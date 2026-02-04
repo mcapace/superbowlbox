@@ -189,16 +189,6 @@ struct DashboardView: View {
             .ignoresSafeArea()
         }
     }
-}
-
-// MARK: - Scale on press (high-tech button feel)
-struct ScaleButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.appQuick, value: configuration.isPressed)
-    }
-}
 
     var currentPool: BoxGrid? {
         guard selectedPoolIndex >= 0 && selectedPoolIndex < appState.pools.count else { return nil }
@@ -210,6 +200,15 @@ struct ScaleButtonStyle: ButtonStyle {
             return .constant(pool)
         }
         return $appState.pools[index]
+    }
+}
+
+// MARK: - Scale on press (high-tech button feel)
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .animation(.appQuick, value: configuration.isPressed)
     }
 }
 

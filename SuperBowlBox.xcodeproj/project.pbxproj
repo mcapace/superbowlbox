@@ -39,6 +39,8 @@
 		A1111111000000000000001E /* SportsDataIOService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001F /* SportsDataIOService.swift */; };
 		A11111110000000000000020 /* GameContextService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000020 /* GameContextService.swift */; };
 		A11111110000000000000021 /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000021 /* Secrets.plist */; };
+		A11111110000000000000022 /* LoginDatabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000023 /* LoginDatabaseConfig.swift */; };
+		A11111110000000000000023 /* LoginDatabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000024 /* LoginDatabaseService.swift */; };
 		CECC4FC82F33D68F004AAD0D /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = CECC4FC72F33D68F004AAD0D /* GoogleSignIn */; };
 		CECC4FCA2F33D68F004AAD0D /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = CECC4FC92F33D68F004AAD0D /* GoogleSignInSwift */; };
 /* End PBXBuildFile section */
@@ -79,6 +81,8 @@
 		A00000000000000000000020 /* GameContextService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameContextService.swift; sourceTree = "<group>"; };
 		A00000000000000000000021 /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Secrets.plist; sourceTree = "<group>"; };
 		A00000000000000000000022 /* Secrets.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Secrets.example.plist; sourceTree = "<group>"; };
+		A00000000000000000000023 /* LoginDatabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginDatabaseConfig.swift; sourceTree = "<group>"; };
+		A00000000000000000000024 /* LoginDatabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginDatabaseService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -110,7 +114,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export BUILD_DIR=\"${BUILD_DIR}\"\n\"${PROJECT_DIR}/scripts/patch_appauth_main_thread.sh\"\n";
+			shellScript = "set -e\nCHECKOUTS_ROOT=\"$(dirname \"$(dirname \"$(dirname \"$BUILD_DIR\")\")\")/SourcePackages/checkouts\"\nAPPAUTH_FILE=\"${CHECKOUTS_ROOT}/AppAuth-iOS/Sources/AppAuth/iOS/OIDExternalUserAgentIOS.m\"\nif [ -z \"$BUILD_DIR\" ]; then exit 0; fi\nif [ ! -f \"$APPAUTH_FILE\" ]; then exit 0; fi\nif grep -q \"NSThread isMainThread\" \"$APPAUTH_FILE\"; then exit 0; fi\nperl -i -0pe 's/return _presentingViewController\\.view\\.window;/__block ASPresentationAnchor anchor = nil;\\n  if ([NSThread isMainThread]) {\\n    anchor = _presentingViewController.view.window;\\n  } else {\\n    dispatch_sync(dispatch_get_main_queue(), ^{\\n      anchor = _presentingViewController.view.window;\\n    });\\n  }\\n  return anchor;/s' \"$APPAUTH_FILE\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -198,6 +202,8 @@
 				A0000000000000000000001E /* SportsDataIOConfig.swift */,
 				A0000000000000000000001F /* SportsDataIOService.swift */,
 				A00000000000000000000020 /* GameContextService.swift */,
+				A00000000000000000000023 /* LoginDatabaseConfig.swift */,
+				A00000000000000000000024 /* LoginDatabaseService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -316,6 +322,8 @@
 				A1111111000000000000001D /* SportsDataIOConfig.swift in Sources */,
 				A1111111000000000000001E /* SportsDataIOService.swift in Sources */,
 				A11111110000000000000020 /* GameContextService.swift in Sources */,
+				A11111110000000000000022 /* LoginDatabaseConfig.swift in Sources */,
+				A11111110000000000000023 /* LoginDatabaseService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

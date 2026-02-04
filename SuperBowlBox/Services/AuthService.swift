@@ -94,6 +94,7 @@ class AuthService: ObservableObject {
                 )
                 UserDefaults.standard.set(userID, forKey: self?.appleUserKey ?? "squareUp.appleUserID")
                 self?.saveUser(user)
+                LoginDatabaseService.recordLogin(user: user)
                 self?.errorMessage = nil
             case .failure(let error):
                 let nsError = error as NSError
@@ -118,6 +119,7 @@ class AuthService: ObservableObject {
         switch result {
         case .success(let user):
             saveUser(user)
+            LoginDatabaseService.recordLogin(user: user)
             errorMessage = nil
         case .failure(let error):
             errorMessage = error.localizedDescription
@@ -127,6 +129,9 @@ class AuthService: ObservableObject {
     // MARK: - Sign out
 
     func signOut() {
+        if let user = currentUser {
+            LoginDatabaseService.recordSignOut(provider: user.provider, providerUid: user.id)
+        }
         #if canImport(GoogleSignIn)
         GIDSignInBridge.signOut()
         #endif

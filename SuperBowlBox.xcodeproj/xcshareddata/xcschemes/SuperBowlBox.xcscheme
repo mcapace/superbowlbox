@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
    LastUpgradeVersion = "1500"
-   version = "1.3">
+   version = "1.8">
    <BuildAction
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES">
@@ -10,7 +10,7 @@
             ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
             <ActionContent
                title = "Patch AppAuth for main thread"
-               scriptText = "export BUILD_DIR=&quot;${BUILD_DIR}&quot;&#10;&quot;${PROJECT_DIR}/scripts/patch_appauth_main_thread.sh&quot;&#10;"
+               scriptText = "set -e&#10;CHECKOUTS_ROOT=&quot;$(dirname &quot;$(dirname &quot;$(dirname &quot;$BUILD_DIR&quot;)&quot;)&quot;)/SourcePackages/checkouts&quot;&#10;APPAUTH_FILE=&quot;${CHECKOUTS_ROOT}/AppAuth-iOS/Sources/AppAuth/iOS/OIDExternalUserAgentIOS.m&quot;&#10;if [ -z &quot;$BUILD_DIR&quot; ]; then exit 0; fi&#10;if [ ! -f &quot;$APPAUTH_FILE&quot; ]; then exit 0; fi&#10;if grep -q &quot;NSThread isMainThread&quot; &quot;$APPAUTH_FILE&quot;; then exit 0; fi&#10;perl -i -0pe &apos;s/return _presentingViewController\.view\.window;/__block ASPresentationAnchor anchor = nil;\n  if ([NSThread isMainThread]) {\n    anchor = _presentingViewController.view.window;\n  } else {\n    dispatch_sync(dispatch_get_main_queue(), ^{\n      anchor = _presentingViewController.view.window;\n    });\n  }\n  return anchor;/s&apos; &quot;$APPAUTH_FILE&quot;&#10;"
                shellToUse = "/bin/sh">
                <EnvironmentBuildable
                   BuildableIdentifier = "primary"
