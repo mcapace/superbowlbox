@@ -93,6 +93,27 @@
 		};
 /* End PBXFrameworksBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		A40000000000000000000004 /* Patch AppAuth main thread */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Patch AppAuth main thread";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export BUILD_DIR=\"${BUILD_DIR}\"\n\"${PROJECT_DIR}/scripts/patch_appauth_main_thread.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXGroup section */
 		A30000000000000000000000 = {
 			isa = PBXGroup;
@@ -198,6 +219,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = A50000000000000000000001 /* Build configuration list for PBXNativeTarget "SuperBowlBox" */;
 			buildPhases = (
+				A40000000000000000000004 /* Patch AppAuth main thread */,
 				A40000000000000000000002 /* Sources */,
 				A20000000000000000000001 /* Frameworks */,
 				A40000000000000000000003 /* Resources */,

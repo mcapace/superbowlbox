@@ -50,6 +50,10 @@ struct ContentView: View {
                 appState.completeOnboarding()
             }
             .environmentObject(appState)
+            .transition(.asymmetric(
+                insertion: .opacity.combined(with: .scale(scale: 0.98)),
+                removal: .opacity.combined(with: .scale(scale: 1.02))
+            ))
         }
     }
 
@@ -62,7 +66,7 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Dashboard View
+// MARK: - Dashboard View (high-tech, animated)
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedPoolIndex = 0
@@ -71,35 +75,37 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Elevated background (adapts to light/dark)
-                Color(.systemGroupedBackground)
-                    .ignoresSafeArea()
+                // Animated tech-style background (subtle gradient shift)
+                techBackground
 
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Live Score Card
+                        // Live Score Card — entrance 0
                         LiveScoreCard(
                             score: appState.scoreService.currentScore ?? GameScore.mock,
                             isLoading: appState.scoreService.isLoading
                         )
                         .padding(.horizontal)
+                        .entrance(delay: 0)
 
-                        // Pool Selector
+                        // Pool Selector — entrance 1
                         if appState.pools.count > 1 {
                             PoolSelectorView(
                                 selectedIndex: $selectedPoolIndex,
                                 pools: appState.pools
                             )
+                            .entrance(delay: 0.06)
                         }
 
-                        // Current Winner Spotlight
+                        // Current Winner Spotlight — entrance 2
                         if let pool = currentPool,
                            let score = appState.scoreService.currentScore {
                             WinnerSpotlightCard(pool: pool, score: score)
                                 .padding(.horizontal)
+                                .entrance(delay: 0.12)
                         }
 
-                        // Interactive Grid
+                        // Interactive Grid — entrance 3
                         if let pool = currentPool {
                             NavigationLink {
                                 GridDetailView(pool: binding(for: pool))
@@ -110,14 +116,16 @@ struct DashboardView: View {
                                     globalMyName: appState.myName
                                 )
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(ScaleButtonStyle())
                             .padding(.horizontal)
+                            .entrance(delay: 0.18)
                         }
 
-                        // Quick Stats
+                        // Quick Stats — entrance 4
                         if let pool = currentPool {
                             QuickStatsCard(pool: pool, globalMyName: appState.myName)
                                 .padding(.horizontal)
+                                .entrance(delay: 0.24)
                         }
 
                         Spacer(minLength: 100)
@@ -145,6 +153,7 @@ struct DashboardView: View {
                         }
                     } label: {
                         Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 18, weight: .semibold))
                             .rotationEffect(.degrees(showingRefreshAnimation ? 360 : 0))
                             .animation(.easeInOut(duration: 0.5), value: showingRefreshAnimation)
                     }
@@ -152,6 +161,44 @@ struct DashboardView: View {
             }
         }
     }
+
+    private var techBackground: some View {
+        ZStack {
+            AppColors.gradientTechBackground
+                .ignoresSafeArea()
+            // Subtle radial glow (ambient)
+            RadialGradient(
+                colors: [
+                    AppColors.techCyan.opacity(0.06),
+                    Color.clear
+                ],
+                center: .topTrailing,
+                startRadius: 0,
+                endRadius: 400
+            )
+            .ignoresSafeArea()
+            RadialGradient(
+                colors: [
+                    AppColors.fieldGreen.opacity(0.05),
+                    Color.clear
+                ],
+                center: .bottomLeading,
+                startRadius: 0,
+                endRadius: 350
+            )
+            .ignoresSafeArea()
+        }
+    }
+}
+
+// MARK: - Scale on press (high-tech button feel)
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .animation(.appQuick, value: configuration.isPressed)
+    }
+}
 
     var currentPool: BoxGrid? {
         guard selectedPoolIndex >= 0 && selectedPoolIndex < appState.pools.count else { return nil }
@@ -237,12 +284,16 @@ struct LiveScoreCard: View {
             .padding(.top, 8)
         }
         .glassCard()
+        .techGlow(color: score.isGameActive ? AppColors.techCyan : AppColors.glowTeal, opacity: score.isGameActive ? 0.6 : 0.35)
         .overlay(
             RoundedRectangle(cornerRadius: AppCardStyle.cornerRadius)
-                .stroke(score.isGameActive ? Color.red.opacity(0.35) : Color.clear, lineWidth: 2)
+                .stroke(score.isGameActive ? AppColors.techCyan.opacity(0.5) : Color.clear, lineWidth: 1.5)
         )
         .onAppear {
             pulseAnimation = true
+            withAnimation(.appAmbient) {
+                liveGlowOpacity = 0.7
+            }
         }
     }
 }
@@ -291,7 +342,7 @@ struct TeamScoreColumn: View {
     }
 }
 
-// MARK: - Pool Selector
+// MARK: - Pool Selector (animated pills)
 struct PoolSelectorView: View {
     @Binding var selectedIndex: Int
     let pools: [BoxGrid]
@@ -320,7 +371,12 @@ struct PoolSelectorView: View {
                                 .fill(selectedIndex == index ? AppColors.fieldGreen : Color(.systemGray5))
                         )
                         .foregroundColor(selectedIndex == index ? .white : .primary)
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(selectedIndex == index ? AppColors.techCyan.opacity(0.5) : Color.clear, lineWidth: 1)
+                        )
                     }
+                    .buttonStyle(ScaleButtonStyle())
                 }
             }
             .padding(.horizontal)
@@ -437,6 +493,7 @@ struct WinnerSpotlightCard: View {
             }
         }
         .glassCard()
+        .techGlow(color: AppColors.glowGold, opacity: 0.5)
         .overlay(
             RoundedRectangle(cornerRadius: AppCardStyle.cornerRadius)
                 .stroke(
@@ -556,6 +613,7 @@ struct InteractiveGridCard: View {
             }
         }
         .glassCard()
+        .techGlow(opacity: 0.4)
     }
 }
 
@@ -675,6 +733,7 @@ struct QuickStatsCard: View {
                 .strokeBorder(.white.opacity(0.25), lineWidth: 1)
         )
         .shadow(color: AppColors.cardShadow, radius: 10, y: 5)
+        .techGlow(cornerRadius: AppCardStyle.cornerRadiusSmall)
     }
 }
 

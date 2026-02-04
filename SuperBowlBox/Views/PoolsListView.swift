@@ -11,32 +11,39 @@ struct PoolsListView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if appState.pools.isEmpty {
-                    EmptyPoolsView(
-                        onCreateNew: { newPoolPrefill = nil; showingNewPoolSheet = true },
-                        onCreateFromGame: { showingCreateFromGame = true },
-                        onScan: { showingScanner = true }
-                    )
-                } else {
-                    List {
-                        ForEach(appState.pools) { pool in
-                            NavigationLink {
-                                GridDetailView(pool: binding(for: pool))
-                            } label: {
-                                PoolRowView(pool: pool, score: appState.scoreService.currentScore)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    poolToDelete = pool
-                                    showingDeleteConfirmation = true
+            ZStack {
+                AppColors.gradientTechBackground
+                    .ignoresSafeArea()
+                Group {
+                    if appState.pools.isEmpty {
+                        EmptyPoolsView(
+                            onCreateNew: { newPoolPrefill = nil; showingNewPoolSheet = true },
+                            onCreateFromGame: { showingCreateFromGame = true },
+                            onScan: { showingScanner = true }
+                        )
+                        .entrance(delay: 0)
+                    } else {
+                        List {
+                            ForEach(Array(appState.pools.enumerated()), id: \.element.id) { index, pool in
+                                NavigationLink {
+                                    GridDetailView(pool: binding(for: pool))
                                 } label: {
-                                    Label("Delete", systemImage: "trash")
+                                    PoolRowView(pool: pool, score: appState.scoreService.currentScore)
                                 }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        poolToDelete = pool
+                                        showingDeleteConfirmation = true
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
+                                .listRowBackground(Color(.secondarySystemGroupedBackground).opacity(0.6))
                             }
                         }
+                        .listStyle(.insetGrouped)
+                        .scrollContentBackground(.hidden)
                     }
-                    .listStyle(.insetGrouped)
                 }
             }
             .navigationTitle("My Pools")

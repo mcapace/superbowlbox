@@ -107,22 +107,20 @@ class AuthService: ObservableObject {
     }
 
     // MARK: - Sign in with Google (requires GoogleSignIn package)
+    /// Call from main thread only. AppAuth/Google access the presenting view controller and must run on main.
 
+    @MainActor
     func signInWithGoogle(presenting: UIViewController) async {
-        await MainActor.run {
-            isSigningIn = true
-            errorMessage = nil
-        }
+        isSigningIn = true
+        errorMessage = nil
         let result = await GoogleSignInBridge.signIn(presenting: presenting)
-        await MainActor.run {
-            isSigningIn = false
-            switch result {
-            case .success(let user):
-                saveUser(user)
-                errorMessage = nil
-            case .failure(let error):
-                errorMessage = error.localizedDescription
-            }
+        isSigningIn = false
+        switch result {
+        case .success(let user):
+            saveUser(user)
+            errorMessage = nil
+        case .failure(let error):
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -208,6 +206,38 @@ enum GoogleSignInBridge {
 #if canImport(GoogleSignIn)
 import GoogleSignIn
 
+// MARK: - Main-thread-safe presentation anchor for AppAuth
+
+/// AppAuth’s `presentationAnchorForWebAuthenticationSession` is invoked off the main thread but
+/// accesses `presentingViewController.view.window`. This wrapper captures the window on the main
+/// thread and exposes it via a view that returns the cached window from any thread.
+private final class MainThreadPresentationAnchorViewController: UIViewController {
+    private let cachedWindow: UIWindow?
+
+    init(wrapping source: UIViewController) {
+        assert(Thread.isMainThread, "Create wrapper on main thread only")
+        self.cachedWindow = source.view.window
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func loadView() {
+        let anchorView = AnchorView()
+        anchorView.setCachedWindow(cachedWindow)
+        view = anchorView
+    }
+}
+
+/// UIView that returns a cached window so `view.window` can be read from any thread without touching UIKit.
+private final class AnchorView: UIView {
+    private var _cachedWindow: UIWindow?
+
+    func setCachedWindow(_ window: UIWindow?) { _cachedWindow = window }
+
+    override var window: UIWindow? { _cachedWindow }
+}
+
 enum GIDSignInBridge {
     static func signOut() {
         GIDSignIn.sharedInstance.signOut()
@@ -215,6 +245,7 @@ enum GIDSignInBridge {
 }
 
 private enum GoogleSignInImplementation {
+    @MainActor
     static func signIn(presenting: UIViewController) async -> Result<AuthUser, Error> {
         guard let clientID = Bundle.main.object(forInfoDictionaryKey: "GIDClientID") as? String else {
             struct MissingClientID: LocalizedError {
@@ -224,8 +255,9 @@ private enum GoogleSignInImplementation {
         }
         let config = GIDConfiguration(clientID: clientID)
         GIDSignIn.sharedInstance.configuration = config
+        let anchorVC = MainThreadPresentationAnchorViewController(wrapping: presenting)
         do {
-            let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: presenting)
+            let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: anchorVC)
             let user = AuthUser(
                 provider: .google,
                 id: result.user.userID ?? result.user.idToken?.tokenString ?? UUID().uuidString,

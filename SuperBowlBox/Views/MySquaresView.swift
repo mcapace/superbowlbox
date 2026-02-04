@@ -17,7 +17,10 @@ struct MySquaresView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
+            ZStack {
+                AppColors.gradientTechBackground
+                    .ignoresSafeArea()
+                VStack(spacing: 0) {
                 // Search bar
                 HStack {
                     Image(systemName: "magnifyingglass")
@@ -70,6 +73,7 @@ struct MySquaresView: View {
                         }
                         .padding(.vertical)
                     }
+                }
                 }
             }
             .navigationTitle("My Squares")

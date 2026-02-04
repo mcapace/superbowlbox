@@ -60,9 +60,15 @@ struct InstructionsView: View {
 
     var body: some View {
         ZStack {
-            // Elevated background
-            Color(.systemGroupedBackground)
+            AppColors.gradientTechBackground
                 .ignoresSafeArea()
+            RadialGradient(
+                colors: [AppColors.techCyan.opacity(0.05), Color.clear],
+                center: .top,
+                startRadius: 0,
+                endRadius: 500
+            )
+            .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 // Skip (sheet mode or onboarding)
@@ -110,13 +116,17 @@ struct InstructionsView: View {
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut(duration: 0.35), value: currentPage)
 
-                // Page indicator
+                // Page indicator (tech-style)
                 HStack(spacing: 8) {
                     ForEach(0..<pageCount, id: \.self) { index in
                         Circle()
-                            .fill(index == currentPage ? AppColors.fieldGreen : Color(.systemGray4))
+                            .fill(index == currentPage ? AppColors.techCyan : Color(.systemGray4))
                             .frame(width: index == currentPage ? 10 : 8, height: index == currentPage ? 10 : 8)
                             .scaleEffect(index == currentPage ? 1.0 : 0.9)
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(index == currentPage ? AppColors.techCyan.opacity(0.6) : Color.clear, lineWidth: 1.5)
+                            )
                             .animation(.spring(response: 0.35, dampingFraction: 0.7), value: currentPage)
                     }
                 }
@@ -144,8 +154,12 @@ struct InstructionsView: View {
                             RoundedRectangle(cornerRadius: AppCardStyle.cornerRadiusSmall)
                                 .fill(AppColors.fieldGreen)
                         )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppCardStyle.cornerRadiusSmall)
+                                .strokeBorder(AppColors.techCyan.opacity(0.4), lineWidth: 1)
+                        )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(ScaleButtonStyle())
                 .padding(.horizontal, 24)
                 .padding(.bottom, 48)
             }
@@ -210,7 +224,7 @@ private struct OnboardingSignInView: View {
                 .cornerRadius(12)
 
                 Button {
-                    Task {
+                    Task { @MainActor in
                         HapticService.impactLight()
                         guard let vc = topViewController() else { return }
                         await authService.signInWithGoogle(presenting: vc)

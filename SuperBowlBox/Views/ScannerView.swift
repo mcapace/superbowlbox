@@ -32,20 +32,20 @@ struct ScannerView: View {
                         onPhotoSelected: { showingImagePicker = true },
                         onManualEntry: { showingManualEntry = true }
                     )
+                    .entrance(delay: 0)
 
                 case .processing:
                     ProcessingScanView()
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
 
                 case .reviewing:
                     if scannedPool != nil {
                         ReviewScanView(
                             pool: $scannedPool.unwrap(default: BoxGrid.empty),
                             image: selectedImage,
-                            onConfirm: {
+                            onConfirm: { poolToSave in
                                 HapticService.success()
-                                if let finalPool = scannedPool {
-                                    onPoolScanned(finalPool)
-                                }
+                                onPoolScanned(poolToSave)
                                 dismiss()
                             },
                             onRetry: {
@@ -56,6 +56,11 @@ struct ScannerView: View {
                             }
                         )
                     }
+                    .entrance(delay: 0)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .scale(scale: 0.98)),
+                        removal: .opacity
+                    ))
 
                 case .error(let message):
                     ErrorScanView(
@@ -82,9 +87,13 @@ struct ScannerView: View {
                 }
             }
             .sheet(isPresented: $showingCamera) {
-                CameraView { image in
-                    handleCapturedImage(image)
-                }
+                CameraView(
+                    onCapture: { handleCapturedImage($0) },
+                    onCaptureFailed: { error in
+                        scanProgress = .error(error.localizedDescription)
+                        showingCamera = false
+                    }
+                )
             }
             .photosPicker(isPresented: $showingImagePicker, selection: $selectedItem, matching: .images)
             .onChange(of: selectedItem) { _, newValue in
@@ -114,20 +123,27 @@ struct ScannerView: View {
     }
 
     private func handleCapturedImage(_ image: UIImage) {
-        selectedImage = image
-        scanProgress = .processing
-
+        Task { @MainActor in
+            selectedImage = image
+            withAnimation(.appReveal) {
+                scanProgress = .processing
+            }
+        }
         Task {
             do {
                 let pool = try await visionService.processImage(image)
                 await MainActor.run {
                     scannedPool = pool
-                    scanProgress = .reviewing
+                    withAnimation(.appEntrance) {
+                        scanProgress = .reviewing
+                    }
                     HapticService.success()
                 }
             } catch {
                 await MainActor.run {
-                    scanProgress = .error(error.localizedDescription)
+                    withAnimation(.appReveal) {
+                        scanProgress = .error(error.localizedDescription)
+                    }
                     HapticService.error()
                 }
             }
@@ -166,7 +182,7 @@ struct IdleScanView: View {
                     .padding(.horizontal, 32)
             }
 
-            // Action buttons
+            // Action buttons (with staggered entrance feel)
             VStack(spacing: 16) {
                 Button {
                     onCameraSelected()
@@ -190,7 +206,12 @@ struct IdleScanView: View {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(AppColors.fieldGreen)
                     )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .strokeBorder(AppColors.techCyan.opacity(0.4), lineWidth: 1)
+                    )
                 }
+                .buttonStyle(ScaleButtonStyle())
 
                 Button {
                     onPhotoSelected()
@@ -215,6 +236,7 @@ struct IdleScanView: View {
                             .fill(Color(.systemGray6))
                     )
                 }
+                .buttonStyle(ScaleButtonStyle())
 
                 Button {
                     onManualEntry()
@@ -239,6 +261,7 @@ struct IdleScanView: View {
                             .fill(Color(.systemGray6))
                     )
                 }
+                .buttonStyle(ScaleButtonStyle())
             }
             .padding(.horizontal)
 
@@ -277,9 +300,11 @@ struct IdleScanView: View {
     }
 }
 
-// MARK: - Processing View
+// MARK: - Processing View (tech-style loading)
 struct ProcessingScanView: View {
     @State private var rotationAngle: Double = 0
+    @State private var pulseScale: CGFloat = 1.0
+    @State private var appeared = false
 
     var body: some View {
         VStack(spacing: 32) {
@@ -287,22 +312,36 @@ struct ProcessingScanView: View {
 
             ZStack {
                 Circle()
-                    .stroke(Color(.systemGray4), lineWidth: 4)
+                    .stroke(Color(.systemGray4).opacity(0.5), lineWidth: 4)
                     .frame(width: 100, height: 100)
 
                 Circle()
-                    .trim(from: 0, to: 0.3)
-                    .stroke(AppColors.fieldGreen, lineWidth: 4)
+                    .trim(from: 0, to: 0.35)
+                    .stroke(
+                        LinearGradient(
+                            colors: [AppColors.techCyan, AppColors.fieldGreen],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                    )
                     .frame(width: 100, height: 100)
                     .rotationEffect(.degrees(rotationAngle))
 
                 Image(systemName: "doc.text.viewfinder")
                     .font(.system(size: 40))
-                    .foregroundColor(AppColors.fieldGreen)
+                    .foregroundStyle(AppColors.gradientGlow)
+                    .scaleEffect(appeared ? pulseScale : 0.8)
             }
             .onAppear {
-                withAnimation(.linear(duration: 1).repeatForever(autoreverses: false)) {
+                withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
                     rotationAngle = 360
+                }
+                withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+                    pulseScale = 1.08
+                }
+                withAnimation(.appEntrance) {
+                    appeared = true
                 }
             }
 
@@ -325,7 +364,8 @@ struct ProcessingScanView: View {
 struct ReviewScanView: View {
     @Binding var pool: BoxGrid
     let image: UIImage?
-    let onConfirm: () -> Void
+    /// Called with the pool to save (including name + ownerLabels). Use this so the saved pool always has the latest fields.
+    let onConfirm: (BoxGrid) -> Void
     let onRetry: () -> Void
     @EnvironmentObject var appState: AppState
 
@@ -466,8 +506,9 @@ struct ReviewScanView: View {
                 // Action buttons
                 VStack(spacing: 12) {
                     Button {
+                        pool.name = poolName.isEmpty ? "Scanned Pool" : poolName
                         applyOwnerLabels()
-                        onConfirm()
+                        onConfirm(pool)
                     } label: {
                         Text("Confirm & Save")
                             .fontWeight(.semibold)

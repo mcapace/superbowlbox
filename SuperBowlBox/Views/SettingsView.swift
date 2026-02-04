@@ -6,10 +6,14 @@ struct SettingsView: View {
     @State private var showingJoinPool = false
     @State private var showingAbout = false
     @State private var showingInstructions = false
+    @State private var showingOnboardingAgain = false
 
     var body: some View {
         NavigationStack {
-            List {
+            ZStack {
+                AppColors.gradientTechBackground
+                    .ignoresSafeArea()
+                List {
                 // Profile Section
                 Section {
                     HStack {
@@ -86,7 +90,7 @@ struct SettingsView: View {
                         }
 
                         Button {
-                            Task {
+                            Task { @MainActor in
                                 guard let vc = topViewController() else { return }
                                 await appState.authService.signInWithGoogle(presenting: vc)
                             }
@@ -207,7 +211,7 @@ struct SettingsView: View {
                 // About Section
                 Section {
                     Button {
-                        appState.resetOnboarding()
+                        showingOnboardingAgain = true
                     } label: {
                         HStack {
                             Image(systemName: "hand.wave.fill")
@@ -259,6 +263,8 @@ struct SettingsView: View {
                     Text("About")
                 }
             }
+            .scrollContentBackground(.hidden)
+            }
             .navigationTitle("Settings")
             .sheet(isPresented: $showingJoinPool) {
                 JoinPoolSheet()
@@ -269,6 +275,13 @@ struct SettingsView: View {
             .sheet(isPresented: $showingInstructions) {
                 InstructionsView(isOnboarding: false) { }
                     .environmentObject(appState)
+            }
+            .fullScreenCover(isPresented: $showingOnboardingAgain) {
+                InstructionsView(isOnboarding: true) {
+                    showingOnboardingAgain = false
+                    appState.completeOnboarding()
+                }
+                .environmentObject(appState)
             }
         }
     }

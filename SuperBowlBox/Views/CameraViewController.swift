@@ -3,6 +3,7 @@ import AVFoundation
 
 struct CameraView: UIViewControllerRepresentable {
     let onCapture: (UIImage) -> Void
+    var onCaptureFailed: ((Error) -> Void)?
 
     func makeUIViewController(context: Context) -> CameraViewController {
         let controller = CameraViewController()
@@ -13,24 +14,31 @@ struct CameraView: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: CameraViewController, context: Context) {}
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onCapture: onCapture)
+        Coordinator(onCapture: onCapture, onCaptureFailed: onCaptureFailed)
     }
 
     class Coordinator: NSObject, CameraViewControllerDelegate {
         let onCapture: (UIImage) -> Void
+        let onCaptureFailed: ((Error) -> Void)?
 
-        init(onCapture: @escaping (UIImage) -> Void) {
+        init(onCapture: @escaping (UIImage) -> Void, onCaptureFailed: ((Error) -> Void)? = nil) {
             self.onCapture = onCapture
+            self.onCaptureFailed = onCaptureFailed
         }
 
         func didCaptureImage(_ image: UIImage) {
             onCapture(image)
+        }
+
+        func didFailCapture(error: Error) {
+            onCaptureFailed?(error)
         }
     }
 }
 
 protocol CameraViewControllerDelegate: AnyObject {
     func didCaptureImage(_ image: UIImage)
+    func didFailCapture(error: Error)
 }
 
 class CameraViewController: UIViewController {
@@ -240,9 +248,19 @@ class CameraViewController: UIViewController {
 
 extension CameraViewController: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        guard error == nil,
-              let imageData = photo.fileDataRepresentation(),
+        if let error = error {
+            DispatchQueue.main.async { [weak self] in
+                self?.delegate?.didFailCapture(error: error)
+                self?.dismiss(animated: true)
+            }
+            return
+        }
+        guard let imageData = photo.fileDataRepresentation(),
               let image = UIImage(data: imageData) else {
+            DispatchQueue.main.async { [weak self] in
+                self?.delegate?.didFailCapture(error: NSError(domain: "Camera", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not get image from photo."]))
+                self?.dismiss(animated: true)
+            }
             return
         }
 
