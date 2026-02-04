@@ -62,16 +62,17 @@ enum GameContextService {
                 let periodWinner = periodId == "Final" ? pool.winningSquare(for: score) : pool.winningSquare(for: prev)
                 let winnerName = (periodWinner?.playerName.isEmpty ?? true) ? "Someone" : (periodWinner?.playerName ?? "Someone")
                 let periodLabel = periodId.replacingOccurrences(of: "_", with: " ")
+                let scoreText = periodId == "Final" ? " Final: \(score.awayScore)-\(score.homeScore)." : ""
                 NotificationService.scheduleLocal(
                     title: "\(periodLabel) winner",
-                    body: "\(winnerName) won \(periodLabel) in \(pool.name).",
+                    body: "\(winnerName) won \(periodLabel) in \(pool.name).\(scoreText)",
                     identifier: "period-\(pool.id.uuidString)-\(periodId)"
                 )
                 UserDefaults.standard.set(true, forKey: key)
             }
         }
 
-        // 3) Your square is one score away (throttled): would win if home or away last digit changed by ±1
+        // 3) Your square is one score away (throttled): tell them who and what needs to happen (e.g. "Mike just needs one more score from Seattle to take the quarter")
         if !ownerLabels.isEmpty {
             let mySquares = pool.squaresForOwner(ownerLabels: ownerLabels)
             let currentH = score.homeLastDigit
@@ -80,27 +81,76 @@ enum GameContextService {
                 let d = abs(a - b)
                 return d == 1 || d == 9 // 9 and 0 are adjacent mod 10
             }
-            let oneDigitAway = mySquares.contains { mySq in
+            typealias OneAway = (square: BoxSquare, teamNeedsToScore: Team)
+            var oneAwayList: [OneAway] = []
+            for mySq in mySquares {
                 let myHomeDigit = pool.homeNumbers[mySq.column]
                 let myAwayDigit = pool.awayNumbers[mySq.row]
                 let homeOneAway = digitAdjacent(myHomeDigit, currentH) && myAwayDigit == currentA
                 let awayOneAway = digitAdjacent(myAwayDigit, currentA) && myHomeDigit == currentH
-                return homeOneAway || awayOneAway
+                if homeOneAway { oneAwayList.append((mySq, pool.homeTeam)) }
+                else if awayOneAway { oneAwayList.append((mySq, pool.awayTeam)) }
             }
-            if oneDigitAway {
+            if !oneAwayList.isEmpty {
                 let key = "gc_oneAway_\(pool.id.uuidString)"
                 let last = UserDefaults.standard.double(forKey: key)
                 let now = Date().timeIntervalSince1970
                 if last == 0 || (now - last) >= oneScoreAwayCooldown {
+                    let (title, body) = oneScoreAwayMessage(
+                        oneAwayList: oneAwayList,
+                        pool: pool,
+                        score: score
+                    )
                     NotificationService.scheduleLocal(
-                        title: "So close!",
-                        body: "A square of yours in \(pool.name) is one score away from winning.",
+                        title: title,
+                        body: body,
                         identifier: "oneAway-\(pool.id.uuidString)"
                     )
                     UserDefaults.standard.set(now, forKey: key)
                 }
             }
         }
+    }
+
+    /// Builds contextual title/body for "one score away" (e.g. "Mike just needs one more score from Seattle to take Q3").
+    private static func oneScoreAwayMessage(
+        oneAwayList: [(square: BoxSquare, teamNeedsToScore: Team)],
+        pool: BoxGrid,
+        score: GameScore
+    ) -> (title: String, body: String) {
+        let periodText = currentPeriodText(for: score)
+        let teamShortName: (Team) -> String = { team in
+            team.name.split(separator: " ").first.map(String.init) ?? team.name
+        }
+        if let first = oneAwayList.first {
+            let name = first.square.displayName
+            let team = teamShortName(first.teamNeedsToScore)
+            if oneAwayList.count == 1 {
+                return (
+                    "So close!",
+                    "\(name) just needs one more score from \(team) to take \(periodText) in \(pool.name)."
+                )
+            }
+            let teams = Set(oneAwayList.map { teamShortName($0.teamNeedsToScore) })
+            if teams.count == 1 {
+                return (
+                    "So close!",
+                    "\(name) is one score away in \(pool.name) — \(teams.first!) could do it for \(periodText)."
+                )
+            }
+            return (
+                "So close!",
+                "\(name) could take \(periodText) in \(pool.name) with one more score from \(Array(teams).sorted().joined(separator: " or "))."
+            )
+        }
+        return ("So close!", "A square of yours in \(pool.name) is one score away from winning.")
+    }
+
+    private static func currentPeriodText(for score: GameScore) -> String {
+        if score.quarter == 2 { return "halftime" }
+        if score.quarter >= 1 && score.quarter <= 4 { return "Q\(score.quarter)" }
+        if score.isGameOver { return "the game" }
+        return "the quarter"
     }
 
     /// Returns period id if that period just ended (e.g. "Halftime", "Q1", "Final").
