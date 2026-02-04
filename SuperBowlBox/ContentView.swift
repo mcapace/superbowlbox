@@ -34,12 +34,29 @@ struct ContentView: View {
         .onAppear {
             appState.scoreService.startLiveUpdates()
             configureTabBarAppearance()
+            NotificationService.requestPermissionAndRegister()
+        }
+        .onChange(of: selectedTab) { _, _ in
+            HapticService.selection()
+        }
+        .onChange(of: appState.scoreService.lastUpdated) { _, _ in
+            appState.refreshWinnersFromCurrentScore()
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { !appState.hasCompletedOnboarding },
+            set: { if !$0 { appState.completeOnboarding() } }
+        )) {
+            InstructionsView(isOnboarding: true) {
+                appState.completeOnboarding()
+            }
+            .environmentObject(appState)
         }
     }
 
     private func configureTabBarAppearance() {
         let appearance = UITabBarAppearance()
         appearance.configureWithDefaultBackground()
+        appearance.backgroundEffect = UIBlurEffect(style: .systemChromeMaterial)
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
     }
@@ -54,16 +71,9 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background gradient
-                LinearGradient(
-                    colors: [
-                        Color(.systemBackground),
-                        Color(.systemGray6)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
+                // Elevated background (adapts to light/dark)
+                Color(.systemGroupedBackground)
+                    .ignoresSafeArea()
 
                 ScrollView {
                     VStack(spacing: 24) {
@@ -97,7 +107,7 @@ struct DashboardView: View {
                                 InteractiveGridCard(
                                     pool: pool,
                                     score: appState.scoreService.currentScore,
-                                    highlightedName: appState.myName
+                                    globalMyName: appState.myName
                                 )
                             }
                             .buttonStyle(.plain)
@@ -106,7 +116,7 @@ struct DashboardView: View {
 
                         // Quick Stats
                         if let pool = currentPool {
-                            QuickStatsCard(pool: pool, myName: appState.myName)
+                            QuickStatsCard(pool: pool, globalMyName: appState.myName)
                                 .padding(.horizontal)
                         }
 
@@ -115,18 +125,21 @@ struct DashboardView: View {
                     .padding(.top)
                 }
             }
-            .navigationTitle("GridIron")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    SquareUpLogoView(showIcon: true, wordmarkSize: 24)
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        withAnimation(.spring(response: 0.3)) {
+                        HapticService.impactLight()
+                        withAnimation(.appSpring) {
                             showingRefreshAnimation = true
                         }
                         Task {
                             await appState.scoreService.fetchCurrentScore()
                             try? await Task.sleep(nanoseconds: 500_000_000)
-                            withAnimation {
+                            withAnimation(.appQuick) {
                                 showingRefreshAnimation = false
                             }
                         }
@@ -171,8 +184,8 @@ struct LiveScoreCard: View {
                     .animation(.easeInOut(duration: 1).repeatForever(autoreverses: true), value: pulseAnimation)
 
                 Text(score.isGameActive ? "LIVE" : score.gameStatusText.uppercased())
-                    .font(.caption)
-                    .fontWeight(.bold)
+                    .font(AppTypography.label)
+                    .tracking(0.8)
                     .foregroundColor(score.isGameActive ? .red : .secondary)
             }
             .padding(.horizontal, 12)
@@ -215,24 +228,18 @@ struct LiveScoreCard: View {
                 Image(systemName: "number.square.fill")
                     .foregroundColor(AppColors.fieldGreen)
                 Text("Winning Numbers:")
-                    .font(.caption)
+                    .font(AppTypography.caption)
                     .foregroundColor(.secondary)
                 Text("\(score.awayLastDigit) - \(score.homeLastDigit)")
-                    .font(.headline)
-                    .fontWeight(.bold)
+                    .font(AppTypography.headline)
                     .foregroundColor(AppColors.fieldGreen)
             }
             .padding(.top, 8)
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(AppColors.cardBackground)
-                .shadow(color: AppColors.cardShadow, radius: 20, y: 10)
-        )
+        .glassCard()
         .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(score.isGameActive ? Color.red.opacity(0.3) : Color.clear, lineWidth: 2)
+            RoundedRectangle(cornerRadius: AppCardStyle.cornerRadius)
+                .stroke(score.isGameActive ? Color.red.opacity(0.35) : Color.clear, lineWidth: 2)
         )
         .onAppear {
             pulseAnimation = true
@@ -266,6 +273,7 @@ struct TeamScoreColumn: View {
             Text("\(score)")
                 .font(AppTypography.scoreDisplay)
                 .foregroundColor(isLeading ? AppColors.fieldGreen : .primary)
+                .contentTransition(.numericText())
 
             // Last digit indicator
             Text("(\(lastDigit))")
@@ -293,7 +301,8 @@ struct PoolSelectorView: View {
             HStack(spacing: 12) {
                 ForEach(Array(pools.enumerated()), id: \.element.id) { index, pool in
                     Button {
-                        withAnimation(.spring(response: 0.3)) {
+                        HapticService.selection()
+                        withAnimation(.appSpring) {
                             selectedIndex = index
                         }
                     } label: {
@@ -301,7 +310,7 @@ struct PoolSelectorView: View {
                             Image(systemName: "square.grid.3x3.fill")
                                 .font(.caption)
                             Text(pool.name)
-                                .font(.subheadline)
+                                .font(AppTypography.callout)
                                 .fontWeight(selectedIndex == index ? .semibold : .regular)
                         }
                         .padding(.horizontal, 16)
@@ -330,6 +339,18 @@ struct WinnerSpotlightCard: View {
         pool.winningSquare(for: score)
     }
 
+    var currentPeriodLabel: String? {
+        pool.currentPeriod(for: score).map { period in
+            switch period {
+            case .quarter(let q): return "Q\(q)"
+            case .halftime: return "Halftime"
+            case .final: return "Final"
+            case .firstScoreChange: return "First score"
+            case .custom(_, let label): return label
+            }
+        }
+    }
+
     var body: some View {
         VStack(spacing: 16) {
             HStack {
@@ -337,9 +358,17 @@ struct WinnerSpotlightCard: View {
                     .font(.title2)
                     .foregroundColor(AppColors.gold)
                 Text("Current Leader")
-                    .font(.headline)
-                    .fontWeight(.bold)
+                    .font(AppTypography.title2)
                 Spacer()
+                if let periodLabel = currentPeriodLabel {
+                    Text(periodLabel)
+                        .font(AppTypography.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(AppColors.fieldGreen)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(AppColors.fieldGreen.opacity(0.15)))
+                }
             }
 
             if let winner = winner {
@@ -407,21 +436,16 @@ struct WinnerSpotlightCard: View {
                 .padding()
             }
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(AppColors.cardBackground)
-                .shadow(color: AppColors.cardShadow, radius: 15, y: 8)
-        )
+        .glassCard()
         .overlay(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: AppCardStyle.cornerRadius)
                 .stroke(
                     LinearGradient(
                         colors: [AppColors.gold.opacity(0.5), AppColors.gold.opacity(0.2)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
-                    lineWidth: 1
+                    lineWidth: 1.5
                 )
         )
     }
@@ -431,7 +455,8 @@ struct WinnerSpotlightCard: View {
 struct InteractiveGridCard: View {
     let pool: BoxGrid
     let score: GameScore?
-    let highlightedName: String
+    /// Global "my name" from Settings; pool may override with ownerLabels (how name appears on this sheet).
+    let globalMyName: String
 
     var winningPosition: (row: Int, column: Int)? {
         guard let score = score else { return nil }
@@ -443,19 +468,18 @@ struct InteractiveGridCard: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(pool.name)
-                        .font(.headline)
-                        .fontWeight(.bold)
+                        .font(AppTypography.headline)
                     Text("\(pool.awayTeam.abbreviation) vs \(pool.homeTeam.abbreviation)")
-                        .font(.caption)
+                        .font(AppTypography.caption)
                         .foregroundColor(.secondary)
                 }
                 Spacer()
                 HStack(spacing: 4) {
                     Text("View Full Grid")
-                        .font(.caption)
+                        .font(AppTypography.caption)
                         .foregroundColor(AppColors.fieldGreen)
                     Image(systemName: "chevron.right")
-                        .font(.caption)
+                        .font(AppTypography.caption)
                         .foregroundColor(AppColors.fieldGreen)
                 }
             }
@@ -502,8 +526,8 @@ struct InteractiveGridCard: View {
                             ForEach(0..<10, id: \.self) { col in
                                 let square = pool.squares[row][col]
                                 let isWinning = winningPosition?.row == row && winningPosition?.column == col
-                                let isHighlighted = !highlightedName.isEmpty &&
-                                    square.playerName.lowercased().contains(highlightedName.lowercased())
+                                let ownerLabels = pool.effectiveOwnerLabels(globalName: globalMyName)
+                                let isHighlighted = !ownerLabels.isEmpty && pool.isOwnerSquare(square, ownerLabels: ownerLabels)
 
                                 GridCellView(
                                     square: square,
@@ -522,21 +546,16 @@ struct InteractiveGridCard: View {
             HStack(spacing: 16) {
                 LegendItem(color: AppColors.fieldGreen, label: "Winner")
                 LegendItem(color: .blue.opacity(0.6), label: "Filled")
-                if !highlightedName.isEmpty {
+                if !pool.effectiveOwnerLabels(globalName: globalMyName).isEmpty {
                     LegendItem(color: .orange, label: "My Squares")
                 }
                 Spacer()
                 Text("\(pool.filledCount)/100")
-                    .font(.caption)
+                    .font(AppTypography.caption)
                     .foregroundColor(.secondary)
             }
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(AppColors.cardBackground)
-                .shadow(color: AppColors.cardShadow, radius: 15, y: 8)
-        )
+        .glassCard()
     }
 }
 
@@ -599,7 +618,7 @@ struct LegendItem: View {
                 .fill(color)
                 .frame(width: 12, height: 12)
             Text(label)
-                .font(.caption2)
+                .font(AppTypography.caption2)
                 .foregroundColor(.secondary)
         }
     }
@@ -608,11 +627,15 @@ struct LegendItem: View {
 // MARK: - Quick Stats Card
 struct QuickStatsCard: View {
     let pool: BoxGrid
-    let myName: String
+    /// Global "my name" from Settings; pool may override with ownerLabels (how name appears on this sheet).
+    let globalMyName: String
+
+    var ownerLabels: [String] {
+        pool.effectiveOwnerLabels(globalName: globalMyName)
+    }
 
     var mySquares: [BoxSquare] {
-        guard !myName.isEmpty else { return [] }
-        return pool.squares(for: myName)
+        pool.squaresForOwner(ownerLabels: ownerLabels)
     }
 
     var body: some View {
@@ -624,7 +647,7 @@ struct QuickStatsCard: View {
                 color: .blue
             )
 
-            if !myName.isEmpty {
+            if !ownerLabels.isEmpty {
                 StatItem(
                     icon: "star.fill",
                     value: "\(mySquares.count)",
@@ -644,10 +667,14 @@ struct QuickStatsCard: View {
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppColors.cardBackground)
-                .shadow(color: AppColors.cardShadow, radius: 10, y: 5)
+            RoundedRectangle(cornerRadius: AppCardStyle.cornerRadiusSmall)
+                .fill(.ultraThinMaterial)
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: AppCardStyle.cornerRadiusSmall)
+                .strokeBorder(.white.opacity(0.25), lineWidth: 1)
+        )
+        .shadow(color: AppColors.cardShadow, radius: 10, y: 5)
     }
 }
 
@@ -664,11 +691,10 @@ struct StatItem: View {
                 .foregroundColor(color)
 
             Text(value)
-                .font(.title2)
-                .fontWeight(.bold)
+                .font(AppTypography.title2)
 
             Text(label)
-                .font(.caption2)
+                .font(AppTypography.caption2)
                 .foregroundColor(.secondary)
         }
         .frame(minWidth: 60)

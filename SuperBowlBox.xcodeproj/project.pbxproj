@@ -24,6 +24,23 @@
 		A1111111000000000000000F /* ScoreOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000000F /* ScoreOverlayView.swift */; };
 		A11111110000000000000010 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000010 /* SettingsView.swift */; };
 		A11111110000000000000011 /* ManualEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000011 /* ManualEntryView.swift */; };
+		A11111110000000000000012 /* PoolsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000013 /* PoolsListView.swift */; };
+		A11111110000000000000013 /* MySquaresView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000014 /* MySquaresView.swift */; };
+		A11111110000000000000014 /* PoolStructure.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000015 /* PoolStructure.swift */; };
+		A11111110000000000000015 /* InstructionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000016 /* InstructionsView.swift */; };
+		A11111110000000000000016 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000017 /* AuthService.swift */; };
+		A11111110000000000000017 /* SignInWithAppleButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000018 /* SignInWithAppleButton.swift */; };
+		A11111110000000000000018 /* HapticService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000019 /* HapticService.swift */; };
+		A11111110000000000000019 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001A /* NotificationService.swift */; };
+		A1111111000000000000001A /* ListableGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001B /* ListableGame.swift */; };
+		A1111111000000000000001B /* GamesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001C /* GamesService.swift */; };
+		A1111111000000000000001C /* CreateFromGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001D /* CreateFromGameView.swift */; };
+		A1111111000000000000001D /* SportsDataIOConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001E /* SportsDataIOConfig.swift */; };
+		A1111111000000000000001E /* SportsDataIOService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001F /* SportsDataIOService.swift */; };
+		A11111110000000000000020 /* GameContextService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000020 /* GameContextService.swift */; };
+		A11111110000000000000021 /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000021 /* Secrets.plist */; };
+		CECC4FC82F33D68F004AAD0D /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = CECC4FC72F33D68F004AAD0D /* GoogleSignIn */; };
+		CECC4FCA2F33D68F004AAD0D /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = CECC4FC92F33D68F004AAD0D /* GoogleSignInSwift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -46,6 +63,22 @@
 		A00000000000000000000010 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A00000000000000000000011 /* ManualEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualEntryView.swift; sourceTree = "<group>"; };
 		A00000000000000000000012 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A00000000000000000000013 /* PoolsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolsListView.swift; sourceTree = "<group>"; };
+		A00000000000000000000014 /* MySquaresView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MySquaresView.swift; sourceTree = "<group>"; };
+		A00000000000000000000015 /* PoolStructure.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolStructure.swift; sourceTree = "<group>"; };
+		A00000000000000000000016 /* InstructionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstructionsView.swift; sourceTree = "<group>"; };
+		A00000000000000000000017 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		A00000000000000000000018 /* SignInWithAppleButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInWithAppleButton.swift; sourceTree = "<group>"; };
+		A00000000000000000000019 /* HapticService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticService.swift; sourceTree = "<group>"; };
+		A0000000000000000000001A /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		A0000000000000000000001B /* ListableGame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListableGame.swift; sourceTree = "<group>"; };
+		A0000000000000000000001C /* GamesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamesService.swift; sourceTree = "<group>"; };
+		A0000000000000000000001D /* CreateFromGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFromGameView.swift; sourceTree = "<group>"; };
+		A0000000000000000000001E /* SportsDataIOConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SportsDataIOConfig.swift; sourceTree = "<group>"; };
+		A0000000000000000000001F /* SportsDataIOService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SportsDataIOService.swift; sourceTree = "<group>"; };
+		A00000000000000000000020 /* GameContextService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameContextService.swift; sourceTree = "<group>"; };
+		A00000000000000000000021 /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Secrets.plist; sourceTree = "<group>"; };
+		A00000000000000000000022 /* Secrets.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Secrets.example.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,6 +86,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CECC4FC82F33D68F004AAD0D /* GoogleSignIn in Frameworks */,
+				CECC4FCA2F33D68F004AAD0D /* GoogleSignInSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -97,6 +132,8 @@
 				A00000000000000000000005 /* BoxSquare.swift */,
 				A00000000000000000000006 /* GameScore.swift */,
 				A00000000000000000000007 /* Team.swift */,
+				A00000000000000000000015 /* PoolStructure.swift */,
+				A0000000000000000000001B /* ListableGame.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -111,6 +148,11 @@
 				A0000000000000000000000F /* ScoreOverlayView.swift */,
 				A00000000000000000000010 /* SettingsView.swift */,
 				A00000000000000000000011 /* ManualEntryView.swift */,
+				A00000000000000000000013 /* PoolsListView.swift */,
+				A00000000000000000000014 /* MySquaresView.swift */,
+				A00000000000000000000016 /* InstructionsView.swift */,
+				A00000000000000000000018 /* SignInWithAppleButton.swift */,
+				A0000000000000000000001D /* CreateFromGameView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -128,6 +170,13 @@
 			children = (
 				A0000000000000000000000B /* VisionService.swift */,
 				A0000000000000000000000C /* NFLScoreService.swift */,
+				A00000000000000000000017 /* AuthService.swift */,
+				A00000000000000000000019 /* HapticService.swift */,
+				A0000000000000000000001A /* NotificationService.swift */,
+				A0000000000000000000001C /* GamesService.swift */,
+				A0000000000000000000001E /* SportsDataIOConfig.swift */,
+				A0000000000000000000001F /* SportsDataIOService.swift */,
+				A00000000000000000000020 /* GameContextService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -136,6 +185,8 @@
 			isa = PBXGroup;
 			children = (
 				A00000000000000000000003 /* Assets.xcassets */,
+				A00000000000000000000021 /* Secrets.plist */,
+				A00000000000000000000022 /* Secrets.example.plist */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -168,7 +219,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					A40000000000000000000001 = {
 						CreatedOnToolsVersion = 15.0;
@@ -184,6 +235,9 @@
 				Base,
 			);
 			mainGroup = A30000000000000000000000;
+			packageReferences = (
+				CECC4FC62F33D68F004AAD0D /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
 			productRefGroup = A30000000000000000000002 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -199,6 +253,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A11111110000000000000003 /* Assets.xcassets in Resources */,
+				A11111110000000000000021 /* Secrets.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -225,6 +280,20 @@
 				A1111111000000000000000F /* ScoreOverlayView.swift in Sources */,
 				A11111110000000000000010 /* SettingsView.swift in Sources */,
 				A11111110000000000000011 /* ManualEntryView.swift in Sources */,
+				A11111110000000000000012 /* PoolsListView.swift in Sources */,
+				A11111110000000000000013 /* MySquaresView.swift in Sources */,
+				A11111110000000000000014 /* PoolStructure.swift in Sources */,
+				A11111110000000000000015 /* InstructionsView.swift in Sources */,
+				A11111110000000000000016 /* AuthService.swift in Sources */,
+				A11111110000000000000017 /* SignInWithAppleButton.swift in Sources */,
+				A11111110000000000000018 /* HapticService.swift in Sources */,
+				A11111110000000000000019 /* NotificationService.swift in Sources */,
+				A1111111000000000000001A /* ListableGame.swift in Sources */,
+				A1111111000000000000001B /* GamesService.swift in Sources */,
+				A1111111000000000000001C /* CreateFromGameView.swift in Sources */,
+				A1111111000000000000001D /* SportsDataIOConfig.swift in Sources */,
+				A1111111000000000000001E /* SportsDataIOService.swift in Sources */,
+				A11111110000000000000020 /* GameContextService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -266,6 +335,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 8U6V3PNEAC;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -289,6 +359,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -329,6 +400,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 8U6V3PNEAC;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -345,6 +417,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -355,14 +428,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = SuperBowlBox/SuperBowlBox.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SuperBowlBox/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Super Bowl Box";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is needed to scan Super Bowl box sheets";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo library access is needed to import Super Bowl box sheet images";
+				INFOPLIST_KEY_CFBundleDisplayName = SquareUp;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is needed to scan pool sheets and box grids";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo library access is needed to import pool or bracket sheet images";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -386,14 +459,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = SuperBowlBox/SuperBowlBox.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SuperBowlBox/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Super Bowl Box";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is needed to scan Super Bowl box sheets";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo library access is needed to import Super Bowl box sheet images";
+				INFOPLIST_KEY_CFBundleDisplayName = SquareUp;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is needed to scan pool sheets and box grids";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo library access is needed to import pool or bracket sheet images";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -434,6 +507,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CECC4FC62F33D68F004AAD0D /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CECC4FC72F33D68F004AAD0D /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CECC4FC62F33D68F004AAD0D /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		CECC4FC92F33D68F004AAD0D /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CECC4FC62F33D68F004AAD0D /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A60000000000000000000001 /* Project object */;
 }

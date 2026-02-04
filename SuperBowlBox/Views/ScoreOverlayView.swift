@@ -13,7 +13,8 @@ struct ScoreOverlayView: View {
         VStack(spacing: 0) {
             // Compact view (always visible)
             Button {
-                withAnimation(.spring(response: 0.3)) {
+                HapticService.impactLight()
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                     isExpanded.toggle()
                 }
             } label: {
@@ -50,7 +51,11 @@ struct ScoreOverlayView: View {
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.systemBackground))
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(.white.opacity(0.3), lineWidth: 1)
+                        )
                         .shadow(color: .black.opacity(0.1), radius: 5, y: 2)
                 )
             }

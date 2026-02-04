@@ -1,9 +1,11 @@
 import SwiftUI
+import UIKit
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
     @State private var showingJoinPool = false
     @State private var showingAbout = false
+    @State private var showingInstructions = false
 
     var body: some View {
         NavigationStack {
@@ -47,7 +49,75 @@ struct SettingsView: View {
                 } header: {
                     Text("Profile")
                 } footer: {
-                    Text("Your name is used to highlight your squares across all pools")
+                    Text("Your name is used to highlight your squares. When you scan or create a pool, you can set how your name appears on that sheet (and add multiple names if you have more than one box).")
+                }
+
+                // Account (Sign in with Apple / Google)
+                Section {
+                    if let user = appState.authService.currentUser {
+                        HStack(spacing: 12) {
+                            Image(systemName: user.provider == .apple ? "apple.logo" : "g.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(AppColors.fieldGreen)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(user.displayName ?? user.email ?? "Signed in")
+                                    .font(AppTypography.headline)
+                                if let email = user.email {
+                                    Text(email)
+                                        .font(AppTypography.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            Spacer()
+                        }
+                        .padding(.vertical, 4)
+
+                        Button(role: .destructive) {
+                            appState.authService.signOut()
+                        } label: {
+                            HStack {
+                                Image(systemName: "rectangle.portrait.and.arrow.right")
+                                Text("Sign Out")
+                            }
+                        }
+                    } else {
+                        SignInWithAppleButton {
+                            appState.authService.signInWithApple()
+                        }
+
+                        Button {
+                            Task {
+                                guard let vc = topViewController() else { return }
+                                await appState.authService.signInWithGoogle(presenting: vc)
+                            }
+                        } label: {
+                            HStack {
+                                Image(systemName: "g.circle.fill")
+                                    .font(.title2)
+                                Text("Sign in with Google")
+                                    .font(AppTypography.headline)
+                                Spacer()
+                            }
+                            .foregroundColor(.primary)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                        }
+                        .disabled(appState.authService.isSigningIn)
+                    }
+
+                    if let error = appState.authService.errorMessage {
+                        Text(error)
+                            .font(AppTypography.caption2)
+                            .foregroundColor(.red)
+                    }
+                } header: {
+                    Text("Account")
+                } footer: {
+                    if appState.authService.currentUser == nil {
+                        Text("Sign in to sync your account across devices (optional)")
+                    }
                 }
 
                 // Join Pool Section
@@ -137,10 +207,40 @@ struct SettingsView: View {
                 // About Section
                 Section {
                     Button {
+                        appState.resetOnboarding()
+                    } label: {
+                        HStack {
+                            Image(systemName: "hand.wave.fill")
+                                .foregroundColor(AppColors.fieldGreen)
+                            Text("Show onboarding again")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .foregroundColor(.primary)
+                    }
+
+                    Button {
+                        showingInstructions = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "questionmark.circle.fill")
+                                .foregroundColor(AppColors.fieldGreen)
+                            Text("How it works")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .foregroundColor(.primary)
+                    }
+
+                    Button {
                         showingAbout = true
                     } label: {
                         HStack {
-                            Text("About GridIron")
+                            Text("About SquareUp")
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.caption)
@@ -166,6 +266,10 @@ struct SettingsView: View {
             .sheet(isPresented: $showingAbout) {
                 AboutView()
             }
+            .sheet(isPresented: $showingInstructions) {
+                InstructionsView(isOnboarding: false) { }
+                    .environmentObject(appState)
+            }
         }
     }
 
@@ -177,6 +281,14 @@ struct SettingsView: View {
             return String(first.prefix(2)).uppercased()
         }
         return "?"
+    }
+
+    private func topViewController() -> UIViewController? {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first(where: { $0.isKeyWindow }) else { return nil }
+        var vc = window.rootViewController
+        while let presented = vc?.presentedViewController { vc = presented }
+        return vc
     }
 }
 
@@ -310,7 +422,7 @@ struct SharePoolSheet: View {
                         .font(.caption)
                         .fontWeight(.semibold)
 
-                    Text("1. Download GridIron from the App Store")
+                    Text("1. Download SquareUp from the App Store")
                         .font(.caption)
                         .foregroundColor(.secondary)
 
@@ -342,18 +454,18 @@ struct SharePoolSheet: View {
     }
 
     private func shareViaMessages() {
-        let message = "Join my Super Bowl pool '\(pool.name)' on GridIron!\n\nInvite Code: \(inviteCode)"
+        let message = "Join my pool '\(pool.name)' on SquareUp!\n\nInvite Code: \(inviteCode)"
         // In a real app, this would open the Messages app
         UIPasteboard.general.string = message
     }
 
     private func shareViaEmail() {
-        let message = "Join my Super Bowl pool '\(pool.name)' on GridIron!\n\nInvite Code: \(inviteCode)"
+        let message = "Join my pool '\(pool.name)' on SquareUp!\n\nInvite Code: \(inviteCode)"
         UIPasteboard.general.string = message
     }
 
     private func shareGeneric() {
-        let message = "Join my Super Bowl pool '\(pool.name)' on GridIron!\n\nInvite Code: \(inviteCode)"
+        let message = "Join my pool '\(pool.name)' on SquareUp!\n\nInvite Code: \(inviteCode)"
         UIPasteboard.general.string = message
     }
 }
@@ -498,24 +610,13 @@ struct AboutView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 32) {
-                    // App icon and name
+                    // App logo and wordmark
                     VStack(spacing: 16) {
-                        Image(systemName: "square.grid.3x3.fill")
-                            .font(.system(size: 80))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [AppColors.fieldGreen, AppColors.fieldGreen.opacity(0.7)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
+                        SquareUpLogoView(showIcon: true, wordmarkSize: 40)
+                            .padding(.top, 8)
 
-                        Text("GridIron")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-
-                        Text("Super Bowl Squares Made Easy")
-                            .font(.subheadline)
+                        Text("Pools, boxes & brackets. Any event.")
+                            .font(AppTypography.callout)
                             .foregroundColor(.secondary)
                     }
                     .padding(.top, 32)

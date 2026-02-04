@@ -1,0 +1,31 @@
+# macOS
+.DS_Store
+
+# Xcode
+*.xcuserdata/
+xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+*.hmap
+*.xccheckout
+*.moved-aside
+Build/
+*.xcscmblueprint
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Secrets (never commit real keys)
+SuperBowlBox/Resources/Secrets.plist
+# Optional env / xcconfig
+# .env
+# *.xcconfig

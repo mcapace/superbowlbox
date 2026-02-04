@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Super Bowl Box</string>
+	<string>SquareUp</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -23,9 +23,24 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Camera access is needed to scan Super Bowl box sheets</string>
+	<string>Camera access is needed to scan pool sheets and box grids</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Photo library access is needed to import Super Bowl box sheet images</string>
+	<string>Photo library access is needed to import pool or bracket sheet images</string>
+	<key>SportsDataIOApiKey</key>
+	<string></string>
+	<key>GIDClientID</key>
+	<string>485274147347-rsrg5bcga18ugucuj1l671au97clgqq6.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.485274147347-rsrg5bcga18ugucuj1l671au97clgqq6</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+		</dict>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

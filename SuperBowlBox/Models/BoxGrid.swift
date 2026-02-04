@@ -11,10 +11,14 @@ struct BoxGrid: Codable, Identifiable {
     var createdAt: Date
     var lastModified: Date
     var currentScore: GameScore?
+    /// How this pool pays out (by quarter, halftime, final, first score, etc.). Nil = legacy, treated as .standardQuarterly.
+    var poolStructure: PoolStructure?
+    /// Names as they appear on this sheet that identify the current user's squares (e.g. "Mike" or "Mike", "Mike 2" for multiple boxes).
+    var ownerLabels: [String]?
 
     init(
         id: UUID = UUID(),
-        name: String = "Super Bowl Box",
+        name: String = "Pool",
         homeTeam: Team = .chiefs,
         awayTeam: Team = .eagles,
         homeNumbers: [Int]? = nil,
@@ -22,7 +26,9 @@ struct BoxGrid: Codable, Identifiable {
         squares: [[BoxSquare]]? = nil,
         createdAt: Date = Date(),
         lastModified: Date = Date(),
-        currentScore: GameScore? = nil
+        currentScore: GameScore? = nil,
+        poolStructure: PoolStructure = .standardQuarterly,
+        ownerLabels: [String]? = nil
     ) {
         self.id = id
         self.name = name
@@ -33,6 +39,8 @@ struct BoxGrid: Codable, Identifiable {
         self.createdAt = createdAt
         self.lastModified = lastModified
         self.currentScore = currentScore
+        self.poolStructure = poolStructure
+        self.ownerLabels = ownerLabels
 
         if let existingSquares = squares {
             self.squares = existingSquares
@@ -47,6 +55,48 @@ struct BoxGrid: Codable, Identifiable {
             }
             self.squares = newSquares
         }
+    }
+
+    /// Resolved pool structure (defaults to standard quarterly for legacy pools).
+    var resolvedPoolStructure: PoolStructure {
+        poolStructure ?? .standardQuarterly
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, homeTeam, awayTeam, homeNumbers, awayNumbers, squares
+        case createdAt, lastModified, currentScore, poolStructure, ownerLabels
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        homeTeam = try c.decode(Team.self, forKey: .homeTeam)
+        awayTeam = try c.decode(Team.self, forKey: .awayTeam)
+        homeNumbers = try c.decode([Int].self, forKey: .homeNumbers)
+        awayNumbers = try c.decode([Int].self, forKey: .awayNumbers)
+        squares = try c.decode([[BoxSquare]].self, forKey: .squares)
+        createdAt = try c.decode(Date.self, forKey: .createdAt)
+        lastModified = try c.decode(Date.self, forKey: .lastModified)
+        currentScore = try c.decodeIfPresent(GameScore.self, forKey: .currentScore)
+        poolStructure = try c.decodeIfPresent(PoolStructure.self, forKey: .poolStructure)
+        ownerLabels = try c.decodeIfPresent([String].self, forKey: .ownerLabels)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encode(homeTeam, forKey: .homeTeam)
+        try c.encode(awayTeam, forKey: .awayTeam)
+        try c.encode(homeNumbers, forKey: .homeNumbers)
+        try c.encode(awayNumbers, forKey: .awayNumbers)
+        try c.encode(squares, forKey: .squares)
+        try c.encode(createdAt, forKey: .createdAt)
+        try c.encode(lastModified, forKey: .lastModified)
+        try c.encodeIfPresent(currentScore, forKey: .currentScore)
+        try c.encodeIfPresent(poolStructure, forKey: .poolStructure)
+        try c.encodeIfPresent(ownerLabels, forKey: .ownerLabels)
     }
 
     // Get the square at a specific position
@@ -84,27 +134,61 @@ struct BoxGrid: Codable, Identifiable {
         lastModified = Date()
     }
 
-    // Mark winners based on quarter scores
-    mutating func updateWinners(quarterScores: QuarterScores) {
-        // Reset all winners
+    // Mark winners based on pool structure and quarter/cumulative scores
+    mutating func updateWinners(quarterScores: QuarterScores, totalScore: (home: Int, away: Int)? = nil) {
         for row in 0..<10 {
             for col in 0..<10 {
                 squares[row][col].isWinner = false
                 squares[row][col].quarterWins = []
+                squares[row][col].winningPeriodIds = []
             }
         }
 
-        // Check each quarter
-        for quarter in 1...4 {
-            if let score = quarterScores.scoreForQuarter(quarter) {
-                let homeDigit = score.home % 10
-                let awayDigit = score.away % 10
-
-                if let pos = winningPosition(homeDigit: homeDigit, awayDigit: awayDigit) {
-                    squares[pos.row][pos.column].isWinner = true
-                    squares[pos.row][pos.column].quarterWins.append(quarter)
-                }
+        for period in resolvedPoolStructure.periods {
+            guard let digits = scoreDigits(for: period, quarterScores: quarterScores, totalScore: totalScore),
+                  let pos = winningPosition(homeDigit: digits.0, awayDigit: digits.1) else { continue }
+            squares[pos.row][pos.column].isWinner = true
+            switch period {
+            case .quarter(let q):
+                squares[pos.row][pos.column].quarterWins.append(q)
+            default:
+                squares[pos.row][pos.column].winningPeriodIds.append(period.id)
             }
+        }
+    }
+
+    /// Score digits used for a given period (for determining winner)
+    func scoreDigits(for period: PoolPeriod, quarterScores: QuarterScores, totalScore: (home: Int, away: Int)?) -> (Int, Int)? {
+        switch period {
+        case .quarter(let q):
+            return quarterScores.scoreForQuarter(q).map { ($0.home % 10, $0.away % 10) }
+        case .halftime:
+            return quarterScores.scoreForQuarter(2).map { ($0.home % 10, $0.away % 10) }
+        case .final:
+            return totalScore.map { ($0.home % 10, $0.away % 10) }
+        case .firstScoreChange, .custom:
+            return totalScore.map { ($0.home % 10, $0.away % 10) }
+        }
+    }
+
+    /// Which period is "current" for live display (e.g. we're in Q2 so current is Q2)
+    func currentPeriod(for score: GameScore) -> PoolPeriod? {
+        switch resolvedPoolStructure.poolType {
+        case .byQuarter(let quarters):
+            guard score.quarter >= 1, score.quarter <= 4, quarters.contains(score.quarter) else { return nil }
+            return .quarter(score.quarter)
+        case .halftimeOnly:
+            return score.quarter == 2 ? .halftime : nil
+        case .finalOnly:
+            return score.isGameOver ? .final : nil
+        case .firstScoreChange:
+            return (score.homeScore + score.awayScore) > 0 ? .firstScoreChange : nil
+        case .halftimeAndFinal:
+            if score.quarter == 2 { return .halftime }
+            if score.isGameOver { return .final }
+            return nil
+        case .custom:
+            return nil
         }
     }
 
@@ -121,17 +205,54 @@ struct BoxGrid: Codable, Identifiable {
         return Array(names).sorted()
     }
 
-    // Get all squares for a specific player
+    // Get all squares for a specific player (exact name match, case-insensitive)
     func squares(for playerName: String) -> [BoxSquare] {
         var result: [BoxSquare] = []
+        let key = playerName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !key.isEmpty else { return result }
         for row in squares {
             for square in row {
-                if square.playerName.lowercased() == playerName.lowercased() {
+                if square.playerName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == key {
                     result.append(square)
                 }
             }
         }
         return result
+    }
+
+    /// Labels that identify "my" squares on this sheet (set when scanning/creating). Used with effectiveOwnerLabels(globalName:).
+    /// Names as they appear on the sheet so we can find your squares; supports multiple entries for multiple boxes.
+    func effectiveOwnerLabels(globalName: String) -> [String] {
+        let global = globalName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let labels = ownerLabels, !labels.isEmpty {
+            return labels.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        }
+        if !global.isEmpty { return [global] }
+        return []
+    }
+
+    /// All squares that belong to the owner (match any of the given labels, case-insensitive).
+    func squaresForOwner(ownerLabels: [String]) -> [BoxSquare] {
+        let keys = Set(ownerLabels.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }.filter { !$0.isEmpty })
+        guard !keys.isEmpty else { return [] }
+        var result: [BoxSquare] = []
+        for row in squares {
+            for square in row {
+                let name = square.playerName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                if keys.contains(name) {
+                    result.append(square)
+                }
+            }
+        }
+        return result
+    }
+
+    /// Whether a square is one of the owner's (by playerName matching any effective owner label).
+    func isOwnerSquare(_ square: BoxSquare, ownerLabels: [String]) -> Bool {
+        let name = square.playerName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !name.isEmpty else { return false }
+        let keys = Set(ownerLabels.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }.filter { !$0.isEmpty })
+        return keys.contains(name)
     }
 
     // Randomize the numbers (typically done after all names are entered)

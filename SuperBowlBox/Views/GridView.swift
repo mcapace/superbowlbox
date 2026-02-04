@@ -20,6 +20,25 @@ struct GridDetailView: View {
     var body: some View {
         ScrollView([.horizontal, .vertical], showsIndicators: true) {
             VStack(spacing: 0) {
+                // Pool structure & payouts summary
+                HStack {
+                    Label(pool.resolvedPoolStructure.periodLabels.joined(separator: " · "), systemImage: "calendar.badge.clock")
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.fieldGreen)
+                    Spacer()
+                    if !pool.resolvedPoolStructure.payoutDescriptions.isEmpty {
+                        Text(pool.resolvedPoolStructure.payoutDescriptions.joined(separator: "  "))
+                            .font(AppTypography.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color(.systemGray6).opacity(0.6))
+                .cornerRadius(8)
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+
                 // Team header for columns (Home team)
                 HStack(spacing: 0) {
                     // Corner cell with team info
@@ -72,8 +91,8 @@ struct GridDetailView: View {
                         ForEach(0..<10, id: \.self) { col in
                             let square = pool.squares[row][col]
                             let isWinning = winningPosition?.row == row && winningPosition?.column == col
-                            let isHighlighted = !appState.myName.isEmpty &&
-                                square.playerName.lowercased().contains(appState.myName.lowercased())
+                            let ownerLabels = pool.effectiveOwnerLabels(globalName: appState.myName)
+                            let isHighlighted = !ownerLabels.isEmpty && pool.isOwnerSquare(square, ownerLabels: ownerLabels)
 
                             FullGridCellView(
                                 square: square,
@@ -81,6 +100,7 @@ struct GridDetailView: View {
                                 isHighlighted: isHighlighted
                             )
                             .onTapGesture {
+                                HapticService.impactLight()
                                 selectedSquare = square
                                 showingEditSheet = true
                             }
@@ -115,7 +135,8 @@ struct GridDetailView: View {
                         pool = BoxGrid(
                             name: pool.name,
                             homeTeam: pool.homeTeam,
-                            awayTeam: pool.awayTeam
+                            awayTeam: pool.awayTeam,
+                            poolStructure: pool.resolvedPoolStructure
                         )
                         appState.updatePool(pool)
                     } label: {
@@ -130,7 +151,8 @@ struct GridDetailView: View {
                 HStack {
                     // Zoom controls
                     Button {
-                        withAnimation {
+                        HapticService.impactLight()
+                        withAnimation(.appSpring) {
                             zoomScale = max(0.5, zoomScale - 0.25)
                         }
                     } label: {
@@ -142,7 +164,8 @@ struct GridDetailView: View {
                         .frame(width: 50)
 
                     Button {
-                        withAnimation {
+                        HapticService.impactLight()
+                        withAnimation(.appSpring) {
                             zoomScale = min(2.0, zoomScale + 0.25)
                         }
                     } label: {

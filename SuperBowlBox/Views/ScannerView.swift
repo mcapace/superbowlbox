@@ -4,6 +4,7 @@ import PhotosUI
 struct ScannerView: View {
     let onPoolScanned: (BoxGrid) -> Void
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appState: AppState
     @StateObject private var visionService = VisionService()
 
     @State private var showingImagePicker = false
@@ -36,17 +37,19 @@ struct ScannerView: View {
                     ProcessingScanView()
 
                 case .reviewing:
-                    if let pool = scannedPool {
+                    if scannedPool != nil {
                         ReviewScanView(
                             pool: $scannedPool.unwrap(default: BoxGrid.empty),
                             image: selectedImage,
                             onConfirm: {
+                                HapticService.success()
                                 if let finalPool = scannedPool {
                                     onPoolScanned(finalPool)
                                 }
                                 dismiss()
                             },
                             onRetry: {
+                                HapticService.impactLight()
                                 scanProgress = .idle
                                 selectedImage = nil
                                 scannedPool = nil
@@ -58,10 +61,12 @@ struct ScannerView: View {
                     ErrorScanView(
                         message: message,
                         onRetry: {
+                            HapticService.impactMedium()
                             scanProgress = .idle
                             selectedImage = nil
                         },
                         onManualEntry: {
+                            HapticService.selection()
                             showingManualEntry = true
                         }
                     )
@@ -92,6 +97,7 @@ struct ScannerView: View {
                     onPoolScanned(pool)
                     dismiss()
                 }
+                .environmentObject(appState)
             }
         }
     }
@@ -117,10 +123,12 @@ struct ScannerView: View {
                 await MainActor.run {
                     scannedPool = pool
                     scanProgress = .reviewing
+                    HapticService.success()
                 }
             } catch {
                 await MainActor.run {
                     scanProgress = .error(error.localizedDescription)
+                    HapticService.error()
                 }
             }
         }
@@ -151,7 +159,7 @@ struct IdleScanView: View {
                     .font(.title2)
                     .fontWeight(.bold)
 
-                Text("Take a photo or choose an image of your Super Bowl squares sheet")
+                Text("Take a photo or choose an image of your pool or box sheet")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -319,9 +327,12 @@ struct ReviewScanView: View {
     let image: UIImage?
     let onConfirm: () -> Void
     let onRetry: () -> Void
+    @EnvironmentObject var appState: AppState
 
     @State private var poolName: String = ""
     @State private var showingImagePreview = false
+    /// Names as they appear on this sheet (so we can find your squares). First = primary; add more if you have multiple boxes.
+    @State private var ownerNameFields: [String] = [""]
 
     var body: some View {
         ScrollView {
@@ -358,6 +369,43 @@ struct ReviewScanView: View {
                             pool.name = newValue
                         }
                 }
+
+                // How does your name appear on this sheet?
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("How does your name appear on this sheet?")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    Text("We use this to find and highlight your squares. Add another row if you have more than one box.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    ForEach(ownerNameFields.indices, id: \.self) { index in
+                        HStack {
+                            TextField("Name as written on sheet", text: $ownerNameFields[index])
+                                .textFieldStyle(.roundedBorder)
+                                .autocorrectionDisabled()
+                            if ownerNameFields.count > 1 {
+                                Button {
+                                    ownerNameFields.remove(at: index)
+                                } label: {
+                                    Image(systemName: "minus.circle.fill")
+                                        .foregroundColor(.red)
+                                }
+                            }
+                        }
+                    }
+                    Button {
+                        ownerNameFields.append("")
+                    } label: {
+                        Label("I have more than one box", systemImage: "plus.circle.fill")
+                            .font(.subheadline)
+                            .foregroundColor(AppColors.fieldGreen)
+                    }
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.systemGray6))
+                )
 
                 // Stats
                 HStack(spacing: 20) {
@@ -418,6 +466,7 @@ struct ReviewScanView: View {
                 // Action buttons
                 VStack(spacing: 12) {
                     Button {
+                        applyOwnerLabels()
                         onConfirm()
                     } label: {
                         Text("Confirm & Save")
@@ -445,12 +494,28 @@ struct ReviewScanView: View {
         }
         .onAppear {
             poolName = pool.name.isEmpty ? "Scanned Pool" : pool.name
+            if ownerNameFields == [""], !appState.myName.isEmpty {
+                ownerNameFields[0] = appState.myName
+            }
+            if let existing = pool.ownerLabels, !existing.isEmpty {
+                ownerNameFields = existing
+            }
+        }
+        .onDisappear {
+            applyOwnerLabels()
         }
         .sheet(isPresented: $showingImagePreview) {
             if let image = image {
                 ImagePreviewView(image: image)
             }
         }
+    }
+
+    private func applyOwnerLabels() {
+        let labels = ownerNameFields
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        pool.ownerLabels = labels.isEmpty ? nil : labels
     }
 }
 
@@ -574,4 +639,5 @@ extension Binding {
 
 #Preview {
     ScannerView { _ in }
+        .environmentObject(AppState())
 }

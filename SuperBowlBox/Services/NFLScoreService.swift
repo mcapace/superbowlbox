@@ -23,7 +23,7 @@ class NFLScoreService: ObservableObject {
             case .decodingError:
                 return "Failed to decode score data"
             case .noGameFound:
-                return "No Super Bowl game found"
+                return "No game found"
             case .apiError(let message):
                 return "API error: \(message)"
             }
@@ -75,21 +75,25 @@ class NFLScoreService: ObservableObject {
     }
 
     private func fetchScoreFromAPI() async throws -> GameScore {
-        // ESPN API endpoint for NFL scores
-        // This is a public API that doesn't require authentication
-        let urlString = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
+        // Prefer Sports Data IO when API key is set (Info.plist: SportsDataIOApiKey)
+        if SportsDataIOConfig.isConfigured {
+            do {
+                return try await SportsDataIOService.fetchNFLScore()
+            } catch {
+                // Fall through to ESPN if Sports Data IO fails (e.g. no games today, key invalid)
+            }
+        }
 
+        // ESPN API fallback (no key required)
+        let urlString = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
         guard let url = URL(string: urlString) else {
             throw ScoreError.apiError("Invalid URL")
         }
-
         let (data, response) = try await URLSession.shared.data(from: url)
-
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
             throw ScoreError.apiError("Invalid response")
         }
-
         return try parseESPNResponse(data)
     }
 
@@ -99,7 +103,7 @@ class NFLScoreService: ObservableObject {
             throw ScoreError.decodingError
         }
 
-        // Look for the Super Bowl or the current featured NFL game
+        // Look for the featured game (e.g. Super Bowl) or current NFL game
         for event in events {
             guard let name = event["name"] as? String,
                   let competitions = event["competitions"] as? [[String: Any]],
@@ -108,7 +112,7 @@ class NFLScoreService: ObservableObject {
                 continue
             }
 
-            // Check if this is the Super Bowl
+            // Prefer championship/featured game when available
             let isSuperBowl = name.lowercased().contains("super bowl")
             let isPlayoff = (event["season"] as? [String: Any])?["type"] as? Int == 3
 
@@ -117,7 +121,7 @@ class NFLScoreService: ObservableObject {
             }
         }
 
-        // If no Super Bowl found, return the first game or mock
+        // If no featured game found, return the first game or mock
         if let event = events.first,
            let competitions = event["competitions"] as? [[String: Any]],
            let competition = competitions.first,

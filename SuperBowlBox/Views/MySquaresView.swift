@@ -4,6 +4,13 @@ struct MySquaresView: View {
     @EnvironmentObject var appState: AppState
     @State private var searchName: String = ""
 
+    /// When search is empty we show "my" squares using per-pool owner labels (or global myName). We have something to show if search is non-empty or global name is set or any pool has owner labels.
+    var hasAnythingToShow: Bool {
+        if !searchName.isEmpty { return true }
+        if !appState.myName.isEmpty { return true }
+        return appState.pools.contains { !$0.effectiveOwnerLabels(globalName: appState.myName).isEmpty }
+    }
+
     var effectiveName: String {
         searchName.isEmpty ? appState.myName : searchName
     }
@@ -33,18 +40,24 @@ struct MySquaresView: View {
                 .cornerRadius(12)
                 .padding()
 
-                if effectiveName.isEmpty {
+                if !hasAnythingToShow {
                     EmptyNameView()
                 } else {
                     ScrollView {
                         VStack(spacing: 20) {
-                            // Summary card
-                            MySquaresSummaryCard(name: effectiveName, pools: appState.pools)
+                            // Summary card (uses per-pool owner labels when not searching)
+                            MySquaresSummaryCard(
+                                pools: appState.pools,
+                                globalMyName: appState.myName,
+                                searchName: searchName
+                            )
                                 .padding(.horizontal)
 
-                            // Squares by pool
+                            // Squares by pool (per-pool owner labels when search empty, else search by name)
                             ForEach(appState.pools) { pool in
-                                let squares = pool.squares(for: effectiveName)
+                                let squares = searchName.isEmpty
+                                    ? pool.squaresForOwner(ownerLabels: pool.effectiveOwnerLabels(globalName: appState.myName))
+                                    : pool.squares(for: searchName)
                                 if !squares.isEmpty {
                                     PoolSquaresCard(
                                         pool: pool,
@@ -60,11 +73,6 @@ struct MySquaresView: View {
                 }
             }
             .navigationTitle("My Squares")
-            .onAppear {
-                if searchName.isEmpty && !appState.myName.isEmpty {
-                    searchName = appState.myName
-                }
-            }
         }
     }
 }
@@ -91,27 +99,52 @@ struct EmptyNameView: View {
 }
 
 struct MySquaresSummaryCard: View {
-    let name: String
     let pools: [BoxGrid]
+    let globalMyName: String
+    let searchName: String
+
+    /// When searchName is empty, use per-pool owner labels (how your name appears on each sheet).
+    private var isOwnerMode: Bool { searchName.isEmpty }
 
     var totalSquares: Int {
-        pools.reduce(0) { $0 + $1.squares(for: name).count }
+        if isOwnerMode {
+            return pools.reduce(0) { acc, pool in
+                acc + pool.squaresForOwner(ownerLabels: pool.effectiveOwnerLabels(globalName: globalMyName)).count
+            }
+        }
+        return pools.reduce(0) { $0 + $1.squares(for: searchName).count }
     }
 
     var winningSquares: Int {
-        pools.reduce(0) { total, pool in
-            total + pool.squares(for: name).filter { $0.isWinner }.count
+        if isOwnerMode {
+            return pools.reduce(0) { total, pool in
+                total + pool.squaresForOwner(ownerLabels: pool.effectiveOwnerLabels(globalName: globalMyName)).filter { $0.isWinner }.count
+            }
         }
+        return pools.reduce(0) { total, pool in
+            total + pool.squares(for: searchName).filter { $0.isWinner }.count
+        }
+    }
+
+    var poolCount: Int {
+        if isOwnerMode {
+            return pools.filter { !$0.squaresForOwner(ownerLabels: $0.effectiveOwnerLabels(globalName: globalMyName)).isEmpty }.count
+        }
+        return pools.filter { !$0.squares(for: searchName).isEmpty }.count
+    }
+
+    var displayLabel: String {
+        isOwnerMode ? "My squares" : searchName
     }
 
     var body: some View {
         VStack(spacing: 16) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Searching for")
+                    Text(isOwnerMode ? "Your squares" : "Searching for")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text(name)
+                    Text(displayLabel)
                         .font(.title2)
                         .fontWeight(.bold)
                 }
@@ -144,7 +177,7 @@ struct MySquaresSummaryCard: View {
                     .frame(height: 40)
 
                 VStack {
-                    Text("\(pools.filter { !$0.squares(for: name).isEmpty }.count)")
+                    Text("\(poolCount)")
                         .font(.system(size: 36, weight: .bold, design: .rounded))
                     Text("Pools")
                         .font(.caption)

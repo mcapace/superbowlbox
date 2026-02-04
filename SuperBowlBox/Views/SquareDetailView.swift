@@ -170,24 +170,24 @@ struct SquareDetailView: View {
                             .fill(Color(.systemGray6))
                     )
 
-                    // Quarter wins history
-                    if !square.quarterWins.isEmpty {
+                    // Period wins (quarters, halftime, final, first score)
+                    if !square.allWonPeriodLabels.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Image(systemName: "trophy.fill")
                                     .foregroundColor(AppColors.gold)
-                                Text("Quarter Wins")
+                                Text("Wins")
                                     .font(.headline)
                             }
 
                             HStack(spacing: 12) {
-                                ForEach(square.quarterWins, id: \.self) { q in
+                                ForEach(square.allWonPeriodLabels, id: \.self) { label in
                                     VStack {
-                                        Text("Q\(q)")
-                                            .font(.title2)
+                                        Text(label)
+                                            .font(.title3)
                                             .fontWeight(.bold)
                                         Image(systemName: "checkmark.circle.fill")
-                                            .foregroundColor(.green)
+                                            .foregroundColor(AppColors.fieldGreen)
                                     }
                                     .padding()
                                     .background(

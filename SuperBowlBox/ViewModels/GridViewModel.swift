@@ -40,18 +40,10 @@ class GridViewModel: ObservableObject {
 
     func updateWinners(for score: GameScore) {
         grid.currentScore = score
-        grid.updateWinners(quarterScores: score.quarterScores)
-
-        // Also mark current winning square
-        if let winningSquare = grid.winningSquare(for: score) {
-            for row in 0..<10 {
-                for col in 0..<10 {
-                    if grid.squares[row][col].id == winningSquare.id {
-                        grid.squares[row][col].isWinner = true
-                    }
-                }
-            }
-        }
+        grid.updateWinners(
+            quarterScores: score.quarterScores,
+            totalScore: (score.homeScore, score.awayScore)
+        )
     }
 
     var currentWinner: BoxSquare? {
@@ -134,7 +126,7 @@ class GridViewModel: ObservableObject {
 
     // Export functionality
     func exportGridAsText() -> String {
-        var text = "Super Bowl Box Grid\n"
+        var text = "Pool Grid\n"
         text += "\(grid.awayTeam.name) vs \(grid.homeTeam.name)\n\n"
 
         // Header row with home team numbers

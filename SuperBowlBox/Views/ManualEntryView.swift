@@ -3,6 +3,7 @@ import SwiftUI
 struct ManualEntryView: View {
     let onSave: (BoxGrid) -> Void
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appState: AppState
 
     @State private var currentStep = 0
     @State private var poolName = ""
@@ -15,6 +16,8 @@ struct ManualEntryView: View {
     @State private var quickNames: [String] = []
     @State private var showingNameInput = false
     @State private var newQuickName = ""
+    /// Names as they appear on this sheet (so we can find your squares). Add more if you have multiple boxes.
+    @State private var ownerNameFields: [String] = [""]
 
     var body: some View {
         NavigationStack {
@@ -56,7 +59,8 @@ struct ManualEntryView: View {
                         awayTeam: awayTeam,
                         homeNumbers: homeNumbers,
                         awayNumbers: awayNumbers,
-                        grid: grid
+                        grid: grid,
+                        ownerNameFields: $ownerNameFields
                     )
                 default:
                     EmptyView()
@@ -109,6 +113,11 @@ struct ManualEntryView: View {
             }
             .navigationTitle("Create Pool")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                if ownerNameFields == [""], !appState.myName.isEmpty {
+                    ownerNameFields[0] = appState.myName
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -145,6 +154,11 @@ struct ManualEntryView: View {
                 pool.updateSquare(row: row, column: col, playerName: grid[row][col])
             }
         }
+
+        let labels = ownerNameFields
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        pool.ownerLabels = labels.isEmpty ? nil : labels
 
         onSave(pool)
         dismiss()
@@ -540,6 +554,7 @@ struct ReviewStep: View {
     let homeNumbers: [Int]
     let awayNumbers: [Int]
     let grid: [[String]]
+    @Binding var ownerNameFields: [String]
 
     var filledCount: Int {
         grid.flatMap { $0 }.filter { !$0.isEmpty }.count
@@ -556,6 +571,43 @@ struct ReviewStep: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
+
+                // How does your name appear on this sheet?
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("How does your name appear on this sheet?")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    Text("We use this to find and highlight your squares. Add another row if you have more than one box.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    ForEach(ownerNameFields.indices, id: \.self) { index in
+                        HStack {
+                            TextField("Name as written on sheet", text: $ownerNameFields[index])
+                                .textFieldStyle(.roundedBorder)
+                                .autocorrectionDisabled()
+                            if ownerNameFields.count > 1 {
+                                Button {
+                                    ownerNameFields.remove(at: index)
+                                } label: {
+                                    Image(systemName: "minus.circle.fill")
+                                        .foregroundColor(.red)
+                                }
+                            }
+                        }
+                    }
+                    Button {
+                        ownerNameFields.append("")
+                    } label: {
+                        Label("I have more than one box", systemImage: "plus.circle.fill")
+                            .font(.subheadline)
+                            .foregroundColor(AppColors.fieldGreen)
+                    }
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.systemGray6))
+                )
 
                 // Pool info
                 VStack(spacing: 12) {
@@ -681,4 +733,5 @@ struct ReviewGridPreview: View {
 
 #Preview {
     ManualEntryView { _ in }
+        .environmentObject(AppState())
 }

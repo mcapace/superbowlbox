@@ -1,6 +1,6 @@
 import Foundation
 
-struct Team: Codable, Identifiable, Equatable {
+struct Team: Codable, Identifiable, Equatable, Hashable {
     let id: UUID
     var name: String
     var abbreviation: String

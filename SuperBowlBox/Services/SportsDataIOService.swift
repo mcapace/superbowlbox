@@ -1,0 +1,118 @@
+import Foundation
+
+/// Fetches NFL (and optionally other sports) scores from Sports Data IO when API key is configured.
+/// See SportsDataIOConfig and Info.plist key `SportsDataIOApiKey`.
+enum SportsDataIOService {
+    /// Fetches NFL score for today: prefers first in-progress game, then first scheduled, then first final.
+    static func fetchNFLScore() async throws -> GameScore {
+        guard SportsDataIOConfig.isConfigured else {
+            throw NFLScoreService.ScoreError.apiError("Sports Data IO not configured")
+        }
+        let dateStr = ISO8601DateFormatter().string(from: Date()).prefix(10)
+        guard let url = SportsDataIOConfig.nflScoresURL(pathComponent: "ScoresByDate/\(dateStr)"),
+              var request = SportsDataIOConfig.authenticatedRequest(url: url) else {
+            throw NFLScoreService.ScoreError.apiError("Invalid Sports Data IO URL or key")
+        }
+        request.httpMethod = "GET"
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw NFLScoreService.ScoreError.apiError("Invalid response")
+        }
+        if http.statusCode == 401 {
+            throw NFLScoreService.ScoreError.apiError("Invalid API key")
+        }
+        if http.statusCode != 200 {
+            throw NFLScoreService.ScoreError.apiError("HTTP \(http.statusCode)")
+        }
+
+        return try parseNFLScoresResponse(data)
+    }
+
+    /// Parses Sports Data IO NFL scores JSON. Handles common field names (PascalCase).
+    private static func parseNFLScoresResponse(_ data: Data) throws -> GameScore {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
+              !json.isEmpty else {
+            throw NFLScoreService.ScoreError.noGameFound
+        }
+
+        // Prefer: in progress > scheduled > final
+        let sorted = json.sorted { g1, g2 in
+            let s1 = statusOrder(g1)
+            let s2 = statusOrder(g2)
+            if s1 != s2 { return s1 < s2 }
+            let d1 = g1["Date"] as? String ?? ""
+            let d2 = g2["Date"] as? String ?? ""
+            return d1 >= d2
+        }
+
+        guard let game = sorted.first else {
+            throw NFLScoreService.ScoreError.noGameFound
+        }
+
+        let homeTeam = parseTeam(from: game, home: true)
+        let awayTeam = parseTeam(from: game, home: false)
+        let homeScore = int(from: game, keys: ["HomeScore", "homeScore"]) ?? 0
+        let awayScore = int(from: game, keys: ["AwayScore", "awayScore"]) ?? 0
+        let quarter = int(from: game, keys: ["Quarter", "quarter"]) ?? 0
+        let timeRemaining = string(from: game, keys: ["TimeRemaining", "timeRemaining"]) ?? "15:00"
+        let status = string(from: game, keys: ["Status", "status"]) ?? ""
+        let isActive = status.lowercased().contains("inprogress") || status.lowercased().contains("in progress")
+        let isOver = status.lowercased().contains("final") || status.lowercased().contains("closed")
+
+        var quarterScores = QuarterScores()
+        quarterScores.q1Home = int(from: game, keys: ["HomeScoreQuarter1", "homeScoreQuarter1"])
+        quarterScores.q1Away = int(from: game, keys: ["AwayScoreQuarter1", "awayScoreQuarter1"])
+        quarterScores.q2Home = int(from: game, keys: ["HomeScoreQuarter2", "homeScoreQuarter2"])
+        quarterScores.q2Away = int(from: game, keys: ["AwayScoreQuarter2", "awayScoreQuarter2"])
+        quarterScores.q3Home = int(from: game, keys: ["HomeScoreQuarter3", "homeScoreQuarter3"])
+        quarterScores.q3Away = int(from: game, keys: ["AwayScoreQuarter3", "awayScoreQuarter3"])
+        quarterScores.q4Home = int(from: game, keys: ["HomeScoreQuarter4", "homeScoreQuarter4"])
+        quarterScores.q4Away = int(from: game, keys: ["AwayScoreQuarter4", "awayScoreQuarter4"])
+
+        return GameScore(
+            homeTeam: homeTeam,
+            awayTeam: awayTeam,
+            homeScore: homeScore,
+            awayScore: awayScore,
+            quarter: quarter,
+            timeRemaining: timeRemaining,
+            isGameActive: isActive,
+            isGameOver: isOver,
+            quarterScores: quarterScores
+        )
+    }
+
+    private static func int(from dict: [String: Any], keys: [String]) -> Int? {
+        for k in keys {
+            if let n = dict[k] as? Int { return n }
+            if let n = dict[k] as? NSNumber { return n.intValue }
+        }
+        return nil
+    }
+
+    private static func string(from dict: [String: Any], keys: [String]) -> String? {
+        for k in keys {
+            if let s = dict[k] as? String, !s.isEmpty { return s }
+        }
+        return nil
+    }
+
+    private static func statusOrder(_ game: [String: Any]) -> Int {
+        let s = (string(from: game, keys: ["Status", "status"]) ?? "").lowercased()
+        if s.contains("inprogress") || s.contains("in progress") { return 0 }
+        if s.contains("scheduled") || s.contains("pregame") { return 1 }
+        return 2 // final/closed
+    }
+
+    private static func parseTeam(from game: [String: Any], home: Bool) -> Team {
+        let nameKeys = home ? ["HomeTeam", "homeTeam"] : ["AwayTeam", "awayTeam"]
+        let name = string(from: game, keys: nameKeys) ?? (home ? "Home" : "Away")
+        let abbrevKeys = home ? ["HomeTeamAbbreviation", "homeTeamAbbreviation"] : ["AwayTeamAbbreviation", "awayTeamAbbreviation"]
+        let abbrev = string(from: game, keys: abbrevKeys) ?? String(name.prefix(2)).uppercased()
+        let colorKeys = home ? ["HomeTeamColor", "homeTeamColor"] : ["AwayTeamColor", "awayTeamColor"]
+        var color = string(from: game, keys: colorKeys) ?? "000000"
+        if !color.hasPrefix("#") { color = "#\(color)" }
+        return Team(name: name, abbreviation: abbrev, primaryColor: color)
+    }
+}

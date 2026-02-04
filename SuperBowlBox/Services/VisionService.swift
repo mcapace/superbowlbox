@@ -71,7 +71,7 @@ class VisionService: ObservableObject {
         }
 
         // Parse the recognized text into a grid structure
-        let grid = try parseGridFromText(textBlocks, imageSize: CGSize(width: cgImage.width, height: cgImage.height))
+        let grid = try await parseGridFromText(textBlocks, imageSize: CGSize(width: cgImage.width, height: cgImage.height))
 
         return grid
     }
@@ -114,7 +114,7 @@ class VisionService: ObservableObject {
         }
     }
 
-    private func parseGridFromText(_ blocks: [RecognizedTextBlock], imageSize: CGSize) throws -> BoxGrid {
+    private func parseGridFromText(_ blocks: [RecognizedTextBlock], imageSize: CGSize) async throws -> BoxGrid {
         // Sort blocks by position (top to bottom, left to right)
         let sortedBlocks = blocks.sorted { block1, block2 in
             // Vision coordinates are normalized with origin at bottom-left
@@ -132,12 +132,6 @@ class VisionService: ObservableObject {
         var homeNumbers: [Int] = []
         var awayNumbers: [Int] = []
         var nameGrid: [[String]] = Array(repeating: Array(repeating: "", count: 10), count: 10)
-
-        // Find potential header numbers
-        let numberBlocks = sortedBlocks.filter { block in
-            let text = block.text.trimmingCharacters(in: .whitespaces)
-            return text.count == 1 && Int(text) != nil
-        }
 
         // Group blocks by approximate row
         var rows: [[RecognizedTextBlock]] = []
@@ -225,13 +219,12 @@ class VisionService: ObservableObject {
             }
         }
 
+        let h = homeNumbers
+        let a = awayNumbers
+        let n = nameGrid
+        let confidence = Float(sortedBlocks.map { $0.confidence }.reduce(0, +)) / Float(max(sortedBlocks.count, 1))
         await MainActor.run {
-            detectedGrid = DetectedGrid(
-                homeNumbers: homeNumbers,
-                awayNumbers: awayNumbers,
-                names: nameGrid,
-                confidence: Float(sortedBlocks.map { $0.confidence }.reduce(0, +)) / Float(max(sortedBlocks.count, 1))
-            )
+            detectedGrid = DetectedGrid(homeNumbers: h, awayNumbers: a, names: n, confidence: confidence)
         }
 
         return grid
