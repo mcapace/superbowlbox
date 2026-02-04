@@ -17,10 +17,7 @@ struct MySquaresView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                AppColors.gradientTechBackground
-                    .ignoresSafeArea()
-                VStack(spacing: 0) {
+            VStack(spacing: 0) {
                 // Search bar
                 HStack {
                     Image(systemName: "magnifyingglass")
@@ -74,8 +71,8 @@ struct MySquaresView: View {
                         .padding(.vertical)
                     }
                 }
-                }
             }
+            .background(AppColors.screenBackground)
             .navigationTitle("My Squares")
         }
     }
@@ -189,12 +186,7 @@ struct MySquaresSummaryCard: View {
                 }
             }
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppColors.cardBackground)
-                .shadow(color: AppColors.cardShadow, radius: 10, y: 5)
-        )
+        .card()
     }
 }
 
@@ -234,12 +226,7 @@ struct PoolSquaresCard: View {
                 }
             }
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(AppColors.cardBackground)
-                .shadow(color: AppColors.cardShadow, radius: 10, y: 5)
-        )
+        .card()
     }
 }
 

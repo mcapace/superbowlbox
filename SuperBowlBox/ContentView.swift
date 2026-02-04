@@ -66,7 +66,7 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Dashboard View (high-tech, animated)
+// MARK: - Dashboard View
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedPoolIndex = 0
@@ -74,65 +74,51 @@ struct DashboardView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                // Animated tech-style background (subtle gradient shift)
-                techBackground
+            ScrollView {
+                VStack(spacing: 20) {
+                    LiveScoreCard(
+                        score: appState.scoreService.currentScore ?? GameScore.mock,
+                        isLoading: appState.scoreService.isLoading
+                    )
+                    .padding(.horizontal)
 
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Live Score Card — entrance 0
-                        LiveScoreCard(
-                            score: appState.scoreService.currentScore ?? GameScore.mock,
-                            isLoading: appState.scoreService.isLoading
+                    if appState.pools.count > 1 {
+                        PoolSelectorView(
+                            selectedIndex: $selectedPoolIndex,
+                            pools: appState.pools
                         )
-                        .padding(.horizontal)
-                        .entrance(delay: 0)
-
-                        // Pool Selector — entrance 1
-                        if appState.pools.count > 1 {
-                            PoolSelectorView(
-                                selectedIndex: $selectedPoolIndex,
-                                pools: appState.pools
-                            )
-                            .entrance(delay: 0.06)
-                        }
-
-                        // Current Winner Spotlight — entrance 2
-                        if let pool = currentPool,
-                           let score = appState.scoreService.currentScore {
-                            WinnerSpotlightCard(pool: pool, score: score)
-                                .padding(.horizontal)
-                                .entrance(delay: 0.12)
-                        }
-
-                        // Interactive Grid — entrance 3
-                        if let pool = currentPool {
-                            NavigationLink {
-                                GridDetailView(pool: binding(for: pool))
-                            } label: {
-                                InteractiveGridCard(
-                                    pool: pool,
-                                    score: appState.scoreService.currentScore,
-                                    globalMyName: appState.myName
-                                )
-                            }
-                            .buttonStyle(ScaleButtonStyle())
-                            .padding(.horizontal)
-                            .entrance(delay: 0.18)
-                        }
-
-                        // Quick Stats — entrance 4
-                        if let pool = currentPool {
-                            QuickStatsCard(pool: pool, globalMyName: appState.myName)
-                                .padding(.horizontal)
-                                .entrance(delay: 0.24)
-                        }
-
-                        Spacer(minLength: 100)
                     }
-                    .padding(.top)
+
+                    if let pool = currentPool,
+                       let score = appState.scoreService.currentScore {
+                        WinnerSpotlightCard(pool: pool, score: score)
+                            .padding(.horizontal)
+                    }
+
+                    if let pool = currentPool {
+                        NavigationLink {
+                            GridDetailView(pool: binding(for: pool))
+                        } label: {
+                            InteractiveGridCard(
+                                pool: pool,
+                                score: appState.scoreService.currentScore,
+                                globalMyName: appState.myName
+                            )
+                        }
+                        .buttonStyle(ScaleButtonStyle())
+                        .padding(.horizontal)
+                    }
+
+                    if let pool = currentPool {
+                        QuickStatsCard(pool: pool, globalMyName: appState.myName)
+                            .padding(.horizontal)
+                    }
+
+                    Spacer(minLength: 100)
                 }
+                .padding(.top, 20)
             }
+            .background(AppColors.screenBackground)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
@@ -159,34 +145,6 @@ struct DashboardView: View {
                     }
                 }
             }
-        }
-    }
-
-    private var techBackground: some View {
-        ZStack {
-            AppColors.gradientTechBackground
-                .ignoresSafeArea()
-            // Subtle radial glow (ambient)
-            RadialGradient(
-                colors: [
-                    AppColors.techCyan.opacity(0.06),
-                    Color.clear
-                ],
-                center: .topTrailing,
-                startRadius: 0,
-                endRadius: 400
-            )
-            .ignoresSafeArea()
-            RadialGradient(
-                colors: [
-                    AppColors.fieldGreen.opacity(0.05),
-                    Color.clear
-                ],
-                center: .bottomLeading,
-                startRadius: 0,
-                endRadius: 350
-            )
-            .ignoresSafeArea()
         }
     }
 
@@ -282,17 +240,9 @@ struct LiveScoreCard: View {
             }
             .padding(.top, 8)
         }
-        .glassCard()
-        .techGlow(color: score.isGameActive ? AppColors.techCyan : AppColors.glowTeal, opacity: score.isGameActive ? 0.6 : 0.35)
-        .overlay(
-            RoundedRectangle(cornerRadius: AppCardStyle.cornerRadius)
-                .stroke(score.isGameActive ? AppColors.techCyan.opacity(0.5) : Color.clear, lineWidth: 1.5)
-        )
+        .card()
         .onAppear {
             pulseAnimation = true
-            withAnimation(.appAmbient) {
-                liveGlowOpacity = 0.7
-            }
         }
     }
 }
@@ -370,10 +320,6 @@ struct PoolSelectorView: View {
                                 .fill(selectedIndex == index ? AppColors.fieldGreen : Color(.systemGray5))
                         )
                         .foregroundColor(selectedIndex == index ? .white : .primary)
-                        .overlay(
-                            Capsule()
-                                .strokeBorder(selectedIndex == index ? AppColors.techCyan.opacity(0.5) : Color.clear, lineWidth: 1)
-                        )
                     }
                     .buttonStyle(ScaleButtonStyle())
                 }
@@ -491,19 +437,7 @@ struct WinnerSpotlightCard: View {
                 .padding()
             }
         }
-        .glassCard()
-        .techGlow(color: AppColors.glowGold, opacity: 0.5)
-        .overlay(
-            RoundedRectangle(cornerRadius: AppCardStyle.cornerRadius)
-                .stroke(
-                    LinearGradient(
-                        colors: [AppColors.gold.opacity(0.5), AppColors.gold.opacity(0.2)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1.5
-                )
-        )
+        .card()
     }
 }
 
@@ -611,8 +545,7 @@ struct InteractiveGridCard: View {
                     .foregroundColor(.secondary)
             }
         }
-        .glassCard()
-        .techGlow(opacity: 0.4)
+        .card()
     }
 }
 
@@ -722,17 +655,7 @@ struct QuickStatsCard: View {
 
             Spacer()
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: AppCardStyle.cornerRadiusSmall)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: AppCardStyle.cornerRadiusSmall)
-                .strokeBorder(.white.opacity(0.25), lineWidth: 1)
-        )
-        .shadow(color: AppColors.cardShadow, radius: 10, y: 5)
-        .techGlow(cornerRadius: AppCardStyle.cornerRadiusSmall)
+        .card(cornerRadius: AppCardStyle.cornerRadiusSmall)
     }
 }
 

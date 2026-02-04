@@ -139,77 +139,37 @@ class AppState: ObservableObject {
     }
 }
 
-// MARK: - Design System (SquareUp — high-tech, premium)
+// MARK: - Design System (squareup — clean, minimal, Jules-inspired)
 struct AppColors {
     static let primary = Color("AccentColor")
-    /// Primary brand — deep teal/emerald (confident, premium)
-    static let fieldGreen = Color(red: 0.04, green: 0.32, blue: 0.22)
-    /// Lighter teal for highlights and live states
-    static let fieldGreenLight = Color(red: 0.12, green: 0.48, blue: 0.36)
-    /// Bright accent for CTAs and focus
-    static let accent = Color(red: 0.10, green: 0.58, blue: 0.42)
-    /// Warm accent for alerts / end zone
-    static let endZoneRed = Color(red: 0.75, green: 0.18, blue: 0.22)
-    /// Premium gold — wins and premium accents
-    static let gold = Color(red: 0.92, green: 0.72, blue: 0.28)
-    static let goldMuted = Color(red: 0.82, green: 0.62, blue: 0.24)
-    /// Near-black for high-contrast type
-    static let ink = Color(red: 0.08, green: 0.08, blue: 0.10)
-    /// Elevated surface (cards, sheets)
-    static let surface = Color(.secondarySystemBackground)
-    /// Rich background for hero areas (adapts to dark/light)
-    static let backgroundElevated = Color(red: 0.96, green: 0.96, blue: 0.98)
-    static let backgroundElevatedDark = Color(red: 0.08, green: 0.10, blue: 0.12)
+    /// Navy — Jules-style primary (brand, headers, key UI)
+    static let navy = Color(red: 0.11, green: 0.14, blue: 0.22)
+    /// Primary green — accent for live, CTAs, success
+    static let fieldGreen = Color(red: 0.12, green: 0.45, blue: 0.32)
+    static let fieldGreenLight = Color(red: 0.18, green: 0.55, blue: 0.40)
+    static let accent = fieldGreen
+    static let endZoneRed = Color(red: 0.78, green: 0.22, blue: 0.22)
+    static let gold = Color(red: 0.85, green: 0.65, blue: 0.22)
+    static let goldMuted = Color(red: 0.75, green: 0.55, blue: 0.20)
+    static let ink = Color(red: 0.10, green: 0.10, blue: 0.12)
+    static let surface = Color(.systemBackground)
+    /// Screen background — soft gray
+    static let screenBackground = Color(red: 0.96, green: 0.96, blue: 0.97)
+    static let backgroundElevated = screenBackground
+    static let backgroundElevatedDark = Color(red: 0.08, green: 0.10, blue: 0.14)
 
-    // High-tech / cyber accents
-    /// Electric teal for glows and live indicators
-    static let techCyan = Color(red: 0.2, green: 0.85, blue: 0.9)
-    static let techCyanDim = Color(red: 0.15, green: 0.55, blue: 0.6)
-    /// Soft glow for borders and highlights
-    static let glowTeal = Color(red: 0.1, green: 0.6, blue: 0.55)
-    static let glowGold = Color(red: 0.95, green: 0.75, blue: 0.3)
-    /// Dark tech surface (for cards in dark mode or contrast)
-    static let techSurface = Color(red: 0.06, green: 0.08, blue: 0.10)
-    static let techSurfaceBorder = Color.white.opacity(0.08)
-
-    static let gradientPrimary = LinearGradient(
-        colors: [fieldGreen, fieldGreenLight],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
-    /// Wordmark / hero gradient (teal → gold hint)
-    static let gradientWordmark = LinearGradient(
-        colors: [fieldGreen, fieldGreenLight, fieldGreenLight.opacity(0.9)],
-        startPoint: .leading,
-        endPoint: .trailing
-    )
-    /// Mesh-style background gradient (tech feel)
-    static let gradientTechBackground = LinearGradient(
-        colors: [
-            Color(.systemGroupedBackground),
-            fieldGreen.opacity(0.08),
-            techCyan.opacity(0.04),
-            Color(.systemGroupedBackground)
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
-    /// Animated / glow gradient for live elements
-    static let gradientGlow = LinearGradient(
-        colors: [techCyan.opacity(0.6), glowTeal.opacity(0.4), fieldGreenLight.opacity(0.3)],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
-
-    static let gradientGold = LinearGradient(
-        colors: [gold, goldMuted],
-        startPoint: .top,
-        endPoint: .bottom
-    )
-
-    static let cardBackground = Color(.systemBackground)
-    static let cardShadow = Color.black.opacity(0.08)
-    static let cardShadowStrong = Color.black.opacity(0.14)
+    /// Legacy aliases for compatibility
+    static let techCyan = fieldGreenLight
+    static let glowTeal = fieldGreen
+    static let glowGold = gold
+    static let gradientTechBackground = LinearGradient(colors: [screenBackground, screenBackground], startPoint: .top, endPoint: .bottom)
+    static let gradientWordmark = LinearGradient(colors: [fieldGreen, fieldGreenLight], startPoint: .leading, endPoint: .trailing)
+    static let gradientPrimary = LinearGradient(colors: [fieldGreen, fieldGreenLight], startPoint: .topLeading, endPoint: .bottomTrailing)
+    static let gradientGold = LinearGradient(colors: [gold, goldMuted], startPoint: .top, endPoint: .bottom)
+    static let gradientGlow = gradientPrimary
+    static let cardBackground = surface
+    static let cardShadow = Color.black.opacity(0.06)
+    static let cardShadowStrong = Color.black.opacity(0.10)
     static let cardTint = Color(.secondarySystemBackground)
 }
 
@@ -230,18 +190,17 @@ extension Font {
 }
 
 struct AppTypography {
-    /// App name / wordmark — SF Pro Rounded Bold 48pt
     static let appName = Font.squareUpWordmark(size: 48)
     static let wordmark = Font.squareUpWordmark(size: 48)
-    static let largeTitle = Font.squareUpDisplay(size: 34)
-    static let title = Font.squareUpDisplay(size: 28)
-    static let title2 = Font.system(size: 22, weight: .semibold, design: .rounded)
+    static let largeTitle = Font.system(size: 28, weight: .bold, design: .rounded)
+    static let title = Font.system(size: 22, weight: .bold, design: .rounded)
+    static let title2 = Font.system(size: 20, weight: .semibold, design: .rounded)
     static let headline = Font.system(size: 17, weight: .semibold, design: .rounded)
-    static let body = Font.system(size: 17, weight: .regular, design: .default)
+    static let body = Font.system(size: 17, weight: .regular, design: .rounded)
     static let callout = Font.system(size: 16, weight: .medium, design: .rounded)
-    static let caption = Font.system(size: 12, weight: .medium, design: .rounded)
+    static let caption = Font.system(size: 13, weight: .medium, design: .rounded)
     static let caption2 = Font.system(size: 11, weight: .medium, design: .rounded)
-    static let scoreDisplay = Font.system(size: 56, weight: .bold, design: .rounded)
+    static let scoreDisplay = Font.system(size: 48, weight: .bold, design: .rounded)
     static let label = Font.system(size: 11, weight: .semibold, design: .rounded)
 }
 
@@ -251,15 +210,15 @@ struct AppTracking {
     static let tight: CGFloat = -0.2
 }
 
-/// Card and layout — refined radius and shadow for depth without clutter.
+/// Card and layout — clean, minimal.
 struct AppCardStyle {
-    static let cornerRadius: CGFloat = 22
-    static let cornerRadiusSmall: CGFloat = 14
-    static let shadowRadius: CGFloat = 20
-    static let shadowY: CGFloat = 8
+    static let cornerRadius: CGFloat = 16
+    static let cornerRadiusSmall: CGFloat = 12
+    static let shadowRadius: CGFloat = 12
+    static let shadowY: CGFloat = 4
 }
 
-// MARK: - SquareUp in-app logo: arrow above wordmark (no full app icon)
+// MARK: - SquareUp in-app logo: App Store icon graphic (arrow) above wordmark
 struct SquareUpLogoView: View {
     var showIcon: Bool = true
     var wordmarkSize: CGFloat = 48
@@ -268,46 +227,45 @@ struct SquareUpLogoView: View {
     var body: some View {
         VStack(spacing: 8) {
             if showIcon {
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: iconSize * 0.7, weight: .bold))
-                    .foregroundStyle(AppColors.gradientWordmark)
-                    .symbolRenderingMode(.hierarchical)
+                Image("SquareUpLogo")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: iconSize, height: iconSize)
             }
-            Text("SquareUp")
-                .font(Font.squareUpWordmark(size: wordmarkSize))
-                .foregroundStyle(AppColors.gradientWordmark)
-                .tracking(AppTracking.display)
+            Text("squareup")
+                .font(.system(size: wordmarkSize, weight: .bold, design: .rounded))
+                .foregroundColor(AppColors.fieldGreen)
+                .tracking(0.5)
         }
         .padding(.vertical, 4)
     }
 }
 
-// MARK: - Glass / material cards (iOS 15+)
+// MARK: - Cards (clean, minimal)
 extension View {
-    /// Premium card with material background and subtle border. Use for dashboard cards.
+    /// Primary card style — white, subtle shadow, no glass.
     func glassCard(cornerRadius: CGFloat = AppCardStyle.cornerRadius) -> some View {
         self
             .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(.ultraThinMaterial)
+                    .fill(AppColors.surface)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .strokeBorder(.white.opacity(0.35), lineWidth: 1)
+                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
             )
             .shadow(color: AppColors.cardShadow, radius: AppCardStyle.shadowRadius, y: AppCardStyle.shadowY)
     }
 
-    /// Solid card with shadow (when material is too light for content).
     func solidCard(cornerRadius: CGFloat = AppCardStyle.cornerRadius) -> some View {
-        self
-            .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(AppColors.cardBackground)
-                    .shadow(color: AppColors.cardShadow, radius: AppCardStyle.shadowRadius, y: AppCardStyle.shadowY)
-            )
+        glassCard(cornerRadius: cornerRadius)
+    }
+
+    /// Single card style alias — use for all screen cards.
+    func card(cornerRadius: CGFloat = AppCardStyle.cornerRadius) -> some View {
+        glassCard(cornerRadius: cornerRadius)
     }
 }
 

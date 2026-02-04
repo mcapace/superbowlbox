@@ -10,10 +10,7 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                AppColors.gradientTechBackground
-                    .ignoresSafeArea()
-                List {
+            List {
                 // Profile Section
                 Section {
                     HStack {
@@ -264,7 +261,7 @@ struct SettingsView: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            }
+            .background(AppColors.screenBackground)
             .navigationTitle("Settings")
             .sheet(isPresented: $showingJoinPool) {
                 JoinPoolSheet()

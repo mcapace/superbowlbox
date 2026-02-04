@@ -102,8 +102,9 @@ class VisionService: ObservableObject {
             }
 
             request.recognitionLevel = .accurate
-            request.usesLanguageCorrection = true
+            request.usesLanguageCorrection = false
             request.recognitionLanguages = ["en-US"]
+            request.minimumTextHeight = 0.01
 
             let handler = VNImageRequestHandler(cgImage: image, options: [:])
             do {
@@ -117,14 +118,9 @@ class VisionService: ObservableObject {
     private func parseGridFromText(_ blocks: [RecognizedTextBlock], imageSize: CGSize) async throws -> BoxGrid {
         // Sort blocks by position (top to bottom, left to right)
         let sortedBlocks = blocks.sorted { block1, block2 in
-            // Vision coordinates are normalized with origin at bottom-left
-            // Convert to top-left origin for easier processing
             let y1 = 1 - block1.boundingBox.midY
             let y2 = 1 - block2.boundingBox.midY
-
-            if abs(y1 - y2) < 0.05 {  // Same row (within 5% tolerance)
-                return block1.boundingBox.minX < block2.boundingBox.minX
-            }
+            if abs(y1 - y2) < 0.08 { return block1.boundingBox.minX < block2.boundingBox.minX }
             return y1 < y2
         }
 
@@ -140,7 +136,7 @@ class VisionService: ObservableObject {
 
         for block in sortedBlocks {
             let y = 1 - block.boundingBox.midY
-            if lastY < 0 || abs(y - lastY) < 0.05 {
+            if lastY < 0 || abs(y - lastY) < 0.08 {
                 currentRow.append(block)
             } else {
                 if !currentRow.isEmpty {
@@ -158,36 +154,34 @@ class VisionService: ObservableObject {
         // First row with 10 numbers is likely the header (home team numbers)
         // First column with 10 numbers is likely the away team numbers
 
+        var headerRowIndex: Int? = nil
         for (rowIndex, row) in rows.enumerated() {
-            // Check if this row could be the header (contains numbers 0-9)
             let numbers = row.compactMap { Int($0.text.trimmingCharacters(in: .whitespaces)) }
                 .filter { $0 >= 0 && $0 <= 9 }
 
-            if numbers.count >= 8 && homeNumbers.isEmpty && rowIndex < 3 {
-                // This is likely the header row
+            if numbers.count >= 6 && homeNumbers.isEmpty && rowIndex < 6 {
                 homeNumbers = extractNumbers(from: row)
+                if homeNumbers.count == 10 {
+                    headerRowIndex = rowIndex
+                }
                 continue
             }
 
-            // For content rows, first item might be away number, rest are names
-            if rowIndex > 0 && homeNumbers.count == 10 {
-                let gridRowIndex = rowIndex - 1 - (homeNumbers.isEmpty ? 0 : 1)
+            if let headerIdx = headerRowIndex, homeNumbers.count == 10 {
+                let gridRowIndex = rowIndex - headerIdx - 1
                 if gridRowIndex >= 0 && gridRowIndex < 10 {
                     var colOffset = 0
                     for (colIndex, block) in row.enumerated() {
                         let text = block.text.trimmingCharacters(in: .whitespaces)
 
-                        // Check if this is an away number
                         if colIndex == 0, let num = Int(text), num >= 0 && num <= 9 {
-                            if awayNumbers.count < 10 {
-                                awayNumbers.append(num)
-                            }
+                            if awayNumbers.count < 10 { awayNumbers.append(num) }
                             colOffset = 1
                             continue
                         }
 
                         let gridColIndex = colIndex - colOffset
-                        if gridColIndex >= 0 && gridColIndex < 10 {
+                        if gridColIndex >= 0 && gridColIndex < 10, !text.isEmpty {
                             nameGrid[gridRowIndex][gridColIndex] = text
                         }
                     }

@@ -32,7 +32,6 @@ struct ScannerView: View {
                         onPhotoSelected: { showingImagePicker = true },
                         onManualEntry: { showingManualEntry = true }
                     )
-                    .entrance(delay: 0)
 
                 case .processing:
                     ProcessingScanView()
@@ -55,12 +54,11 @@ struct ScannerView: View {
                                 scannedPool = nil
                             }
                         )
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.98)),
+                            removal: .opacity
+                        ))
                     }
-                    .entrance(delay: 0)
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .scale(scale: 0.98)),
-                        removal: .opacity
-                    ))
 
                 case .error(let message):
                     ErrorScanView(
@@ -108,6 +106,7 @@ struct ScannerView: View {
                 }
                 .environmentObject(appState)
             }
+            .background(AppColors.screenBackground)
         }
     }
 

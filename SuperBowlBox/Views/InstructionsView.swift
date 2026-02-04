@@ -60,15 +60,8 @@ struct InstructionsView: View {
 
     var body: some View {
         ZStack {
-            AppColors.gradientTechBackground
+            AppColors.screenBackground
                 .ignoresSafeArea()
-            RadialGradient(
-                colors: [AppColors.techCyan.opacity(0.05), Color.clear],
-                center: .top,
-                startRadius: 0,
-                endRadius: 500
-            )
-            .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 // Skip (sheet mode or onboarding)

@@ -11,18 +11,14 @@ struct PoolsListView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                AppColors.gradientTechBackground
-                    .ignoresSafeArea()
-                Group {
-                    if appState.pools.isEmpty {
-                        EmptyPoolsView(
-                            onCreateNew: { newPoolPrefill = nil; showingNewPoolSheet = true },
-                            onCreateFromGame: { showingCreateFromGame = true },
-                            onScan: { showingScanner = true }
-                        )
-                        .entrance(delay: 0)
-                    } else {
+            Group {
+                if appState.pools.isEmpty {
+                    EmptyPoolsView(
+                        onCreateNew: { newPoolPrefill = nil; showingNewPoolSheet = true },
+                        onCreateFromGame: { showingCreateFromGame = true },
+                        onScan: { showingScanner = true }
+                    )
+                } else {
                         List {
                             ForEach(Array(appState.pools.enumerated()), id: \.element.id) { index, pool in
                                 NavigationLink {
@@ -43,9 +39,9 @@ struct PoolsListView: View {
                         }
                         .listStyle(.insetGrouped)
                         .scrollContentBackground(.hidden)
-                    }
                 }
             }
+            .background(AppColors.screenBackground)
             .navigationTitle("My Pools")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
