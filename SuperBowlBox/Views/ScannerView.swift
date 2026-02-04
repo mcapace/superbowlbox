@@ -1,0 +1,577 @@
+import SwiftUI
+import PhotosUI
+
+struct ScannerView: View {
+    let onPoolScanned: (BoxGrid) -> Void
+    @Environment(\.dismiss) var dismiss
+    @StateObject private var visionService = VisionService()
+
+    @State private var showingImagePicker = false
+    @State private var showingCamera = false
+    @State private var selectedImage: UIImage?
+    @State private var scannedPool: BoxGrid?
+    @State private var showingManualEntry = false
+    @State private var scanProgress: ScanProgress = .idle
+    @State private var selectedItem: PhotosPickerItem?
+
+    enum ScanProgress {
+        case idle
+        case processing
+        case reviewing
+        case error(String)
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                switch scanProgress {
+                case .idle:
+                    IdleScanView(
+                        onCameraSelected: { showingCamera = true },
+                        onPhotoSelected: { showingImagePicker = true },
+                        onManualEntry: { showingManualEntry = true }
+                    )
+
+                case .processing:
+                    ProcessingScanView()
+
+                case .reviewing:
+                    if let pool = scannedPool {
+                        ReviewScanView(
+                            pool: $scannedPool.unwrap(default: BoxGrid.empty),
+                            image: selectedImage,
+                            onConfirm: {
+                                if let finalPool = scannedPool {
+                                    onPoolScanned(finalPool)
+                                }
+                                dismiss()
+                            },
+                            onRetry: {
+                                scanProgress = .idle
+                                selectedImage = nil
+                                scannedPool = nil
+                            }
+                        )
+                    }
+
+                case .error(let message):
+                    ErrorScanView(
+                        message: message,
+                        onRetry: {
+                            scanProgress = .idle
+                            selectedImage = nil
+                        },
+                        onManualEntry: {
+                            showingManualEntry = true
+                        }
+                    )
+                }
+            }
+            .navigationTitle("Scan Pool Sheet")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+            .sheet(isPresented: $showingCamera) {
+                CameraView { image in
+                    handleCapturedImage(image)
+                }
+            }
+            .photosPicker(isPresented: $showingImagePicker, selection: $selectedItem, matching: .images)
+            .onChange(of: selectedItem) { _, newValue in
+                if let item = newValue {
+                    loadImage(from: item)
+                }
+            }
+            .sheet(isPresented: $showingManualEntry) {
+                ManualEntryView { pool in
+                    onPoolScanned(pool)
+                    dismiss()
+                }
+            }
+        }
+    }
+
+    private func loadImage(from item: PhotosPickerItem) {
+        Task {
+            if let data = try? await item.loadTransferable(type: Data.self),
+               let image = UIImage(data: data) {
+                await MainActor.run {
+                    handleCapturedImage(image)
+                }
+            }
+        }
+    }
+
+    private func handleCapturedImage(_ image: UIImage) {
+        selectedImage = image
+        scanProgress = .processing
+
+        Task {
+            do {
+                let pool = try await visionService.processImage(image)
+                await MainActor.run {
+                    scannedPool = pool
+                    scanProgress = .reviewing
+                }
+            } catch {
+                await MainActor.run {
+                    scanProgress = .error(error.localizedDescription)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Idle View
+struct IdleScanView: View {
+    let onCameraSelected: () -> Void
+    let onPhotoSelected: () -> Void
+    let onManualEntry: () -> Void
+
+    var body: some View {
+        VStack(spacing: 32) {
+            // Illustration
+            VStack(spacing: 16) {
+                Image(systemName: "doc.viewfinder")
+                    .font(.system(size: 80))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [AppColors.fieldGreen, AppColors.fieldGreen.opacity(0.6)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+
+                Text("Scan Your Pool Sheet")
+                    .font(.title2)
+                    .fontWeight(.bold)
+
+                Text("Take a photo or choose an image of your Super Bowl squares sheet")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
+
+            // Action buttons
+            VStack(spacing: 16) {
+                Button {
+                    onCameraSelected()
+                } label: {
+                    HStack {
+                        Image(systemName: "camera.fill")
+                            .font(.title2)
+                        VStack(alignment: .leading) {
+                            Text("Take Photo")
+                                .font(.headline)
+                            Text("Use camera to capture sheet")
+                                .font(.caption)
+                                .opacity(0.8)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                    }
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(AppColors.fieldGreen)
+                    )
+                }
+
+                Button {
+                    onPhotoSelected()
+                } label: {
+                    HStack {
+                        Image(systemName: "photo.on.rectangle")
+                            .font(.title2)
+                        VStack(alignment: .leading) {
+                            Text("Choose Photo")
+                                .font(.headline)
+                            Text("Select from photo library")
+                                .font(.caption)
+                                .opacity(0.8)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                    }
+                    .foregroundColor(.primary)
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(.systemGray6))
+                    )
+                }
+
+                Button {
+                    onManualEntry()
+                } label: {
+                    HStack {
+                        Image(systemName: "square.and.pencil")
+                            .font(.title2)
+                        VStack(alignment: .leading) {
+                            Text("Manual Entry")
+                                .font(.headline)
+                            Text("Enter names manually")
+                                .font(.caption)
+                                .opacity(0.8)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                    }
+                    .foregroundColor(.primary)
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(.systemGray6))
+                    )
+                }
+            }
+            .padding(.horizontal)
+
+            Spacer()
+
+            // Tips
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Tips for best results:")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "lightbulb.fill")
+                        .foregroundColor(.yellow)
+                    Text("Ensure good lighting and keep the sheet flat")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "crop")
+                        .foregroundColor(AppColors.fieldGreen)
+                    Text("Include the full grid with all numbers visible")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray6))
+            )
+            .padding(.horizontal)
+        }
+        .padding(.vertical)
+    }
+}
+
+// MARK: - Processing View
+struct ProcessingScanView: View {
+    @State private var rotationAngle: Double = 0
+
+    var body: some View {
+        VStack(spacing: 32) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .stroke(Color(.systemGray4), lineWidth: 4)
+                    .frame(width: 100, height: 100)
+
+                Circle()
+                    .trim(from: 0, to: 0.3)
+                    .stroke(AppColors.fieldGreen, lineWidth: 4)
+                    .frame(width: 100, height: 100)
+                    .rotationEffect(.degrees(rotationAngle))
+
+                Image(systemName: "doc.text.viewfinder")
+                    .font(.system(size: 40))
+                    .foregroundColor(AppColors.fieldGreen)
+            }
+            .onAppear {
+                withAnimation(.linear(duration: 1).repeatForever(autoreverses: false)) {
+                    rotationAngle = 360
+                }
+            }
+
+            VStack(spacing: 8) {
+                Text("Analyzing Image...")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+
+                Text("Detecting grid and reading names")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+        }
+    }
+}
+
+// MARK: - Review View
+struct ReviewScanView: View {
+    @Binding var pool: BoxGrid
+    let image: UIImage?
+    let onConfirm: () -> Void
+    let onRetry: () -> Void
+
+    @State private var poolName: String = ""
+    @State private var showingImagePreview = false
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                // Success indicator
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .font(.title2)
+                    Text("Scan Complete!")
+                        .font(.headline)
+                    Spacer()
+                    if image != nil {
+                        Button("View Image") {
+                            showingImagePreview = true
+                        }
+                        .font(.caption)
+                    }
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.green.opacity(0.1))
+                )
+
+                // Pool name
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Pool Name")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    TextField("Enter pool name", text: $poolName)
+                        .textFieldStyle(.roundedBorder)
+                        .onChange(of: poolName) { _, newValue in
+                            pool.name = newValue
+                        }
+                }
+
+                // Stats
+                HStack(spacing: 20) {
+                    StatBox(
+                        title: "Names Found",
+                        value: "\(pool.filledCount)",
+                        icon: "person.fill"
+                    )
+                    StatBox(
+                        title: "Empty Squares",
+                        value: "\(100 - pool.filledCount)",
+                        icon: "square.dashed"
+                    )
+                }
+
+                // Grid preview
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Grid Preview")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    MiniGridPreview(pool: pool, score: nil)
+                        .frame(height: 150)
+                }
+
+                // Detected numbers
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Detected Numbers")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("Columns (\(pool.homeTeam.abbreviation))")
+                                .font(.caption2)
+                            Text(pool.homeNumbers.map { String($0) }.joined(separator: " "))
+                                .font(.system(.caption, design: .monospaced))
+                                .fontWeight(.bold)
+                        }
+
+                        Spacer()
+
+                        VStack(alignment: .trailing) {
+                            Text("Rows (\(pool.awayTeam.abbreviation))")
+                                .font(.caption2)
+                            Text(pool.awayNumbers.map { String($0) }.joined(separator: " "))
+                                .font(.system(.caption, design: .monospaced))
+                                .fontWeight(.bold)
+                        }
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(.systemGray6))
+                    )
+                }
+
+                // Action buttons
+                VStack(spacing: 12) {
+                    Button {
+                        onConfirm()
+                    } label: {
+                        Text("Confirm & Save")
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(AppColors.fieldGreen)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                    }
+
+                    Button {
+                        onRetry()
+                    } label: {
+                        Text("Retry Scan")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .foregroundColor(.primary)
+                            .cornerRadius(12)
+                    }
+                }
+            }
+            .padding()
+        }
+        .onAppear {
+            poolName = pool.name.isEmpty ? "Scanned Pool" : pool.name
+        }
+        .sheet(isPresented: $showingImagePreview) {
+            if let image = image {
+                ImagePreviewView(image: image)
+            }
+        }
+    }
+}
+
+struct StatBox: View {
+    let title: String
+    let value: String
+    let icon: String
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(AppColors.fieldGreen)
+            Text(value)
+                .font(.title)
+                .fontWeight(.bold)
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemGray6))
+        )
+    }
+}
+
+struct ImagePreviewView: View {
+    let image: UIImage
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationStack {
+            GeometryReader { geometry in
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+            }
+            .navigationTitle("Scanned Image")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Error View
+struct ErrorScanView: View {
+    let message: String
+    let onRetry: () -> Void
+    let onManualEntry: () -> Void
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 60))
+                .foregroundColor(.orange)
+
+            VStack(spacing: 8) {
+                Text("Scan Failed")
+                    .font(.title2)
+                    .fontWeight(.bold)
+
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
+
+            VStack(spacing: 12) {
+                Button {
+                    onRetry()
+                } label: {
+                    Text("Try Again")
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(AppColors.fieldGreen)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                }
+
+                Button {
+                    onManualEntry()
+                } label: {
+                    Text("Enter Manually Instead")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .foregroundColor(.primary)
+                        .cornerRadius(12)
+                }
+            }
+            .padding(.horizontal, 32)
+
+            Spacer()
+        }
+    }
+}
+
+// MARK: - Optional Binding Extension
+extension Binding {
+    func unwrap<T>(default defaultValue: T) -> Binding<T> where Value == T? {
+        Binding<T>(
+            get: { self.wrappedValue ?? defaultValue },
+            set: { self.wrappedValue = $0 }
+        )
+    }
+}
+
+#Preview {
+    ScannerView { _ in }
+}
