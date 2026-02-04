@@ -153,8 +153,8 @@ struct AppColors {
     static let goldMuted = Color(red: 0.75, green: 0.55, blue: 0.20)
     static let ink = Color(red: 0.10, green: 0.10, blue: 0.12)
     static let surface = Color(.systemBackground)
-    /// Screen background — soft gray
-    static let screenBackground = Color(red: 0.96, green: 0.96, blue: 0.97)
+    /// Screen background — warm gray with a hint of green so it’s clearly not default white
+    static let screenBackground = Color(red: 0.93, green: 0.95, blue: 0.94)
     static let backgroundElevated = screenBackground
     static let backgroundElevatedDark = Color(red: 0.08, green: 0.10, blue: 0.14)
 
@@ -168,8 +168,9 @@ struct AppColors {
     static let gradientGold = LinearGradient(colors: [gold, goldMuted], startPoint: .top, endPoint: .bottom)
     static let gradientGlow = gradientPrimary
     static let cardBackground = surface
-    static let cardShadow = Color.black.opacity(0.06)
-    static let cardShadowStrong = Color.black.opacity(0.10)
+    static let cardShadow = Color.black.opacity(0.10)
+    static let cardShadowStrong = Color.black.opacity(0.18)
+    static let cardHighlight = Color.white.opacity(0.6)
     static let cardTint = Color(.secondarySystemBackground)
 }
 
@@ -210,12 +211,22 @@ struct AppTracking {
     static let tight: CGFloat = -0.2
 }
 
-/// Card and layout — clean, minimal.
+/// Card and layout — elevated, premium feel.
 struct AppCardStyle {
-    static let cornerRadius: CGFloat = 16
-    static let cornerRadiusSmall: CGFloat = 12
-    static let shadowRadius: CGFloat = 12
-    static let shadowY: CGFloat = 4
+    static let cornerRadius: CGFloat = 20
+    static let cornerRadiusSmall: CGFloat = 14
+    static let cardPadding: CGFloat = 24
+    static let cardPaddingCompact: CGFloat = 16
+    /// Spacing between cards/sections on a screen
+    static let sectionSpacing: CGFloat = 28
+    /// Horizontal inset for card content from screen edge
+    static let screenHorizontalInset: CGFloat = 20
+    /// Shadow: soft ambient
+    static let shadowRadius: CGFloat = 24
+    static let shadowY: CGFloat = 8
+    /// Shadow: tighter offset for depth
+    static let shadowRadiusTight: CGFloat = 8
+    static let shadowYTight: CGFloat = 3
 }
 
 // MARK: - SquareUp in-app logo: App Store icon graphic (arrow) above wordmark
@@ -241,12 +252,12 @@ struct SquareUpLogoView: View {
     }
 }
 
-// MARK: - Cards (clean, minimal)
+// MARK: - Cards (elevated, premium)
 extension View {
-    /// Primary card style — white, subtle shadow, no glass.
+    /// Primary card style — white, two-layer shadow, subtle top highlight for raised feel.
     func glassCard(cornerRadius: CGFloat = AppCardStyle.cornerRadius) -> some View {
         self
-            .padding(20)
+            .padding(AppCardStyle.cardPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius)
@@ -254,9 +265,20 @@ extension View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.35),
+                                Color.black.opacity(0.06)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 1
+                    )
             )
             .shadow(color: AppColors.cardShadow, radius: AppCardStyle.shadowRadius, y: AppCardStyle.shadowY)
+            .shadow(color: AppColors.cardShadowStrong.opacity(0.5), radius: AppCardStyle.shadowRadiusTight, y: AppCardStyle.shadowYTight)
     }
 
     func solidCard(cornerRadius: CGFloat = AppCardStyle.cornerRadius) -> some View {

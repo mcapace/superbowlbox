@@ -41,6 +41,7 @@
 		A11111110000000000000021 /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000021 /* Secrets.plist */; };
 		A11111110000000000000022 /* LoginDatabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000023 /* LoginDatabaseConfig.swift */; };
 		A11111110000000000000023 /* LoginDatabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000024 /* LoginDatabaseService.swift */; };
+		A11111110000000000000024 /* GoogleSignInButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000025 /* GoogleSignInButton.swift */; };
 		CECC4FC82F33D68F004AAD0D /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = CECC4FC72F33D68F004AAD0D /* GoogleSignIn */; };
 		CECC4FCA2F33D68F004AAD0D /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = CECC4FC92F33D68F004AAD0D /* GoogleSignInSwift */; };
 /* End PBXBuildFile section */
@@ -83,6 +84,7 @@
 		A00000000000000000000022 /* Secrets.example.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Secrets.example.plist; sourceTree = "<group>"; };
 		A00000000000000000000023 /* LoginDatabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginDatabaseConfig.swift; sourceTree = "<group>"; };
 		A00000000000000000000024 /* LoginDatabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginDatabaseService.swift; sourceTree = "<group>"; };
+		A00000000000000000000025 /* GoogleSignInButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInButton.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -178,6 +180,7 @@
 				A00000000000000000000014 /* MySquaresView.swift */,
 				A00000000000000000000016 /* InstructionsView.swift */,
 				A00000000000000000000018 /* SignInWithAppleButton.swift */,
+				A00000000000000000000025 /* GoogleSignInButton.swift */,
 				A0000000000000000000001D /* CreateFromGameView.swift */,
 			);
 			path = Views;
@@ -325,6 +328,7 @@
 				A11111110000000000000020 /* GameContextService.swift in Sources */,
 				A11111110000000000000022 /* LoginDatabaseConfig.swift in Sources */,
 				A11111110000000000000023 /* LoginDatabaseService.swift in Sources */,
+				A11111110000000000000024 /* GoogleSignInButton.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

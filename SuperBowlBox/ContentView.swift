@@ -75,24 +75,25 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
+                VStack(spacing: AppCardStyle.sectionSpacing) {
                     LiveScoreCard(
                         score: appState.scoreService.currentScore ?? GameScore.mock,
                         isLoading: appState.scoreService.isLoading
                     )
-                    .padding(.horizontal)
+                    .padding(.horizontal, AppCardStyle.screenHorizontalInset)
 
                     if appState.pools.count > 1 {
                         PoolSelectorView(
                             selectedIndex: $selectedPoolIndex,
                             pools: appState.pools
                         )
+                        .padding(.horizontal, AppCardStyle.screenHorizontalInset)
                     }
 
                     if let pool = currentPool,
                        let score = appState.scoreService.currentScore {
                         WinnerSpotlightCard(pool: pool, score: score)
-                            .padding(.horizontal)
+                            .padding(.horizontal, AppCardStyle.screenHorizontalInset)
                     }
 
                     if let pool = currentPool {
@@ -106,20 +107,21 @@ struct DashboardView: View {
                             )
                         }
                         .buttonStyle(ScaleButtonStyle())
-                        .padding(.horizontal)
+                        .padding(.horizontal, AppCardStyle.screenHorizontalInset)
                     }
 
                     if let pool = currentPool {
                         QuickStatsCard(pool: pool, globalMyName: appState.myName)
-                            .padding(.horizontal)
+                            .padding(.horizontal, AppCardStyle.screenHorizontalInset)
                     }
 
-                    Spacer(minLength: 100)
+                    Spacer(minLength: 120)
                 }
-                .padding(.top, 20)
+                .padding(.top, 24)
             }
             .background(AppColors.screenBackground)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(AppColors.screenBackground, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     SquareUpLogoView(showIcon: true, wordmarkSize: 24)

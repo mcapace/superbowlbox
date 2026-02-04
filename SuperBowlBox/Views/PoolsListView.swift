@@ -42,6 +42,7 @@ struct PoolsListView: View {
                 }
             }
             .background(AppColors.screenBackground)
+            .toolbarBackground(AppColors.screenBackground, for: .navigationBar)
             .navigationTitle("My Pools")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -240,16 +241,19 @@ struct EmptyPoolsView: View {
                     .multilineTextAlignment(.center)
             }
 
-            VStack(spacing: 12) {
+            VStack(spacing: 16) {
                 Button {
                     onCreateNew()
                 } label: {
                     Label("Create New Pool", systemImage: "plus.square.fill")
                         .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(AppColors.fieldGreen)
+                        .padding(AppCardStyle.cardPaddingCompact)
+                        .background(
+                            RoundedRectangle(cornerRadius: AppCardStyle.cornerRadiusSmall)
+                                .fill(AppColors.fieldGreen)
+                                .shadow(color: AppColors.fieldGreen.opacity(0.35), radius: 10, y: 4)
+                        )
                         .foregroundColor(.white)
-                        .cornerRadius(12)
                 }
 
                 Button {
@@ -257,10 +261,13 @@ struct EmptyPoolsView: View {
                 } label: {
                     Label("Create from Game", systemImage: "sportscourt")
                         .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(.systemGray5))
+                        .padding(AppCardStyle.cardPaddingCompact)
+                        .background(
+                            RoundedRectangle(cornerRadius: AppCardStyle.cornerRadiusSmall)
+                                .fill(Color(.systemBackground))
+                                .shadow(color: Color.black.opacity(0.08), radius: 10, y: 3)
+                        )
                         .foregroundColor(.primary)
-                        .cornerRadius(12)
                 }
 
                 Button {
@@ -268,15 +275,18 @@ struct EmptyPoolsView: View {
                 } label: {
                     Label("Scan Pool Sheet", systemImage: "camera.viewfinder")
                         .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(.systemGray5))
+                        .padding(AppCardStyle.cardPaddingCompact)
+                        .background(
+                            RoundedRectangle(cornerRadius: AppCardStyle.cornerRadiusSmall)
+                                .fill(Color(.systemBackground))
+                                .shadow(color: Color.black.opacity(0.08), radius: 10, y: 3)
+                        )
                         .foregroundColor(.primary)
-                        .cornerRadius(12)
                 }
             }
-            .padding(.horizontal, 40)
+            .padding(.horizontal, AppCardStyle.screenHorizontalInset + 8)
         }
-        .padding()
+        .padding(.vertical, 28)
     }
 }
 

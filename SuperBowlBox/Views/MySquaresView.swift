@@ -35,25 +35,27 @@ struct MySquaresView: View {
                         }
                     }
                 }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .padding()
+                .padding(AppCardStyle.cardPaddingCompact)
+                .background(
+                    RoundedRectangle(cornerRadius: AppCardStyle.cornerRadiusSmall)
+                        .fill(Color(.systemGray6))
+                        .shadow(color: Color.black.opacity(0.06), radius: 8, y: 2)
+                )
+                .padding(.horizontal, AppCardStyle.screenHorizontalInset)
+                .padding(.vertical, 16)
 
                 if !hasAnythingToShow {
                     EmptyNameView()
                 } else {
                     ScrollView {
-                        VStack(spacing: 20) {
-                            // Summary card (uses per-pool owner labels when not searching)
+                        VStack(spacing: AppCardStyle.sectionSpacing) {
                             MySquaresSummaryCard(
                                 pools: appState.pools,
                                 globalMyName: appState.myName,
                                 searchName: searchName
                             )
-                                .padding(.horizontal)
+                            .padding(.horizontal, AppCardStyle.screenHorizontalInset)
 
-                            // Squares by pool (per-pool owner labels when search empty, else search by name)
                             ForEach(appState.pools) { pool in
                                 let squares = searchName.isEmpty
                                     ? pool.squaresForOwner(ownerLabels: pool.effectiveOwnerLabels(globalName: appState.myName))
@@ -64,15 +66,16 @@ struct MySquaresView: View {
                                         squares: squares,
                                         score: appState.scoreService.currentScore
                                     )
-                                    .padding(.horizontal)
+                                    .padding(.horizontal, AppCardStyle.screenHorizontalInset)
                                 }
                             }
                         }
-                        .padding(.vertical)
+                        .padding(.vertical, 24)
                     }
                 }
             }
             .background(AppColors.screenBackground)
+            .toolbarBackground(AppColors.screenBackground, for: .navigationBar)
             .navigationTitle("My Squares")
         }
     }

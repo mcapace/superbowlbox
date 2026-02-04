@@ -86,26 +86,15 @@ struct SettingsView: View {
                             appState.authService.signInWithApple()
                         }
 
-                        Button {
-                            Task { @MainActor in
-                                guard let vc = topViewController() else { return }
-                                await appState.authService.signInWithGoogle(presenting: vc)
-                            }
-                        } label: {
-                            HStack {
-                                Image(systemName: "g.circle.fill")
-                                    .font(.title2)
-                                Text("Sign in with Google")
-                                    .font(AppTypography.headline)
-                                Spacer()
-                            }
-                            .foregroundColor(.primary)
-                            .padding(.vertical, 12)
-                            .frame(maxWidth: .infinity)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(12)
-                        }
-                        .disabled(appState.authService.isSigningIn)
+                        GoogleSignInButton(
+                            action: {
+                                Task { @MainActor in
+                                    guard let vc = topViewController() else { return }
+                                    await appState.authService.signInWithGoogle(presenting: vc)
+                                }
+                            },
+                            isDisabled: appState.authService.isSigningIn
+                        )
                     }
 
                     if let error = appState.authService.errorMessage {
@@ -261,6 +250,7 @@ struct SettingsView: View {
                 }
             }
             .scrollContentBackground(.hidden)
+            .toolbarBackground(AppColors.screenBackground, for: .navigationBar)
             .background(AppColors.screenBackground)
             .navigationTitle("Settings")
             .sheet(isPresented: $showingJoinPool) {

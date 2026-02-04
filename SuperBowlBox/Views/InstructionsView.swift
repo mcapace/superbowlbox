@@ -216,28 +216,16 @@ private struct OnboardingSignInView: View {
                 .frame(height: 52)
                 .cornerRadius(12)
 
-                Button {
-                    Task { @MainActor in
-                        HapticService.impactLight()
-                        guard let vc = topViewController() else { return }
-                        await authService.signInWithGoogle(presenting: vc)
-                    }
-                } label: {
-                    HStack {
-                        Image(systemName: "g.circle.fill")
-                            .font(.title2)
-                        Text("Sign in with Google")
-                            .font(AppTypography.headline)
-                        Spacer()
-                    }
-                    .foregroundColor(.primary)
-                    .padding(.vertical, 14)
-                    .padding(.horizontal, 16)
-                    .frame(maxWidth: .infinity)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
-                }
-                .disabled(authService.isSigningIn)
+                GoogleSignInButton(
+                    action: {
+                        Task { @MainActor in
+                            HapticService.impactLight()
+                            guard let vc = topViewController() else { return }
+                            await authService.signInWithGoogle(presenting: vc)
+                        }
+                    },
+                    isDisabled: authService.isSigningIn
+                )
 
                 if let error = authService.errorMessage {
                     Text(error)
