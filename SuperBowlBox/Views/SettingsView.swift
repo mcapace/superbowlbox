@@ -8,10 +8,29 @@ struct SettingsView: View {
     @State private var autoRefresh = true
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                DesignSystem.Colors.background
-                    .ignoresSafeArea()
+        ZStack {
+            // Animated Background
+            AnimatedMeshBackground()
+            TechGridBackground()
+
+            VStack(spacing: 0) {
+                // Header
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("SETTINGS")
+                            .font(.system(size: 28, weight: .black, design: .monospaced))
+                            .foregroundStyle(DesignSystem.Colors.cyberGradient)
+
+                        Text("SYSTEM CONFIGURATION")
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .foregroundColor(DesignSystem.Colors.textMuted)
+                            .tracking(2)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 60)
+                .padding(.bottom, 20)
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
@@ -52,28 +71,17 @@ struct SettingsView: View {
                         )
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, 120)
+                    .padding(.bottom, 140)
                 }
-            }
-            .navigationTitle("")
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Settings")
-                        .font(DesignSystem.Typography.headline)
-                        .foregroundColor(DesignSystem.Colors.textPrimary)
-                }
-            }
-            .toolbarBackground(DesignSystem.Colors.background, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .sheet(isPresented: $showingJoinPool) {
-                JoinPoolSheet()
-            }
-            .sheet(isPresented: $showingAbout) {
-                AboutView()
             }
         }
         .preferredColorScheme(.dark)
+        .sheet(isPresented: $showingJoinPool) {
+            JoinPoolSheet()
+        }
+        .sheet(isPresented: $showingAbout) {
+            AboutView()
+        }
     }
 }
 
@@ -82,6 +90,7 @@ struct ProfileSection: View {
     @Binding var myName: String
     let onSave: () -> Void
     @FocusState private var isEditing: Bool
+    @State private var orbitalRotation: Double = 0
 
     var initials: String {
         let words = myName.split(separator: " ")
@@ -94,55 +103,83 @@ struct ProfileSection: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 16) {
-                // Avatar
-                ZStack {
+        VStack(spacing: 20) {
+            // Section header
+            HStack {
+                Image(systemName: "person.crop.circle.badge.checkmark")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.accent)
+
+                Text("IDENTITY MODULE")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(DesignSystem.Colors.textMuted)
+                    .tracking(2)
+
+                Spacer()
+
+                // Status indicator
+                HStack(spacing: 4) {
                     Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [DesignSystem.Colors.accent, DesignSystem.Colors.accent.opacity(0.6)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 64, height: 64)
+                        .fill(myName.isEmpty ? DesignSystem.Colors.danger : DesignSystem.Colors.live)
+                        .frame(width: 6, height: 6)
+
+                    Text(myName.isEmpty ? "UNSET" : "ACTIVE")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundColor(myName.isEmpty ? DesignSystem.Colors.danger : DesignSystem.Colors.live)
+                }
+            }
+
+            HStack(spacing: 16) {
+                // Avatar with orbital ring
+                ZStack {
+                    OrbitalRing(
+                        progress: myName.isEmpty ? 0.2 : 1.0,
+                        color: DesignSystem.Colors.accent,
+                        size: 80,
+                        lineWidth: 3
+                    )
+
+                    Circle()
+                        .fill(DesignSystem.Colors.cyberGradient)
+                        .frame(width: 60, height: 60)
 
                     Text(initials)
-                        .font(.system(size: 24, weight: .bold))
+                        .font(.system(size: 22, weight: .bold))
                         .foregroundColor(.white)
                 }
-                .shadow(color: DesignSystem.Colors.accentGlow, radius: 12, y: 4)
+                .glow(DesignSystem.Colors.accent, radius: 15)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("YOUR PROFILE")
-                        .font(DesignSystem.Typography.captionSmall)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("TRACKING AS")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
                         .foregroundColor(DesignSystem.Colors.textMuted)
-                        .tracking(1)
+                        .tracking(2)
 
                     if myName.isEmpty {
-                        Text("Set Your Name")
-                            .font(DesignSystem.Typography.headline)
+                        Text("Not Configured")
+                            .font(.system(size: 18, weight: .bold, design: .monospaced))
                             .foregroundColor(DesignSystem.Colors.textTertiary)
                     } else {
-                        Text(myName)
-                            .font(DesignSystem.Typography.headline)
+                        Text(myName.uppercased())
+                            .font(.system(size: 18, weight: .bold, design: .monospaced))
                             .foregroundColor(DesignSystem.Colors.textPrimary)
+                            .tracking(1)
                     }
                 }
 
                 Spacer()
             }
 
-            // Name input
+            // Name input with futuristic styling
             HStack(spacing: 12) {
-                Image(systemName: "person.fill")
-                    .foregroundColor(DesignSystem.Colors.textMuted)
-                    .frame(width: 20)
+                Image(systemName: "terminal.fill")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(isEditing ? DesignSystem.Colors.accent : DesignSystem.Colors.textMuted)
 
-                TextField("Enter your name", text: $myName)
-                    .font(DesignSystem.Typography.body)
+                TextField("Enter identity...", text: $myName)
+                    .font(.system(size: 14, weight: .medium, design: .monospaced))
                     .foregroundColor(DesignSystem.Colors.textPrimary)
+                    .autocorrectionDisabled()
                     .focused($isEditing)
                     .onChange(of: myName) { _, _ in
                         onSave()
@@ -154,12 +191,13 @@ struct ProfileSection: View {
                         myName = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 18))
                             .foregroundColor(DesignSystem.Colors.textMuted)
                     }
                 }
             }
             .padding(14)
-            .background(DesignSystem.Colors.surfaceElevated)
+            .background(DesignSystem.Colors.surface.opacity(0.8))
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
@@ -169,60 +207,82 @@ struct ProfileSection: View {
                     )
             )
 
-            Text("Your name is used to highlight your squares across all pools")
-                .font(DesignSystem.Typography.captionSmall)
+            Text("Identity is used to locate your squares across all connected pools")
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
                 .foregroundColor(DesignSystem.Colors.textMuted)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(20)
-        .glassCard()
+        .neonCard(DesignSystem.Colors.accent, intensity: 0.2)
     }
 }
 
 // MARK: - Quick Actions Section
 struct QuickActionsSection: View {
     let onJoinPool: () -> Void
+    @State private var scanRotation: Double = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("QUICK ACTIONS")
-                .font(DesignSystem.Typography.captionSmall)
-                .foregroundColor(DesignSystem.Colors.textMuted)
-                .tracking(1)
+            HStack {
+                Image(systemName: "bolt.horizontal.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.gold)
+
+                Text("QUICK ACTIONS")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(DesignSystem.Colors.textMuted)
+                    .tracking(2)
+
+                Spacer()
+            }
 
             Button {
                 Haptics.impact(.light)
                 onJoinPool()
             } label: {
-                HStack {
+                HStack(spacing: 14) {
                     ZStack {
+                        // Scanning animation
                         Circle()
-                            .fill(DesignSystem.Colors.accent.opacity(0.15))
-                            .frame(width: 40, height: 40)
+                            .stroke(DesignSystem.Colors.accent.opacity(0.2), lineWidth: 2)
+                            .frame(width: 48, height: 48)
+
+                        Circle()
+                            .trim(from: 0, to: 0.25)
+                            .stroke(DesignSystem.Colors.accent, lineWidth: 2)
+                            .frame(width: 48, height: 48)
+                            .rotationEffect(.degrees(scanRotation))
 
                         Image(systemName: "link.badge.plus")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 20, weight: .semibold))
                             .foregroundColor(DesignSystem.Colors.accent)
                     }
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Join Pool with Code")
-                            .font(DesignSystem.Typography.bodyMedium)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("JOIN POOL WITH CODE")
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
                             .foregroundColor(DesignSystem.Colors.textPrimary)
+                            .tracking(1)
 
-                        Text("Enter an invite code from a pool host")
-                            .font(DesignSystem.Typography.captionSmall)
+                        Text("Enter an invite code from host")
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
                             .foregroundColor(DesignSystem.Colors.textTertiary)
                     }
 
                     Spacer()
 
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(DesignSystem.Colors.textMuted)
+                    Image(systemName: "chevron.right.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(DesignSystem.Colors.accent.opacity(0.6))
                 }
                 .padding(16)
-                .glassCard()
+                .neonCard(DesignSystem.Colors.accent, intensity: 0.15)
+            }
+            .onAppear {
+                withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
+                    scanRotation = 360
+                }
             }
         }
     }
@@ -234,10 +294,26 @@ struct SharePoolsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("SHARE MY POOLS")
-                .font(DesignSystem.Typography.captionSmall)
-                .foregroundColor(DesignSystem.Colors.textMuted)
-                .tracking(1)
+            HStack {
+                Image(systemName: "paperplane.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.live)
+
+                Text("SHARE POOLS")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(DesignSystem.Colors.textMuted)
+                    .tracking(2)
+
+                Spacer()
+
+                Text("\(pools.count)")
+                    .font(.system(size: 12, weight: .black, design: .monospaced))
+                    .foregroundColor(DesignSystem.Colors.live)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(DesignSystem.Colors.live.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
 
             VStack(spacing: 8) {
                 ForEach(pools) { pool in
@@ -254,33 +330,53 @@ struct NotificationsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("NOTIFICATIONS")
-                .font(DesignSystem.Typography.captionSmall)
-                .foregroundColor(DesignSystem.Colors.textMuted)
-                .tracking(1)
+            HStack {
+                Image(systemName: "bell.and.waves.left.and.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.danger)
+
+                Text("ALERTS MODULE")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(DesignSystem.Colors.textMuted)
+                    .tracking(2)
+
+                Spacer()
+
+                // Status
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(notificationsEnabled ? DesignSystem.Colors.live : DesignSystem.Colors.textMuted)
+                        .frame(width: 6, height: 6)
+
+                    Text(notificationsEnabled ? "ENABLED" : "DISABLED")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundColor(notificationsEnabled ? DesignSystem.Colors.live : DesignSystem.Colors.textMuted)
+                }
+            }
 
             VStack(spacing: 0) {
                 SettingsToggleRow(
-                    icon: "bell.and.waves.left.and.right",
+                    icon: "bell.badge.waveform.fill",
                     iconColor: DesignSystem.Colors.danger,
-                    title: "Push Notifications",
+                    title: "PUSH NOTIFICATIONS",
                     subtitle: "Get notified when you win",
                     isOn: $notificationsEnabled
                 )
 
-                Divider()
-                    .background(DesignSystem.Colors.glassBorder)
+                Rectangle()
+                    .fill(DesignSystem.Colors.glassBorder)
+                    .frame(height: 1)
                     .padding(.leading, 56)
 
                 SettingsToggleRow(
-                    icon: "viewfinder.circle.fill",
+                    icon: "viewfinder.trianglebadge.exclamationmark",
                     iconColor: DesignSystem.Colors.gold,
-                    title: "On the Hunt Alerts",
-                    subtitle: "When your squares are close to winning",
+                    title: "ON THE HUNT ALERTS",
+                    subtitle: "When squares are close to winning",
                     isOn: $notificationsEnabled
                 )
             }
-            .glassCard()
+            .neonCard(DesignSystem.Colors.danger, intensity: 0.1)
         }
     }
 }
@@ -289,46 +385,75 @@ struct NotificationsSection: View {
 struct LiveScoresSection: View {
     @Binding var autoRefresh: Bool
     let lastUpdated: Date?
+    @State private var wavePhase: Double = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("LIVE SCORES")
-                .font(DesignSystem.Typography.captionSmall)
-                .foregroundColor(DesignSystem.Colors.textMuted)
-                .tracking(1)
+            HStack {
+                Image(systemName: "dot.radiowaves.left.and.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.live)
+
+                Text("LIVE DATA FEED")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(DesignSystem.Colors.textMuted)
+                    .tracking(2)
+
+                Spacer()
+
+                if autoRefresh {
+                    // Animated signal indicator
+                    HStack(spacing: 2) {
+                        ForEach(0..<3, id: \.self) { i in
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(DesignSystem.Colors.live)
+                                .frame(width: 3, height: 6 + CGFloat(i) * 4)
+                                .opacity(0.4 + Double(i) * 0.3)
+                        }
+                    }
+                }
+            }
 
             VStack(spacing: 0) {
                 SettingsToggleRow(
                     icon: "arrow.triangle.2.circlepath",
                     iconColor: DesignSystem.Colors.live,
-                    title: "Auto-refresh Scores",
-                    subtitle: "Updates every 30 seconds during games",
+                    title: "AUTO-REFRESH SCORES",
+                    subtitle: "Updates every 30s during games",
                     isOn: $autoRefresh
                 )
 
                 if let lastUpdated = lastUpdated {
-                    Divider()
-                        .background(DesignSystem.Colors.glassBorder)
+                    Rectangle()
+                        .fill(DesignSystem.Colors.glassBorder)
+                        .frame(height: 1)
                         .padding(.leading, 56)
 
-                    HStack {
+                    HStack(spacing: 14) {
                         ZStack {
                             Circle()
-                                .fill(DesignSystem.Colors.surfaceElevated)
+                                .stroke(DesignSystem.Colors.textMuted.opacity(0.3), lineWidth: 2)
                                 .frame(width: 40, height: 40)
 
+                            Circle()
+                                .trim(from: 0, to: 0.75)
+                                .stroke(DesignSystem.Colors.textMuted, lineWidth: 2)
+                                .frame(width: 40, height: 40)
+                                .rotationEffect(.degrees(-90))
+
                             Image(systemName: "clock.badge.checkmark.fill")
-                                .font(.system(size: 16))
+                                .font(.system(size: 14))
                                 .foregroundColor(DesignSystem.Colors.textMuted)
                         }
 
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Last Updated")
-                                .font(DesignSystem.Typography.bodyMedium)
-                                .foregroundColor(DesignSystem.Colors.textPrimary)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("LAST SYNC")
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(DesignSystem.Colors.textMuted)
+                                .tracking(1)
 
                             Text(lastUpdated, style: .relative)
-                                .font(DesignSystem.Typography.captionSmall)
+                                .font(.system(size: 12, weight: .medium, design: .monospaced))
                                 .foregroundColor(DesignSystem.Colors.textTertiary)
                         }
 
@@ -337,7 +462,7 @@ struct LiveScoresSection: View {
                     .padding(16)
                 }
             }
-            .glassCard()
+            .neonCard(DesignSystem.Colors.live, intensity: 0.1)
         }
     }
 }
@@ -349,10 +474,18 @@ struct DataSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("DATA")
-                .font(DesignSystem.Typography.captionSmall)
-                .foregroundColor(DesignSystem.Colors.textMuted)
-                .tracking(1)
+            HStack {
+                Image(systemName: "externaldrive.fill.badge.icloud")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.accent)
+
+                Text("DATA MANAGEMENT")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(DesignSystem.Colors.textMuted)
+                    .tracking(2)
+
+                Spacer()
+            }
 
             VStack(spacing: 0) {
                 Button {
@@ -360,15 +493,16 @@ struct DataSection: View {
                     onBackup()
                 } label: {
                     SettingsRowContent(
-                        icon: "externaldrive.fill.badge.icloud",
+                        icon: "arrow.up.doc.fill",
                         iconColor: DesignSystem.Colors.accent,
-                        title: "Backup Data",
+                        title: "BACKUP DATA",
                         showChevron: false
                     )
                 }
 
-                Divider()
-                    .background(DesignSystem.Colors.glassBorder)
+                Rectangle()
+                    .fill(DesignSystem.Colors.glassBorder)
+                    .frame(height: 1)
                     .padding(.leading, 56)
 
                 Button {
@@ -378,13 +512,13 @@ struct DataSection: View {
                     SettingsRowContent(
                         icon: "trash.fill",
                         iconColor: DesignSystem.Colors.danger,
-                        title: "Clear All Data",
+                        title: "CLEAR ALL DATA",
                         titleColor: DesignSystem.Colors.danger,
                         showChevron: false
                     )
                 }
             }
-            .glassCard()
+            .neonCard(DesignSystem.Colors.accent, intensity: 0.1)
         }
         .alert("Clear All Data?", isPresented: $showingClearConfirm) {
             Button("Cancel", role: .cancel) {}
@@ -403,10 +537,18 @@ struct AboutSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("ABOUT")
-                .font(DesignSystem.Typography.captionSmall)
-                .foregroundColor(DesignSystem.Colors.textMuted)
-                .tracking(1)
+            HStack {
+                Image(systemName: "info.circle.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
+
+                Text("SYSTEM INFO")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(DesignSystem.Colors.textMuted)
+                    .tracking(2)
+
+                Spacer()
+            }
 
             VStack(spacing: 0) {
                 Button {
@@ -416,39 +558,45 @@ struct AboutSection: View {
                     SettingsRowContent(
                         icon: "apps.iphone",
                         iconColor: DesignSystem.Colors.accent,
-                        title: "About SquareUp",
+                        title: "ABOUT SQUAREUP",
                         showChevron: true
                     )
                 }
 
-                Divider()
-                    .background(DesignSystem.Colors.glassBorder)
+                Rectangle()
+                    .fill(DesignSystem.Colors.glassBorder)
+                    .frame(height: 1)
                     .padding(.leading, 56)
 
-                HStack {
+                HStack(spacing: 14) {
                     ZStack {
                         Circle()
-                            .fill(DesignSystem.Colors.surfaceElevated)
+                            .fill(DesignSystem.Colors.gold.opacity(0.15))
                             .frame(width: 40, height: 40)
 
                         Image(systemName: "checkmark.seal.fill")
-                            .font(.system(size: 16))
+                            .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(DesignSystem.Colors.gold)
                     }
 
-                    Text("Version")
-                        .font(DesignSystem.Typography.bodyMedium)
+                    Text("VERSION")
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
                         .foregroundColor(DesignSystem.Colors.textPrimary)
+                        .tracking(1)
 
                     Spacer()
 
                     Text("1.0.0")
-                        .font(DesignSystem.Typography.mono)
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.accent)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(DesignSystem.Colors.accent.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .padding(16)
             }
-            .glassCard()
+            .neonCard(DesignSystem.Colors.textSecondary, intensity: 0.05)
         }
     }
 }
@@ -462,7 +610,7 @@ struct SettingsToggleRow: View {
     @Binding var isOn: Bool
 
     var body: some View {
-        HStack {
+        HStack(spacing: 14) {
             ZStack {
                 Circle()
                     .fill(iconColor.opacity(0.15))
@@ -473,13 +621,14 @@ struct SettingsToggleRow: View {
                     .foregroundColor(iconColor)
             }
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(DesignSystem.Typography.bodyMedium)
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
                     .foregroundColor(DesignSystem.Colors.textPrimary)
+                    .tracking(1)
 
                 Text(subtitle)
-                    .font(DesignSystem.Typography.captionSmall)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundColor(DesignSystem.Colors.textTertiary)
             }
 
@@ -501,7 +650,7 @@ struct SettingsRowContent: View {
     let showChevron: Bool
 
     var body: some View {
-        HStack {
+        HStack(spacing: 14) {
             ZStack {
                 Circle()
                     .fill(iconColor.opacity(0.15))
@@ -513,15 +662,16 @@ struct SettingsRowContent: View {
             }
 
             Text(title)
-                .font(DesignSystem.Typography.bodyMedium)
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
                 .foregroundColor(titleColor)
+                .tracking(1)
 
             Spacer()
 
             if showChevron {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(DesignSystem.Colors.textMuted)
+                Image(systemName: "chevron.right.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundColor(DesignSystem.Colors.textMuted.opacity(0.6))
             }
         }
         .padding(16)
@@ -542,29 +692,45 @@ struct SharePoolRow: View {
             Haptics.selection()
             showingShareSheet = true
         } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(pool.name)
-                        .font(DesignSystem.Typography.bodyMedium)
-                        .foregroundColor(DesignSystem.Colors.textPrimary)
+            HStack(spacing: 14) {
+                // Mini grid preview
+                VStack(spacing: 1) {
+                    ForEach(0..<3, id: \.self) { row in
+                        HStack(spacing: 1) {
+                            ForEach(0..<3, id: \.self) { col in
+                                Rectangle()
+                                    .fill(DesignSystem.Colors.accent.opacity(0.3 + Double.random(in: 0...0.4)))
+                                    .frame(width: 10, height: 10)
+                            }
+                        }
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 4))
 
-                    HStack(spacing: 4) {
-                        Text("Code:")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(pool.name.uppercased())
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                        .tracking(1)
+
+                    HStack(spacing: 6) {
+                        Text("CODE:")
+                            .font(.system(size: 9, weight: .medium, design: .monospaced))
                             .foregroundColor(DesignSystem.Colors.textMuted)
                         Text(inviteCode)
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
                             .foregroundColor(DesignSystem.Colors.accent)
                     }
-                    .font(DesignSystem.Typography.mono)
                 }
 
                 Spacer()
 
-                Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(DesignSystem.Colors.accent)
+                Image(systemName: "square.and.arrow.up.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(DesignSystem.Colors.accent.opacity(0.6))
             }
-            .padding(16)
-            .glassCard()
+            .padding(14)
+            .neonCard(DesignSystem.Colors.accent, intensity: 0.1)
         }
         .sheet(isPresented: $showingShareSheet) {
             SharePoolSheet(pool: pool, inviteCode: inviteCode)
@@ -578,146 +744,162 @@ struct SharePoolSheet: View {
     let inviteCode: String
     @Environment(\.dismiss) var dismiss
     @State private var copied = false
+    @State private var codeGlow = false
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                DesignSystem.Colors.background
-                    .ignoresSafeArea()
+        ZStack {
+            AnimatedMeshBackground()
+            TechGridBackground()
 
-                VStack(spacing: 32) {
-                    // Pool info
-                    VStack(spacing: 16) {
-                        ZStack {
-                            Circle()
-                                .fill(DesignSystem.Colors.accent.opacity(0.15))
-                                .frame(width: 80, height: 80)
-
-                            Image(systemName: "square.grid.3x3.fill")
-                                .font(.system(size: 36))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [DesignSystem.Colors.accent, DesignSystem.Colors.accent.opacity(0.6)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                        }
-
-                        Text(pool.name)
-                            .font(DesignSystem.Typography.title)
-                            .foregroundColor(DesignSystem.Colors.textPrimary)
-
-                        HStack(spacing: 8) {
-                            TeamBadge(team: pool.awayTeam, size: 28)
-                            Text("vs")
-                                .font(DesignSystem.Typography.caption)
-                                .foregroundColor(DesignSystem.Colors.textMuted)
-                            TeamBadge(team: pool.homeTeam, size: 28)
-                        }
-                    }
-                    .padding(.top, 20)
-
-                    // Invite code
-                    VStack(spacing: 16) {
-                        Text("INVITE CODE")
-                            .font(DesignSystem.Typography.captionSmall)
-                            .foregroundColor(DesignSystem.Colors.textMuted)
-                            .tracking(2)
-
-                        HStack(spacing: 6) {
-                            ForEach(Array(inviteCode), id: \.self) { char in
-                                Text(String(char))
-                                    .font(DesignSystem.Typography.monoLarge)
-                                    .foregroundColor(DesignSystem.Colors.textPrimary)
-                                    .frame(width: 38, height: 50)
-                                    .background(DesignSystem.Colors.surfaceElevated)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .stroke(DesignSystem.Colors.glassBorder, lineWidth: 1)
-                                    )
-                            }
-                        }
-
-                        Button {
-                            Haptics.impact(.light)
-                            UIPasteboard.general.string = inviteCode
-                            copied = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                copied = false
-                            }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                                Text(copied ? "Copied!" : "Copy Code")
-                            }
-                            .font(DesignSystem.Typography.bodyMedium)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 12)
-                            .background(
-                                Capsule()
-                                    .fill(copied ? DesignSystem.Colors.live : DesignSystem.Colors.accent)
-                            )
-                            .foregroundColor(.white)
-                        }
-                    }
-                    .padding(24)
-                    .glassCard()
-                    .padding(.horizontal, 20)
-
-                    // Share options
-                    VStack(spacing: 16) {
-                        Text("SHARE VIA")
-                            .font(DesignSystem.Typography.captionSmall)
-                            .foregroundColor(DesignSystem.Colors.textMuted)
-                            .tracking(2)
-
-                        HStack(spacing: 32) {
-                            ShareOptionButton(icon: "message.fill", label: "Message", color: DesignSystem.Colors.live) {
-                                shareViaMessages()
-                            }
-
-                            ShareOptionButton(icon: "envelope.fill", label: "Email", color: DesignSystem.Colors.accent) {
-                                shareViaEmail()
-                            }
-
-                            ShareOptionButton(icon: "square.and.arrow.up", label: "More", color: DesignSystem.Colors.textSecondary) {
-                                shareGeneric()
-                            }
-                        }
-                    }
+            VStack(spacing: 32) {
+                // Header
+                HStack {
+                    Text("SHARE POOL")
+                        .font(.system(size: 20, weight: .black, design: .monospaced))
+                        .foregroundStyle(DesignSystem.Colors.cyberGradient)
 
                     Spacer()
 
-                    // Instructions
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("HOW TO JOIN")
-                            .font(DesignSystem.Typography.captionSmall)
-                            .foregroundColor(DesignSystem.Colors.textMuted)
-                            .tracking(1)
-
-                        InstructionRow(number: "1", text: "Download SquareUp from the App Store")
-                        InstructionRow(number: "2", text: "Go to Settings > Join Pool with Code")
-                        InstructionRow(number: "3", text: "Enter the code above")
-                    }
-                    .padding(20)
-                    .glassCard()
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
-                }
-            }
-            .navigationTitle("Share Pool")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(DesignSystem.Colors.background, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundColor(DesignSystem.Colors.textMuted)
                     }
-                    .foregroundColor(DesignSystem.Colors.accent)
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+
+                // Pool info
+                VStack(spacing: 20) {
+                    ZStack {
+                        // Orbital rings
+                        ForEach(0..<3, id: \.self) { i in
+                            Circle()
+                                .stroke(DesignSystem.Colors.accent.opacity(0.1), lineWidth: 1)
+                                .frame(width: 80 + CGFloat(i) * 30)
+                        }
+
+                        Circle()
+                            .fill(DesignSystem.Colors.cyberGradient)
+                            .frame(width: 70, height: 70)
+
+                        Image(systemName: "square.grid.3x3.fill")
+                            .font(.system(size: 32))
+                            .foregroundColor(.white)
+                    }
+                    .glow(DesignSystem.Colors.accent, radius: 20)
+
+                    Text(pool.name.uppercased())
+                        .font(.system(size: 18, weight: .black, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                        .tracking(2)
+
+                    HStack(spacing: 8) {
+                        TeamBadge(team: pool.awayTeam, size: 28)
+                        Text("VS")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundColor(DesignSystem.Colors.textMuted)
+                        TeamBadge(team: pool.homeTeam, size: 28)
+                    }
+                }
+
+                // Invite code
+                VStack(spacing: 20) {
+                    Text("INVITE CODE")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.textMuted)
+                        .tracking(3)
+
+                    HStack(spacing: 6) {
+                        ForEach(Array(inviteCode), id: \.self) { char in
+                            Text(String(char))
+                                .font(.system(size: 24, weight: .black, design: .monospaced))
+                                .foregroundColor(DesignSystem.Colors.textPrimary)
+                                .frame(width: 38, height: 50)
+                                .background(DesignSystem.Colors.surface)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(DesignSystem.Colors.accent.opacity(codeGlow ? 0.8 : 0.3), lineWidth: 1)
+                                )
+                        }
+                    }
+                    .shadow(color: codeGlow ? DesignSystem.Colors.accentGlow : .clear, radius: 15)
+                    .onAppear {
+                        withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                            codeGlow = true
+                        }
+                    }
+
+                    Button {
+                        Haptics.impact(.light)
+                        UIPasteboard.general.string = inviteCode
+                        copied = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            copied = false
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: copied ? "checkmark.circle.fill" : "doc.on.doc.fill")
+                            Text(copied ? "COPIED!" : "COPY CODE")
+                                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                .tracking(1)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 28)
+                        .padding(.vertical, 14)
+                        .background(
+                            Capsule()
+                                .fill(copied ? DesignSystem.Colors.live : DesignSystem.Colors.accent)
+                        )
+                        .shadow(color: (copied ? DesignSystem.Colors.liveGlow : DesignSystem.Colors.accentGlow), radius: 12)
+                    }
+                }
+                .padding(24)
+                .neonCard(DesignSystem.Colors.accent, intensity: 0.2)
+                .padding(.horizontal, 20)
+
+                // Share options
+                VStack(spacing: 16) {
+                    Text("SHARE VIA")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.textMuted)
+                        .tracking(3)
+
+                    HStack(spacing: 32) {
+                        ShareOptionButton(icon: "message.fill", label: "MESSAGE", color: DesignSystem.Colors.live) {
+                            shareViaMessages()
+                        }
+
+                        ShareOptionButton(icon: "envelope.fill", label: "EMAIL", color: DesignSystem.Colors.accent) {
+                            shareViaEmail()
+                        }
+
+                        ShareOptionButton(icon: "square.and.arrow.up.fill", label: "MORE", color: DesignSystem.Colors.textSecondary) {
+                            shareGeneric()
+                        }
+                    }
+                }
+
+                Spacer()
+
+                // Instructions
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("HOW TO JOIN")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.textMuted)
+                        .tracking(2)
+
+                    InstructionRow(number: "1", text: "Download SquareUp from the App Store")
+                    InstructionRow(number: "2", text: "Go to Settings > Join Pool with Code")
+                    InstructionRow(number: "3", text: "Enter the code above")
+                }
+                .padding(20)
+                .neonCard(DesignSystem.Colors.textSecondary, intensity: 0.05)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
             }
         }
         .preferredColorScheme(.dark)
@@ -746,14 +928,14 @@ struct InstructionRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(number)
-                .font(DesignSystem.Typography.mono)
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .foregroundColor(DesignSystem.Colors.accent)
                 .frame(width: 24, height: 24)
                 .background(DesignSystem.Colors.accent.opacity(0.15))
                 .clipShape(Circle())
 
             Text(text)
-                .font(DesignSystem.Typography.caption)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundColor(DesignSystem.Colors.textSecondary)
         }
     }
@@ -777,13 +959,14 @@ struct ShareOptionButton: View {
                         .frame(width: 56, height: 56)
 
                     Image(systemName: icon)
-                        .font(.system(size: 22))
+                        .font(.system(size: 22, weight: .semibold))
                         .foregroundColor(color)
                 }
 
                 Text(label)
-                    .font(DesignSystem.Typography.captionSmall)
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
                     .foregroundColor(DesignSystem.Colors.textSecondary)
+                    .tracking(1)
             }
         }
     }
@@ -797,139 +980,162 @@ struct JoinPoolSheet: View {
     @State private var isLoading = false
     @State private var error: String?
     @FocusState private var isCodeFocused: Bool
+    @State private var scanRotation: Double = 0
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                DesignSystem.Colors.background
-                    .ignoresSafeArea()
+        ZStack {
+            AnimatedMeshBackground()
+            TechGridBackground()
 
-                VStack(spacing: 32) {
-                    // Header
-                    VStack(spacing: 16) {
-                        ZStack {
-                            Circle()
-                                .fill(DesignSystem.Colors.accent.opacity(0.15))
-                                .frame(width: 80, height: 80)
-
-                            Image(systemName: "link.badge.plus")
-                                .font(.system(size: 36))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [DesignSystem.Colors.accent, DesignSystem.Colors.accent.opacity(0.6)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                        }
-
-                        Text("Join a Pool")
-                            .font(DesignSystem.Typography.title)
-                            .foregroundColor(DesignSystem.Colors.textPrimary)
-
-                        Text("Enter the invite code shared by the pool host")
-                            .font(DesignSystem.Typography.body)
-                            .foregroundColor(DesignSystem.Colors.textTertiary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.top, 20)
-
-                    // Code input
-                    VStack(spacing: 16) {
-                        TextField("ENTER CODE", text: $code)
-                            .font(DesignSystem.Typography.monoLarge)
-                            .foregroundColor(DesignSystem.Colors.textPrimary)
-                            .multilineTextAlignment(.center)
-                            .textInputAutocapitalization(.characters)
-                            .autocorrectionDisabled()
-                            .focused($isCodeFocused)
-                            .padding()
-                            .background(DesignSystem.Colors.surfaceElevated)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .stroke(
-                                        isCodeFocused ? DesignSystem.Colors.accent.opacity(0.5) : DesignSystem.Colors.glassBorder,
-                                        lineWidth: 1
-                                    )
-                            )
-                            .onChange(of: code) { _, newValue in
-                                if newValue.count > 8 {
-                                    code = String(newValue.prefix(8))
-                                }
-                                code = code.uppercased()
-                            }
-                            .padding(.horizontal, 20)
-
-                        if let error = error {
-                            Text(error)
-                                .font(DesignSystem.Typography.captionSmall)
-                                .foregroundColor(DesignSystem.Colors.danger)
-                        }
-                    }
-
-                    Button {
-                        Haptics.impact(.medium)
-                        joinPool()
-                    } label: {
-                        HStack {
-                            if isLoading {
-                                ProgressView()
-                                    .tint(.white)
-                            } else {
-                                Text("Join Pool")
-                                    .font(DesignSystem.Typography.bodyMedium)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(
-                            LinearGradient(
-                                colors: code.count == 8 ?
-                                    [DesignSystem.Colors.accent, DesignSystem.Colors.accent.opacity(0.8)] :
-                                    [DesignSystem.Colors.textMuted, DesignSystem.Colors.textMuted.opacity(0.8)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .foregroundColor(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .shadow(
-                            color: code.count == 8 ? DesignSystem.Colors.accentGlow : .clear,
-                            radius: 12, y: 4
-                        )
-                    }
-                    .disabled(code.count != 8 || isLoading)
-                    .padding(.horizontal, 20)
+            VStack(spacing: 32) {
+                // Header
+                HStack {
+                    Text("JOIN POOL")
+                        .font(.system(size: 20, weight: .black, design: .monospaced))
+                        .foregroundStyle(DesignSystem.Colors.cyberGradient)
 
                     Spacer()
 
-                    // Note
-                    Text("Note: In this demo version, invite codes create a local copy of the pool. Full cloud sync coming soon!")
-                        .font(DesignSystem.Typography.captionSmall)
-                        .foregroundColor(DesignSystem.Colors.textMuted)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                        .padding(.bottom, 20)
-                }
-            }
-            .navigationTitle("Join Pool")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(DesignSystem.Colors.background, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundColor(DesignSystem.Colors.textMuted)
                     }
-                    .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
-            }
-            .onAppear {
-                isCodeFocused = true
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+
+                // Icon with scanning animation
+                ZStack {
+                    ForEach(0..<3, id: \.self) { i in
+                        Circle()
+                            .stroke(DesignSystem.Colors.accent.opacity(0.1), lineWidth: 1)
+                            .frame(width: 80 + CGFloat(i) * 30)
+                    }
+
+                    Circle()
+                        .trim(from: 0, to: 0.25)
+                        .stroke(DesignSystem.Colors.accent, lineWidth: 2)
+                        .frame(width: 130)
+                        .rotationEffect(.degrees(scanRotation))
+
+                    Circle()
+                        .fill(DesignSystem.Colors.cyberGradient)
+                        .frame(width: 70, height: 70)
+
+                    Image(systemName: "link.badge.plus")
+                        .font(.system(size: 32))
+                        .foregroundColor(.white)
+                }
+                .glow(DesignSystem.Colors.accent, radius: 20)
+                .onAppear {
+                    withAnimation(.linear(duration: 3).repeatForever(autoreverses: false)) {
+                        scanRotation = 360
+                    }
+                }
+
+                VStack(spacing: 8) {
+                    Text("ENTER INVITE CODE")
+                        .font(.system(size: 14, weight: .black, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                        .tracking(2)
+
+                    Text("Enter the code shared by the pool host")
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                }
+
+                // Code input
+                VStack(spacing: 16) {
+                    TextField("XXXXXXXX", text: $code)
+                        .font(.system(size: 24, weight: .black, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                        .multilineTextAlignment(.center)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
+                        .focused($isCodeFocused)
+                        .padding()
+                        .background(DesignSystem.Colors.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(
+                                    isCodeFocused ? DesignSystem.Colors.accent.opacity(0.6) : DesignSystem.Colors.glassBorder,
+                                    lineWidth: isCodeFocused ? 2 : 1
+                                )
+                        )
+                        .shadow(color: isCodeFocused ? DesignSystem.Colors.accentGlow : .clear, radius: 12)
+                        .onChange(of: code) { _, newValue in
+                            if newValue.count > 8 {
+                                code = String(newValue.prefix(8))
+                            }
+                            code = code.uppercased()
+                        }
+                        .padding(.horizontal, 20)
+
+                    if let error = error {
+                        HStack(spacing: 6) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 12))
+                            Text(error)
+                                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        }
+                        .foregroundColor(DesignSystem.Colors.danger)
+                    }
+                }
+
+                Button {
+                    Haptics.impact(.medium)
+                    joinPool()
+                } label: {
+                    HStack(spacing: 10) {
+                        if isLoading {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Image(systemName: "checkmark.circle.fill")
+                            Text("JOIN POOL")
+                                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                .tracking(1)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        code.count == 8 ?
+                            DesignSystem.Colors.cyberGradient :
+                            LinearGradient(colors: [DesignSystem.Colors.textMuted], startPoint: .leading, endPoint: .trailing)
+                    )
+                    .foregroundColor(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .shadow(
+                        color: code.count == 8 ? DesignSystem.Colors.accentGlow : .clear,
+                        radius: 15
+                    )
+                }
+                .disabled(code.count != 8 || isLoading)
+                .padding(.horizontal, 20)
+
+                Spacer()
+
+                // Note
+                HStack(spacing: 8) {
+                    Image(systemName: "info.circle.fill")
+                        .font(.system(size: 14))
+                    Text("Demo: Codes create local pool copies. Cloud sync coming soon!")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                }
+                .foregroundColor(DesignSystem.Colors.textMuted)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
             }
         }
         .preferredColorScheme(.dark)
+        .onAppear {
+            isCodeFocused = true
+        }
     }
 
     private func joinPool() {
@@ -948,115 +1154,142 @@ struct JoinPoolSheet: View {
 // MARK: - About View
 struct AboutView: View {
     @Environment(\.dismiss) var dismiss
+    @State private var logoRotation: Double = 0
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                DesignSystem.Colors.background
-                    .ignoresSafeArea()
+        ZStack {
+            AnimatedMeshBackground()
+            TechGridBackground()
 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 32) {
-                        // App icon and name
-                        VStack(spacing: 20) {
-                            ZStack {
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [DesignSystem.Colors.accent.opacity(0.3), DesignSystem.Colors.accent.opacity(0.1)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: 120, height: 120)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 32) {
+                    // Header
+                    HStack {
+                        Text("ABOUT")
+                            .font(.system(size: 20, weight: .black, design: .monospaced))
+                            .foregroundStyle(DesignSystem.Colors.cyberGradient)
 
-                                Image(systemName: "square.grid.3x3.fill")
-                                    .font(.system(size: 56))
-                                    .foregroundStyle(
-                                        LinearGradient(
-                                            colors: [DesignSystem.Colors.accent, DesignSystem.Colors.accent.opacity(0.6)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                            }
-                            .shadow(color: DesignSystem.Colors.accentGlow, radius: 20, y: 8)
+                        Spacer()
 
-                            Text("SquareUp")
-                                .font(DesignSystem.Typography.scoreHero)
-                                .foregroundColor(DesignSystem.Colors.textPrimary)
-
-                            Text("Super Bowl Squares Made Easy")
-                                .font(DesignSystem.Typography.body)
-                                .foregroundColor(DesignSystem.Colors.textTertiary)
-                        }
-                        .padding(.top, 40)
-
-                        // Features
-                        VStack(spacing: 16) {
-                            FeatureRow(
-                                icon: "text.viewfinder",
-                                iconColor: DesignSystem.Colors.accent,
-                                title: "Smart Scanning",
-                                description: "Scan your pool sheet with OCR technology"
-                            )
-
-                            FeatureRow(
-                                icon: "dot.radiowaves.left.and.right",
-                                iconColor: DesignSystem.Colors.live,
-                                title: "Live Scores",
-                                description: "Real-time score updates during the game"
-                            )
-
-                            FeatureRow(
-                                icon: "viewfinder.circle.fill",
-                                iconColor: DesignSystem.Colors.danger,
-                                title: "On the Hunt",
-                                description: "Know when your squares are close to winning"
-                            )
-
-                            FeatureRow(
-                                icon: "bell.and.waves.left.and.right",
-                                iconColor: DesignSystem.Colors.gold,
-                                title: "Notifications",
-                                description: "Get alerts when you win a quarter"
-                            )
-
-                            FeatureRow(
-                                icon: "paperplane.fill",
-                                iconColor: DesignSystem.Colors.textSecondary,
-                                title: "Easy Sharing",
-                                description: "Share pools with friends via invite codes"
-                            )
-                        }
-                        .padding(20)
-                        .glassCard()
-                        .padding(.horizontal, 20)
-
-                        // Footer
-                        VStack(spacing: 8) {
-                            Text("Made with ♠️ for football fans")
-                                .font(DesignSystem.Typography.caption)
-                                .foregroundColor(DesignSystem.Colors.textTertiary)
-
-                            Text("Version 1.0.0")
-                                .font(DesignSystem.Typography.captionSmall)
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 28))
                                 .foregroundColor(DesignSystem.Colors.textMuted)
                         }
-                        .padding(.bottom, 40)
                     }
-                }
-            }
-            .navigationTitle("About")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(DesignSystem.Colors.background, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        dismiss()
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
+
+                    // App logo with orbital animation
+                    VStack(spacing: 24) {
+                        ZStack {
+                            // Orbital rings
+                            ForEach(0..<4, id: \.self) { i in
+                                Circle()
+                                    .stroke(DesignSystem.Colors.accent.opacity(0.08), lineWidth: 1)
+                                    .frame(width: 100 + CGFloat(i) * 30)
+                            }
+
+                            Circle()
+                                .trim(from: 0, to: 0.15)
+                                .stroke(DesignSystem.Colors.accent, lineWidth: 2)
+                                .frame(width: 180)
+                                .rotationEffect(.degrees(logoRotation))
+
+                            Circle()
+                                .trim(from: 0.5, to: 0.65)
+                                .stroke(DesignSystem.Colors.gold, lineWidth: 2)
+                                .frame(width: 150)
+                                .rotationEffect(.degrees(-logoRotation * 0.7))
+
+                            Circle()
+                                .fill(DesignSystem.Colors.cyberGradient)
+                                .frame(width: 90, height: 90)
+
+                            Image(systemName: "square.grid.3x3.fill")
+                                .font(.system(size: 44))
+                                .foregroundColor(.white)
+                        }
+                        .glow(DesignSystem.Colors.accent, radius: 25)
+                        .onAppear {
+                            withAnimation(.linear(duration: 20).repeatForever(autoreverses: false)) {
+                                logoRotation = 360
+                            }
+                        }
+
+                        VStack(spacing: 8) {
+                            Text("SQUAREUP")
+                                .font(.system(size: 32, weight: .black, design: .monospaced))
+                                .foregroundStyle(DesignSystem.Colors.cyberGradient)
+                                .tracking(4)
+
+                            Text("SUPER BOWL SQUARES REIMAGINED")
+                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .foregroundColor(DesignSystem.Colors.textMuted)
+                                .tracking(2)
+                        }
                     }
-                    .foregroundColor(DesignSystem.Colors.accent)
+
+                    // Features
+                    VStack(spacing: 16) {
+                        FeatureRow(
+                            icon: "text.viewfinder",
+                            iconColor: DesignSystem.Colors.accent,
+                            title: "SMART SCANNING",
+                            description: "Scan pool sheets with OCR technology"
+                        )
+
+                        FeatureRow(
+                            icon: "dot.radiowaves.left.and.right",
+                            iconColor: DesignSystem.Colors.live,
+                            title: "LIVE SCORES",
+                            description: "Real-time score updates during game"
+                        )
+
+                        FeatureRow(
+                            icon: "viewfinder.trianglebadge.exclamationmark",
+                            iconColor: DesignSystem.Colors.danger,
+                            title: "ON THE HUNT",
+                            description: "Know when squares are close to winning"
+                        )
+
+                        FeatureRow(
+                            icon: "bell.badge.waveform.fill",
+                            iconColor: DesignSystem.Colors.gold,
+                            title: "SMART ALERTS",
+                            description: "Get notified when you win a quarter"
+                        )
+
+                        FeatureRow(
+                            icon: "paperplane.circle.fill",
+                            iconColor: DesignSystem.Colors.textSecondary,
+                            title: "EASY SHARING",
+                            description: "Share pools via invite codes"
+                        )
+                    }
+                    .padding(20)
+                    .neonCard(DesignSystem.Colors.accent, intensity: 0.15)
+                    .padding(.horizontal, 20)
+
+                    // Footer
+                    VStack(spacing: 12) {
+                        Text("MADE WITH ♠️ FOR FOOTBALL FANS")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                            .tracking(2)
+
+                        HStack(spacing: 6) {
+                            Text("VERSION")
+                                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                .foregroundColor(DesignSystem.Colors.textMuted)
+                            Text("1.0.0")
+                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .foregroundColor(DesignSystem.Colors.accent)
+                        }
+                    }
+                    .padding(.bottom, 40)
                 }
             }
         }
@@ -1071,7 +1304,7 @@ struct FeatureRow: View {
     let description: String
 
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
+        HStack(alignment: .center, spacing: 14) {
             ZStack {
                 Circle()
                     .fill(iconColor.opacity(0.15))
@@ -1084,11 +1317,12 @@ struct FeatureRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(DesignSystem.Typography.headline)
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
                     .foregroundColor(DesignSystem.Colors.textPrimary)
+                    .tracking(1)
 
                 Text(description)
-                    .font(DesignSystem.Typography.caption)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundColor(DesignSystem.Colors.textTertiary)
             }
 
