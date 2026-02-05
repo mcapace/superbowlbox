@@ -74,8 +74,11 @@ struct DashboardView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: AppCardStyle.sectionSpacing) {
+            ZStack {
+                MeshBackgroundView()
+                TechGridOverlay()
+                ScrollView {
+                    VStack(spacing: AppCardStyle.sectionSpacing) {
                     LiveScoreCard(
                         score: appState.scoreService.currentScore ?? GameScore.mock,
                         isLoading: appState.scoreService.isLoading
@@ -125,10 +128,10 @@ struct DashboardView: View {
                     }
 
                     Spacer(minLength: 120)
+                    }
+                    .padding(.top, 24)
                 }
-                .padding(.top, 24)
             }
-            .background(DesignSystem.Colors.backgroundPrimary)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
             .toolbar {
@@ -213,7 +216,7 @@ struct OnTheHuntCard: View {
                 .background(RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall).fill(DesignSystem.Colors.backgroundTertiary.opacity(0.6)))
             }
         }
-        .dsGlassCard()
+        .neonCard(glowColor: DesignSystem.Colors.neonCyanGlow)
     }
 
     @ViewBuilder
@@ -294,8 +297,8 @@ struct LiveScoreCard: View {
         }
         .padding(DesignSystem.Layout.cardPadding)
         .frame(maxWidth: .infinity)
-        .dsGlassCard()
-        .glow(color: score.isGameActive ? DesignSystem.Colors.liveGreen.opacity(0.3) : .clear, radius: 8)
+        .neonCard(glowColor: score.isGameActive ? DesignSystem.Colors.matrixGreenGlow : DesignSystem.Colors.neonCyanGlow)
+        .glow(color: score.isGameActive ? DesignSystem.Colors.matrixGreenGlow : DesignSystem.Colors.neonCyanGlow.opacity(0.3), radius: 10)
         .onAppear { pulseAnimation = true }
     }
 }
@@ -456,7 +459,7 @@ struct WinnerSpotlightCard: View {
                 .padding()
             }
         }
-        .dsGlassCard()
+        .neonCard(glowColor: DesignSystem.Colors.winnerGold.opacity(0.6))
     }
 }
 
@@ -564,7 +567,7 @@ struct InteractiveGridCard: View {
                     .foregroundColor(DesignSystem.Colors.textSecondary)
             }
         }
-        .dsGlassCard()
+        .neonCard(glowColor: DesignSystem.Colors.matrixGreenGlow.opacity(0.5))
     }
 }
 
@@ -674,7 +677,7 @@ struct QuickStatsCard: View {
 
             Spacer()
         }
-        .dsGlassCard(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+        .neonCard(cornerRadius: DesignSystem.Layout.cornerRadiusSmall, glowColor: DesignSystem.Colors.neonCyanGlow)
     }
 }
 

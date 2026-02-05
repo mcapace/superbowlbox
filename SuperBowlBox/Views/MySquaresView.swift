@@ -17,6 +17,9 @@ struct MySquaresView: View {
 
     var body: some View {
         NavigationStack {
+            ZStack {
+                MeshBackgroundView()
+                TechGridOverlay()
             VStack(spacing: 0) {
                 // Search bar
                 HStack {
@@ -74,7 +77,7 @@ struct MySquaresView: View {
                     }
                 }
             }
-            .background(DesignSystem.Colors.backgroundPrimary)
+            }
             .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
             .navigationTitle("My Squares")
         }
@@ -190,7 +193,7 @@ struct MySquaresSummaryCard: View {
                 }
             }
         }
-        .dsGlassCard()
+        .neonCard(glowColor: DesignSystem.Colors.neonCyanGlow)
     }
 }
 
@@ -230,7 +233,7 @@ struct PoolSquaresCard: View {
                 }
             }
         }
-        .dsGlassCard()
+        .neonCard(glowColor: DesignSystem.Colors.neonCyanGlow)
     }
 }
 

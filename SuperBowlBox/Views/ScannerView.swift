@@ -106,7 +106,7 @@ struct ScannerView: View {
                 }
                 .environmentObject(appState)
             }
-            .background(DesignSystem.Colors.backgroundPrimary)
+            .background(ZStack { MeshBackgroundView(); TechGridOverlay() })
         }
     }
 

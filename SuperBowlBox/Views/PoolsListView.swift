@@ -11,6 +11,9 @@ struct PoolsListView: View {
 
     var body: some View {
         NavigationStack {
+            ZStack {
+                MeshBackgroundView()
+                TechGridOverlay()
             Group {
                 if appState.pools.isEmpty {
                     EmptyPoolsView(
@@ -41,7 +44,7 @@ struct PoolsListView: View {
                         .scrollContentBackground(.hidden)
                 }
             }
-            .background(DesignSystem.Colors.backgroundPrimary)
+            }
             .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
             .navigationTitle("My Pools")
             .toolbar {

@@ -10,11 +10,15 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
+            ZStack {
+                MeshBackgroundView()
+                TechGridOverlay()
             List {
                 // Profile Section
                 Section {
                     HStack {
                         ZStack {
+                            OrbitalRingView(progress: 1, size: 64, color: DesignSystem.Colors.cyberCyan)
                             Circle()
                                 .fill(DesignSystem.Colors.accentBlue)
                                 .frame(width: 60, height: 60)
@@ -264,9 +268,9 @@ struct SettingsView: View {
                     Text("About")
                 }
             }
+            }
             .scrollContentBackground(.hidden)
             .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
-            .background(DesignSystem.Colors.backgroundPrimary)
             .navigationTitle("Settings")
             .sheet(isPresented: $showingJoinPool) {
                 JoinPoolSheet()

@@ -60,8 +60,8 @@ struct InstructionsView: View {
 
     var body: some View {
         ZStack {
-            DesignSystem.Colors.backgroundPrimary
-                .ignoresSafeArea()
+            MeshBackgroundView()
+            TechGridOverlay()
 
             VStack(spacing: 0) {
                 // Skip (sheet mode or onboarding)
