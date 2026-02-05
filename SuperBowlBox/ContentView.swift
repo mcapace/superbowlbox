@@ -151,6 +151,18 @@ struct DashboardView: View {
                             .padding(.horizontal, DesignSystem.Layout.screenInset)
                     }
 
+                    if let pool = currentPool,
+                       let score = appState.scoreService.currentScore,
+                       !pool.finalizedWinnings(score: score).isEmpty {
+                        SectionHeaderView(title: "Current winnings (finalized)")
+                        FinalizedWinningsCard(
+                            pool: pool,
+                            score: score,
+                            ownerLabels: pool.effectiveOwnerLabels(globalName: appState.myName)
+                        )
+                        .padding(.horizontal, DesignSystem.Layout.screenInset)
+                    }
+
                     if let pool = currentPool {
                         SectionHeaderView(title: "Grid")
                         NavigationLink {
@@ -708,6 +720,85 @@ struct WinnerSpotlightCard: View {
                 .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 0.5)
         )
         .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.4), radius: 6, x: 0, y: 2)
+    }
+}
+
+// MARK: - Finalized winnings (period winners + amounts based on pool rules)
+struct FinalizedWinningsCard: View {
+    let pool: BoxGrid
+    let score: GameScore
+    let ownerLabels: [String]
+
+    private var items: [(period: PoolPeriod, winnerName: String, amount: Double?)] {
+        pool.finalizedWinnings(score: score)
+    }
+
+    private func isMyWin(_ winnerName: String) -> Bool {
+        let w = winnerName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !w.isEmpty else { return false }
+        return ownerLabels.contains { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == w }
+    }
+
+    private func formatAmount(_ amount: Double?) -> String {
+        guard let amount else { return "—" }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = pool.resolvedPoolStructure.currencyCode
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: amount)) ?? "$\(Int(amount))"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(DesignSystem.Colors.liveGreen)
+                Text("Finalized by rules")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+            }
+
+            VStack(spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                    HStack {
+                        Text(item.period.displayLabel)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
+                            .frame(width: 56, alignment: .leading)
+                        Text(item.winnerName)
+                            .font(.system(size: 14, weight: isMyWin(item.winnerName) ? .semibold : .regular))
+                            .foregroundColor(isMyWin(item.winnerName) ? DesignSystem.Colors.winnerGold : DesignSystem.Colors.textPrimary)
+                        Spacer()
+                        Text(formatAmount(item.amount))
+                            .font(.system(size: 14, weight: .medium))
+                            .monospacedDigit()
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                    .fill(DesignSystem.Colors.backgroundTertiary)
+            )
+
+            if let custom = pool.resolvedPoolStructure.customPayoutDescription, !custom.isEmpty {
+                Text(custom)
+                    .font(.caption)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
+            }
+        }
+        .padding(DesignSystem.Layout.cardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                .fill(DesignSystem.Colors.cardSurface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 0.5)
+        )
     }
 }
 

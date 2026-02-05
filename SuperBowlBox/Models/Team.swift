@@ -102,4 +102,23 @@ struct Team: Codable, Identifiable, Equatable, Hashable {
         .chiefs, .eagles, .fortyNiners, .ravens,
         .bills, .lions, .cowboys, .packers
     ]
+
+    /// Match sheet text to a team (abbreviation or distinctive name part). Used by OCR to set grid teams.
+    static func firstMatching(in text: String) -> Team? {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !t.isEmpty else { return nil }
+        for team in allTeams {
+            if t == team.abbreviation.lowercased() { return team }
+            let nameLower = team.name.lowercased()
+            if nameLower.contains(t) || t.contains(nameLower) { return team }
+        }
+        let keywords: [(String, Team)] = [
+            ("chief", .chiefs), ("eagle", .eagles), ("49er", .fortyNiners), ("niner", .fortyNiners),
+            ("raven", .ravens), ("bill", .bills), ("lion", .lions), ("cowboy", .cowboys), ("packer", .packers)
+        ]
+        for (keyword, team) in keywords where t.contains(keyword) {
+            return team
+        }
+        return nil
+    }
 }

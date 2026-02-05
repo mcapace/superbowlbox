@@ -574,10 +574,39 @@ struct JoinPoolSheet: View {
     @State private var code: String = ""
     @State private var isLoading = false
     @State private var error: String?
+    @State private var joinedPool: BoxGrid?
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 32) {
+            Group {
+                if let pool = joinedPool {
+                    ClaimYourSquaresView(
+                        pool: pool,
+                        onConfirm: { updatedPool in
+                            appState.addPool(updatedPool)
+                            HapticService.success()
+                            dismiss()
+                        },
+                        onCancel: { joinedPool = nil }
+                    )
+                } else {
+                    joinCodeContent
+                }
+            }
+            .navigationTitle(joinedPool != nil ? "Claim your squares" : "Join Pool")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        if joinedPool != nil { joinedPool = nil } else { dismiss() }
+                    }
+                }
+            }
+        }
+    }
+
+    private var joinCodeContent: some View {
+        VStack(spacing: 32) {
                 VStack(spacing: 8) {
                     Image(systemName: "link.badge.plus")
                         .font(.system(size: 50))
@@ -648,15 +677,6 @@ struct JoinPoolSheet: View {
                 }
             }
             .padding()
-            .navigationTitle("Join Pool")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
         }
     }
 
@@ -671,9 +691,8 @@ struct JoinPoolSheet: View {
             do {
                 let pool = try await SharedPoolsService.fetchPool(code: code.trimmingCharacters(in: .whitespaces).uppercased())
                 await MainActor.run {
-                    appState.addPool(pool)
-                    HapticService.success()
-                    dismiss()
+                    joinedPool = pool
+                    isLoading = false
                 }
             } catch {
                 await MainActor.run {
@@ -682,6 +701,165 @@ struct JoinPoolSheet: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Claim your squares (after join: enter name or manual box numbers; rules already in pool)
+struct ClaimYourSquaresView: View {
+    let pool: BoxGrid
+    let onConfirm: (BoxGrid) -> Void
+    let onCancel: () -> Void
+
+    @EnvironmentObject var appState: AppState
+    @State private var ownerName: String = ""
+    @State private var useManualEntry = false
+    @State private var manualBoxes: [(homeDigit: Int, awayDigit: Int)] = [(0, 0)]
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                Text("Rules and payout were set by the host. Enter your name so we can find your squares on the grid.")
+                    .font(.subheadline)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
+
+                if !useManualEntry {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Your name as it appears on the sheet")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        TextField("e.g. Mike Capace", text: $ownerName)
+                            .textFieldStyle(.roundedBorder)
+                            .textContentType(.name)
+                            .autocorrectionDisabled()
+                    }
+
+                    Button {
+                        claimWithName()
+                    } label: {
+                        Text("Find my squares")
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(AppColors.fieldGreen)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                    }
+                    .disabled(ownerName.trimmingCharacters(in: .whitespaces).isEmpty)
+
+                    Button {
+                        useManualEntry = true
+                    } label: {
+                        Text("Scan didn't find me / Enter my numbers manually")
+                            .font(.subheadline)
+                            .foregroundColor(AppColors.fieldGreen)
+                    }
+                } else {
+                    manualEntrySection
+                }
+            }
+            .padding()
+        }
+        .onAppear {
+            if ownerName.isEmpty, !appState.myName.isEmpty {
+                ownerName = appState.myName
+            }
+        }
+    }
+
+    private var manualEntrySection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Enter the column and row number for each of your squares.")
+                .font(.subheadline)
+                .foregroundColor(DesignSystem.Colors.textSecondary)
+
+            TextField("Your name", text: $ownerName)
+                .textFieldStyle(.roundedBorder)
+
+            ForEach(Array(manualBoxes.enumerated()), id: \.offset) { index, _ in
+                HStack {
+                    Text("Box \(index + 1)")
+                        .font(.subheadline)
+                        .frame(width: 44, alignment: .leading)
+                    Picker("", selection: Binding(
+                        get: { manualBoxes[index].homeDigit },
+                        set: { newVal in
+                            var b = manualBoxes
+                            b[index].homeDigit = newVal
+                            manualBoxes = b
+                        }
+                    )) {
+                        ForEach(0...9, id: \.self) { n in Text("\(n)").tag(n) }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    Text("\(pool.homeTeam.abbreviation)")
+                        .font(.caption2)
+                    Picker("", selection: Binding(
+                        get: { manualBoxes[index].awayDigit },
+                        set: { newVal in
+                            var b = manualBoxes
+                            b[index].awayDigit = newVal
+                            manualBoxes = b
+                        }
+                    )) {
+                        ForEach(0...9, id: \.self) { n in Text("\(n)").tag(n) }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    Text("\(pool.awayTeam.abbreviation)")
+                        .font(.caption2)
+                    if manualBoxes.count > 1 {
+                        Button {
+                            manualBoxes.remove(at: index)
+                        } label: {
+                            Image(systemName: "minus.circle.fill")
+                                .foregroundColor(DesignSystem.Colors.dangerRed)
+                        }
+                    }
+                }
+            }
+
+            Button {
+                manualBoxes.append((0, 0))
+            } label: {
+                Label("Add another box", systemImage: "plus.circle.fill")
+                    .font(.subheadline)
+                    .foregroundColor(AppColors.fieldGreen)
+            }
+
+            Button {
+                claimWithManualBoxes()
+            } label: {
+                Text("Done – add pool")
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(AppColors.fieldGreen)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+            }
+        }
+    }
+
+    private func claimWithName() {
+        let name = ownerName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        var p = pool
+        p.ownerLabels = [name]
+        onConfirm(p)
+    }
+
+    private func claimWithManualBoxes() {
+        let name = ownerName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let label = name.isEmpty ? "You" : name
+        var p = pool
+        for box in manualBoxes {
+            if let pos = p.winningPosition(homeDigit: box.homeDigit, awayDigit: box.awayDigit) {
+                p.updateSquare(row: pos.row, column: pos.column, playerName: label)
+            }
+        }
+        p.ownerLabels = [label]
+        onConfirm(p)
     }
 }
 
@@ -709,7 +887,7 @@ struct AboutView: View {
                         FeatureRow(
                             icon: "text.viewfinder",
                             title: "Smart Scanning",
-                            description: "Scan your pool sheet with OCR technology"
+                            description: "Scan your pool sheet with your camera"
                         )
 
                         FeatureRow(

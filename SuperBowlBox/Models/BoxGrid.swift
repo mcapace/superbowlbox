@@ -198,6 +198,50 @@ struct BoxGrid: Codable, Identifiable {
         }
     }
 
+    /// True if this period has already ended (winner is final).
+    func isPeriodFinalized(_ period: PoolPeriod, score: GameScore) -> Bool {
+        if score.isGameOver { return true }
+        switch period {
+        case .quarter(let q):
+            return score.quarter > q
+        case .halftime:
+            return score.quarter >= 3
+        case .final:
+            return score.isGameOver
+        case .firstScoreChange:
+            return (score.homeScore + score.awayScore) > 0
+        case .custom:
+            return score.isGameOver
+        }
+    }
+
+    /// Square that won the given period (from current winner state).
+    func squareThatWon(period: PoolPeriod) -> BoxSquare? {
+        for row in squares {
+            for sq in row {
+                switch period {
+                case .quarter(let q):
+                    if sq.quarterWins.contains(q) { return sq }
+                default:
+                    if sq.winningPeriodIds.contains(period.id) { return sq }
+                }
+            }
+        }
+        return nil
+    }
+
+    /// Finalized periods with winner name and payout amount (for "Current winnings" UI).
+    func finalizedWinnings(score: GameScore) -> [(period: PoolPeriod, winnerName: String, amount: Double?)] {
+        let periods = resolvedPoolStructure.periods
+        return periods.enumerated().compactMap { index, period in
+            guard isPeriodFinalized(period, score: score) else { return nil }
+            let sq = squareThatWon(period: period)
+            let name = sq?.displayName ?? "—"
+            let amount = resolvedPoolStructure.amountPerPeriod(at: index)
+            return (period, name, amount)
+        }
+    }
+
     // Get all unique player names
     var allPlayers: [String] {
         var names = Set<String>()
@@ -211,19 +255,9 @@ struct BoxGrid: Codable, Identifiable {
         return Array(names).sorted()
     }
 
-    // Get all squares for a specific player (exact name match, case-insensitive)
+    // Get all squares for a specific player (name match, case-insensitive, whitespace-tolerant)
     func squares(for playerName: String) -> [BoxSquare] {
-        var result: [BoxSquare] = []
-        let key = playerName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !key.isEmpty else { return result }
-        for row in squares {
-            for square in row {
-                if square.playerName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == key {
-                    result.append(square)
-                }
-            }
-        }
-        return result
+        squaresForOwner(ownerLabels: [playerName])
     }
 
     /// Labels that identify "my" squares on this sheet (set when scanning/creating). Used with effectiveOwnerLabels(globalName:).
@@ -237,15 +271,27 @@ struct BoxGrid: Codable, Identifiable {
         return []
     }
 
-    /// All squares that belong to the owner (match any of the given labels, case-insensitive).
+    /// Normalize for name matching: trim, lowercase, collapse whitespace, and apply common OCR substitutions (0/O, 1/l, 5/S) so "M1ke" and "M i k e" match "Mike".
+    private static func normalizeForNameMatch(_ s: String) -> String {
+        let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .split(whereSeparator: { $0.isWhitespace })
+            .joined()
+        return t
+            .replacingOccurrences(of: "0", with: "o")
+            .replacingOccurrences(of: "1", with: "l")
+            .replacingOccurrences(of: "5", with: "s")
+    }
+
+    /// All squares that belong to the owner (match any of the given labels, case-insensitive, whitespace-tolerant).
     func squaresForOwner(ownerLabels: [String]) -> [BoxSquare] {
-        let keys = Set(ownerLabels.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }.filter { !$0.isEmpty })
+        let keys = Set(ownerLabels.map { Self.normalizeForNameMatch($0) }.filter { !$0.isEmpty })
         guard !keys.isEmpty else { return [] }
         var result: [BoxSquare] = []
         for row in squares {
             for square in row {
-                let name = square.playerName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                if keys.contains(name) {
+                let name = Self.normalizeForNameMatch(square.playerName)
+                if !name.isEmpty && keys.contains(name) {
                     result.append(square)
                 }
             }
@@ -255,9 +301,9 @@ struct BoxGrid: Codable, Identifiable {
 
     /// Whether a square is one of the owner's (by playerName matching any effective owner label).
     func isOwnerSquare(_ square: BoxSquare, ownerLabels: [String]) -> Bool {
-        let name = square.playerName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let name = Self.normalizeForNameMatch(square.playerName)
         guard !name.isEmpty else { return false }
-        let keys = Set(ownerLabels.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }.filter { !$0.isEmpty })
+        let keys = Set(ownerLabels.map { Self.normalizeForNameMatch($0) }.filter { !$0.isEmpty })
         return keys.contains(name)
     }
 

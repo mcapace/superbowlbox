@@ -30,14 +30,16 @@ enum SharedPoolsService {
         return String((0..<8).map { _ in chars.randomElement()! })
     }
 
-    /// Upload pool to backend; returns the share code. Uses existing sharedCode if backend supports upsert, otherwise always creates new row.
+    /// Upload pool to backend; returns the share code. Rules/payout/structure are stored; ownerLabels are stripped so joiners claim with their own name.
     static func uploadPool(_ pool: BoxGrid) async throws -> String {
         guard SharedPoolsConfig.isConfigured else { throw SharedPoolsError.notConfigured }
         guard let base = SharedPoolsConfig.baseURL,
               let url = URL(string: tablePath, relativeTo: base) else { throw SharedPoolsError.invalidURL }
 
+        var template = pool
+        template.ownerLabels = nil
         let code = generateCode()
-        let body = SharedPoolRowPayload(code: code, pool_json: pool)
+        let body = SharedPoolRowPayload(code: code, pool_json: template)
         guard let data = try? JSONEncoder().encode(body) else { throw SharedPoolsError.decodingFailed }
 
         var request = URLRequest(url: url)

@@ -35,6 +35,7 @@
 		A1111111000000000000001A /* ListableGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001B /* ListableGame.swift */; };
 		A1111111000000000000001B /* GamesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001C /* GamesService.swift */; };
 		A1111111000000000000001C /* CreateFromGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001D /* CreateFromGameView.swift */; };
+		A1111111000000000000002A /* EnterMyNumbersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000002A /* EnterMyNumbersView.swift */; };
 		A1111111000000000000001D /* SportsDataIOConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001E /* SportsDataIOConfig.swift */; };
 		A1111111000000000000001E /* SportsDataIOService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001F /* SportsDataIOService.swift */; };
 		A11111110000000000000020 /* GameContextService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000020 /* GameContextService.swift */; };
@@ -81,6 +82,7 @@
 		A0000000000000000000001B /* ListableGame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListableGame.swift; sourceTree = "<group>"; };
 		A0000000000000000000001C /* GamesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamesService.swift; sourceTree = "<group>"; };
 		A0000000000000000000001D /* CreateFromGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFromGameView.swift; sourceTree = "<group>"; };
+		A0000000000000000000002A /* EnterMyNumbersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnterMyNumbersView.swift; sourceTree = "<group>"; };
 		A0000000000000000000001E /* SportsDataIOConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SportsDataIOConfig.swift; sourceTree = "<group>"; };
 		A0000000000000000000001F /* SportsDataIOService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SportsDataIOService.swift; sourceTree = "<group>"; };
 		A00000000000000000000020 /* GameContextService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameContextService.swift; sourceTree = "<group>"; };
@@ -192,6 +194,7 @@
 				A00000000000000000000018 /* SignInWithAppleButton.swift */,
 				A00000000000000000000025 /* GoogleSignInButton.swift */,
 				A0000000000000000000001D /* CreateFromGameView.swift */,
+				A0000000000000000000002A /* EnterMyNumbersView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -335,6 +338,7 @@
 				A1111111000000000000001A /* ListableGame.swift in Sources */,
 				A1111111000000000000001B /* GamesService.swift in Sources */,
 				A1111111000000000000001C /* CreateFromGameView.swift in Sources */,
+				A1111111000000000000002A /* EnterMyNumbersView.swift in Sources */,
 				A1111111000000000000001D /* SportsDataIOConfig.swift in Sources */,
 				A1111111000000000000001E /* SportsDataIOService.swift in Sources */,
 				A11111110000000000000020 /* GameContextService.swift in Sources */,

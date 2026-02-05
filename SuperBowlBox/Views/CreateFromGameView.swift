@@ -67,7 +67,7 @@ struct CreateFromGameView: View {
                     .listStyle(.insetGrouped)
                 }
             }
-            .navigationTitle("Create from Game")
+            .navigationTitle("Upcoming Games")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

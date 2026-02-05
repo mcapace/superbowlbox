@@ -4,6 +4,7 @@ import AVFoundation
 struct CameraView: UIViewControllerRepresentable {
     let onCapture: (UIImage) -> Void
     var onCaptureFailed: ((Error) -> Void)?
+    var onDismiss: (() -> Void)?
 
     func makeUIViewController(context: Context) -> CameraViewController {
         let controller = CameraViewController()
@@ -14,16 +15,18 @@ struct CameraView: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: CameraViewController, context: Context) {}
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onCapture: onCapture, onCaptureFailed: onCaptureFailed)
+        Coordinator(onCapture: onCapture, onCaptureFailed: onCaptureFailed, onDismiss: onDismiss)
     }
 
     class Coordinator: NSObject, CameraViewControllerDelegate {
         let onCapture: (UIImage) -> Void
         let onCaptureFailed: ((Error) -> Void)?
+        let onDismiss: (() -> Void)?
 
-        init(onCapture: @escaping (UIImage) -> Void, onCaptureFailed: ((Error) -> Void)? = nil) {
+        init(onCapture: @escaping (UIImage) -> Void, onCaptureFailed: ((Error) -> Void)? = nil, onDismiss: (() -> Void)? = nil) {
             self.onCapture = onCapture
             self.onCaptureFailed = onCaptureFailed
+            self.onDismiss = onDismiss
         }
 
         func didCaptureImage(_ image: UIImage) {
@@ -33,12 +36,17 @@ struct CameraView: UIViewControllerRepresentable {
         func didFailCapture(error: Error) {
             onCaptureFailed?(error)
         }
+
+        func didCancel() {
+            onDismiss?()
+        }
     }
 }
 
 protocol CameraViewControllerDelegate: AnyObject {
     func didCaptureImage(_ image: UIImage)
     func didFailCapture(error: Error)
+    func didCancel()
 }
 
 class CameraViewController: UIViewController {
@@ -230,7 +238,8 @@ class CameraViewController: UIViewController {
     }
 
     @objc private func dismissCamera() {
-        dismiss(animated: true)
+        delegate?.didCancel()
+        // SwiftUI dismisses the sheet via onDismiss callback
     }
 
     private func showCameraError() {
@@ -240,7 +249,7 @@ class CameraViewController: UIViewController {
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
-            self?.dismiss(animated: true)
+            self?.delegate?.didCancel()
         })
         present(alert, animated: true)
     }
@@ -251,7 +260,6 @@ extension CameraViewController: AVCapturePhotoCaptureDelegate {
         if let error = error {
             DispatchQueue.main.async { [weak self] in
                 self?.delegate?.didFailCapture(error: error)
-                self?.dismiss(animated: true)
             }
             return
         }
@@ -259,14 +267,13 @@ extension CameraViewController: AVCapturePhotoCaptureDelegate {
               let image = UIImage(data: imageData) else {
             DispatchQueue.main.async { [weak self] in
                 self?.delegate?.didFailCapture(error: NSError(domain: "Camera", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not get image from photo."]))
-                self?.dismiss(animated: true)
             }
             return
         }
 
         DispatchQueue.main.async { [weak self] in
             self?.delegate?.didCaptureImage(image)
-            self?.dismiss(animated: true)
+            // Do not dismiss here — SwiftUI dismisses the sheet when showingCamera is set false.
         }
     }
 }

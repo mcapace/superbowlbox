@@ -113,7 +113,8 @@ struct ScannerView: View {
                     onCaptureFailed: { error in
                         scanProgress = .error(error.localizedDescription)
                         showingCamera = false
-                    }
+                    },
+                    onDismiss: { showingCamera = false }
                 )
             }
             .photosPicker(isPresented: $showingImagePicker, selection: $selectedItem, matching: .images)
@@ -145,17 +146,17 @@ struct ScannerView: View {
     }
 
     private func handleCapturedImage(_ image: UIImage) {
-        Task { @MainActor in
-            showingCamera = false
-            selectedImage = image
-            ownerNameFieldsBeforeScan = [""]
-            poolNameBeforeScan = ""
-            if !appState.myName.isEmpty {
-                ownerNameFieldsBeforeScan[0] = appState.myName
-            }
-            withAnimation(.appReveal) {
-                scanProgress = .enteringName
-            }
+        // Called on main from camera delegate. Update state immediately so the sheet dismisses
+        // and we show "Your name as on sheet" before any VC dismiss runs.
+        showingCamera = false
+        selectedImage = image
+        ownerNameFieldsBeforeScan = [""]
+        poolNameBeforeScan = ""
+        if !appState.myName.isEmpty {
+            ownerNameFieldsBeforeScan[0] = appState.myName
+        }
+        withAnimation(.appReveal) {
+            scanProgress = .enteringName
         }
     }
 
@@ -420,7 +421,7 @@ struct EnterNameForScanView: View {
                     HapticService.impactLight()
                     onContinue()
                 } label: {
-                    Text("Continue – Match with OCR")
+                    Text("Continue")
                         .font(DesignSystem.Typography.headline)
                         .frame(maxWidth: .infinity)
                         .padding()
@@ -596,17 +597,31 @@ struct ReviewScanView: View {
                 )
 
                 // Stats
+                let effectiveLabels = ownerNameFields.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+                let mySquaresCount = effectiveLabels.isEmpty ? 0 : pool.squaresForOwner(ownerLabels: effectiveLabels).count
+
                 HStack(spacing: 20) {
                     StatBox(
-                        title: "Names Found",
+                        title: "Names on Sheet",
                         value: "\(pool.filledCount)",
                         icon: "person.fill"
                     )
                     StatBox(
-                        title: "Empty Squares",
+                        title: "Your Squares",
+                        value: "\(mySquaresCount)",
+                        icon: "star.fill"
+                    )
+                    StatBox(
+                        title: "Empty",
                         value: "\(100 - pool.filledCount)",
                         icon: "square.dashed"
                     )
+                }
+                if !effectiveLabels.isEmpty && mySquaresCount == 0 {
+                    Text("No squares matched \"\(effectiveLabels.joined(separator: "\", \""))\". Try the exact spelling as on the sheet (we ignore extra spaces and case).")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                        .padding(.horizontal)
                 }
 
                 // Grid preview

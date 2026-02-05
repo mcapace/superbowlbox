@@ -23,15 +23,22 @@ struct GridDetailView: View {
         ScrollView([.horizontal, .vertical], showsIndicators: true) {
             VStack(spacing: 0) {
                 // Pool structure & payouts summary (sleek)
-                HStack {
-                    Label(pool.resolvedPoolStructure.periodLabels.joined(separator: " · "), systemImage: "calendar.badge.clock")
-                        .font(.system(size: 12))
-                        .foregroundColor(DesignSystem.Colors.liveGreen)
-                    Spacer()
-                    if !pool.resolvedPoolStructure.payoutDescriptions.isEmpty {
-                        Text(pool.resolvedPoolStructure.payoutDescriptions.joined(separator: "  "))
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Label(pool.resolvedPoolStructure.periodLabels.joined(separator: " · "), systemImage: "calendar.badge.clock")
+                            .font(.system(size: 12))
+                            .foregroundColor(DesignSystem.Colors.liveGreen)
+                        Spacer()
+                        if !pool.resolvedPoolStructure.payoutDescriptions.isEmpty {
+                            Text(pool.resolvedPoolStructure.payoutDescriptions.joined(separator: "  "))
+                                .font(.system(size: 11))
+                                .foregroundColor(DesignSystem.Colors.textTertiary)
+                        }
+                    }
+                    if let custom = pool.resolvedPoolStructure.customPayoutDescription, !custom.isEmpty {
+                        Text(custom)
                             .font(.system(size: 11))
-                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
                     }
                 }
                 .padding(.horizontal, 14)
@@ -143,18 +150,6 @@ struct GridDetailView: View {
                     Image(systemName: "ellipsis.circle")
                 }
             }
-            .alert("Delete pool?", isPresented: $showingDeletePoolConfirmation) {
-                Button("Cancel", role: .cancel) {}
-                Button("Delete", role: .destructive) {
-                    if let index = appState.pools.firstIndex(where: { $0.id == pool.id }) {
-                        HapticService.impactHeavy()
-                        appState.removePool(at: index)
-                        dismiss()
-                    }
-                }
-            } message: {
-                Text("'\(pool.name)' will be permanently deleted. This cannot be undone.")
-            }
 
             ToolbarItem(placement: .bottomBar) {
                 HStack {
@@ -213,6 +208,18 @@ struct GridDetailView: View {
         }
         .sheet(isPresented: $showingShareSheet) {
             ShareSheet(items: [exportGridAsImage()])
+        }
+        .alert("Delete pool?", isPresented: $showingDeletePoolConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                if let index = appState.pools.firstIndex(where: { $0.id == pool.id }) {
+                    HapticService.impactHeavy()
+                    appState.removePool(at: index)
+                    dismiss()
+                }
+            }
+        } message: {
+            Text("'\(pool.name)' will be permanently deleted. This cannot be undone.")
         }
     }
 

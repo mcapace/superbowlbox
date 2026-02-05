@@ -8,17 +8,43 @@ struct PoolStructure: Codable, Equatable, Hashable {
     var payoutStyle: PayoutStyle
     var totalPoolAmount: Double?
     var currencyCode: String
+    /// Free-text description of how this pool pays (e.g. "$25 per quarter, halftime pays double"). Shown in UI; can be used for AI/LLM to explain winnings.
+    var customPayoutDescription: String?
 
     init(
         poolType: PoolType = .byQuarter([1, 2, 3, 4]),
         payoutStyle: PayoutStyle = .equalSplit,
         totalPoolAmount: Double? = nil,
-        currencyCode: String = "USD"
+        currencyCode: String = "USD",
+        customPayoutDescription: String? = nil
     ) {
         self.poolType = poolType
         self.payoutStyle = payoutStyle
         self.totalPoolAmount = totalPoolAmount
         self.currencyCode = currencyCode
+        self.customPayoutDescription = customPayoutDescription
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case poolType, payoutStyle, totalPoolAmount, currencyCode, customPayoutDescription
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        poolType = try c.decode(PoolType.self, forKey: .poolType)
+        payoutStyle = try c.decode(PayoutStyle.self, forKey: .payoutStyle)
+        totalPoolAmount = try c.decodeIfPresent(Double.self, forKey: .totalPoolAmount)
+        currencyCode = try c.decode(String.self, forKey: .currencyCode)
+        customPayoutDescription = try c.decodeIfPresent(String.self, forKey: .customPayoutDescription)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(poolType, forKey: .poolType)
+        try c.encode(payoutStyle, forKey: .payoutStyle)
+        try c.encodeIfPresent(totalPoolAmount, forKey: .totalPoolAmount)
+        try c.encode(currencyCode, forKey: .currencyCode)
+        try c.encodeIfPresent(customPayoutDescription, forKey: .customPayoutDescription)
     }
 
     /// Periods that can win in this pool (for display and winner logic)

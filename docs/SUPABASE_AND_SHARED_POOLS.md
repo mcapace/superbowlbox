@@ -49,10 +49,10 @@ The app **uploads a pool** when you share it (or when you first open the share s
 ### App behavior
 
 - **Share (Settings → Share My Pools → tap a pool)**  
-  Opens the share sheet. If the pool has no saved code, the app uploads it to `shared_pools` and shows the new 8-character code; the code is then saved on the pool so reopening the sheet shows the same code without re-uploading.
+  Opens the share sheet. If the pool has no saved code, the app uploads the pool (including rules/payout/structure) to `shared_pools` and shows the new 8-character code. The creator’s “your name” (ownerLabels) is not uploaded so the shared template is neutral. The code is saved on the pool so reopening the sheet shows the same code without re-uploading.
 
-- **Join (Settings → Join Pool with Code)**  
-  User enters an 8-character code. The app fetches the row from `shared_pools` with that `code`, decodes `pool_json` into the pool, and adds it to their list.
+- **Join (Pools or Settings → Join Pool with Code)**  
+  User enters an 8-character code. The app fetches the pool from `shared_pools`. **Rules and payout are already in the pool** (set by the host). The joiner then sees **Claim your squares**: they only enter **their name as it appears on the sheet** so the app can find their squares, or choose **Enter my numbers manually** if OCR didn’t find them (column + row for each box, add more boxes if needed). No re-entering of rules.
 
 ---
 

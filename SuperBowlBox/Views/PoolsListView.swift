@@ -5,6 +5,7 @@ struct PoolsListView: View {
     @State private var showingNewPoolSheet = false
     @State private var showingCreateFromGame = false
     @State private var newPoolPrefill: NewPoolPrefill?
+    @State private var gameForMyNumbers: ListableGame?
     @State private var showingScanner = false
     @State private var showingJoinPool = false
     @State private var poolToDelete: BoxGrid?
@@ -118,17 +119,23 @@ struct PoolsListView: View {
             .sheet(isPresented: $showingCreateFromGame) {
                 CreateFromGameView(
                     onSelect: { game in
-                        newPoolPrefill = NewPoolPrefill(
-                            poolName: "\(game.awayTeam.abbreviation) @ \(game.homeTeam.abbreviation)",
-                            homeTeam: game.homeTeam,
-                            awayTeam: game.awayTeam,
-                            suggestedPoolStructure: PoolStructure.defaultFor(sport: game.sport)
-                        )
                         showingCreateFromGame = false
-                        showingNewPoolSheet = true
+                        gameForMyNumbers = game
                     },
                     onCancel: { showingCreateFromGame = false }
                 )
+            }
+            .sheet(item: $gameForMyNumbers) { game in
+                EnterMyNumbersView(
+                    game: game,
+                    onSave: { pool in
+                        HapticService.success()
+                        appState.addPool(pool)
+                        gameForMyNumbers = nil
+                    },
+                    onCancel: { gameForMyNumbers = nil }
+                )
+                .environmentObject(appState)
             }
             .sheet(isPresented: $showingScanner) {
                 ScannerView { scannedPool in
@@ -295,9 +302,9 @@ struct NoPoolsEmptyState: View {
                         Image(systemName: "sportscourt.fill")
                             .font(.title2)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Create from game")
+                            Text("Manual / from game")
                                 .font(DesignSystem.Typography.headline)
-                            Text("Start from a scheduled game")
+                            Text("Pick a game, then enter your numbers")
                                 .font(DesignSystem.Typography.caption)
                                 .foregroundColor(DesignSystem.Colors.textSecondary)
                         }
@@ -629,6 +636,7 @@ struct NewPoolSheet: View {
     @State private var poolTypeOption: PoolTypeOption = .byQuarter
     @State private var payoutStyleOption: PayoutStyleOption = .equalSplit
     @State private var totalPoolAmountText = ""
+    @State private var customPayoutDescription = ""
     @State private var showPoolStructureInfo = false
     /// When set (from prefill), we use this structure when creating the pool instead of the form-derived one.
     @State private var prefillStructure: PoolStructure?
@@ -641,11 +649,13 @@ struct NewPoolSheet: View {
     }
 
     private var poolStructure: PoolStructure {
-        PoolStructure(
+        let desc = customPayoutDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        return PoolStructure(
             poolType: poolTypeOption.poolType,
             payoutStyle: payoutStyleOption.payoutStyle,
             totalPoolAmount: totalPoolAmount,
-            currencyCode: "USD"
+            currencyCode: "USD",
+            customPayoutDescription: desc.isEmpty ? nil : desc
         )
     }
 
@@ -692,6 +702,21 @@ struct NewPoolSheet: View {
                             .multilineTextAlignment(.trailing)
                     }
                     .font(.subheadline)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Describe how this pool pays (optional)")
+                            .font(.subheadline)
+                        TextField("e.g. $25 per quarter, halftime pays double", text: $customPayoutDescription, axis: .vertical)
+                            .lineLimit(2...4)
+                            .textFieldStyle(.roundedBorder)
+                        Button {
+                            suggestPoolTypeFromDescription()
+                        } label: {
+                            Label("Suggest from description", systemImage: "sparkles")
+                                .font(.subheadline)
+                                .foregroundColor(AppColors.fieldGreen)
+                        }
+                    }
                 }
 
                 Section("Teams") {
@@ -743,11 +768,13 @@ struct NewPoolSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create") {
+                        let name = poolName.isEmpty ? "Pool \(Date().formatted(date: .abbreviated, time: .omitted))" : poolName
+                        let structure = effectivePoolStructure
                         let newPool = BoxGrid(
-                            name: poolName.isEmpty ? "Pool \(Date().formatted(date: .abbreviated, time: .omitted))" : poolName,
+                            name: name,
                             homeTeam: selectedHomeTeam,
                             awayTeam: selectedAwayTeam,
-                            poolStructure: effectivePoolStructure
+                            poolStructure: structure
                         )
                         onSave(newPool)
                     }
@@ -762,9 +789,44 @@ struct NewPoolSheet: View {
                     prefillStructure = p.suggestedPoolStructure
                 }
             }
+            .onChange(of: customPayoutDescription) { _, newValue in
+                if prefillStructure != nil, !newValue.trimmingCharacters(in: .whitespaces).isEmpty {
+                    prefillStructure = nil
+                }
+            }
             .sheet(isPresented: $showPoolStructureInfo) {
                 PoolStructureInfoSheet()
             }
+        }
+    }
+
+    /// Suggest pool type from free-text description (keyword matching; LLM could be wired here later).
+    private func suggestPoolTypeFromDescription() {
+        let t = customPayoutDescription.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !t.isEmpty else { return }
+        if t.contains("first score") || t.contains("first score change") || t.contains("first td") || t.contains("first field goal") {
+            poolTypeOption = .firstScore
+            prefillStructure = nil
+            return
+        }
+        if t.contains("halftime") && (t.contains("final") || t.contains("end")) {
+            poolTypeOption = .halftimeAndFinal
+            prefillStructure = nil
+            return
+        }
+        if t.contains("halftime") {
+            poolTypeOption = .halftimeOnly
+            prefillStructure = nil
+            return
+        }
+        if t.contains("final") || t.contains("end of game") || t.contains("full game") {
+            poolTypeOption = .finalOnly
+            prefillStructure = nil
+            return
+        }
+        if t.contains("quarter") || t.contains("q1") || t.contains("q2") || t.contains("q3") || t.contains("q4") {
+            poolTypeOption = .byQuarter
+            prefillStructure = nil
         }
     }
 }
