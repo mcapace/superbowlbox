@@ -8,13 +8,13 @@ struct ContentView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Background
-            DesignSystem.Colors.background
-                .ignoresSafeArea()
+            // Animated Background
+            AnimatedMeshBackground()
+            TechGridBackground()
 
             // Tab Content
             TabView(selection: $selectedTab) {
-                LiveDashboardView()
+                FuturisticDashboard()
                     .tag(0)
 
                 PoolsHubView()
@@ -28,9 +28,9 @@ struct ContentView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
 
-            // Custom Floating Tab Bar
-            FloatingTabBar(selectedTab: $selectedTab, namespace: tabAnimation)
-                .padding(.horizontal, 24)
+            // Futuristic Tab Bar
+            FuturisticTabBar(selectedTab: $selectedTab, namespace: tabAnimation)
+                .padding(.horizontal, 20)
                 .padding(.bottom, 8)
         }
         .preferredColorScheme(.dark)
@@ -40,22 +40,22 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Floating Tab Bar
-struct FloatingTabBar: View {
+// MARK: - Futuristic Tab Bar
+struct FuturisticTabBar: View {
     @Binding var selectedTab: Int
     var namespace: Namespace.ID
 
     let tabs = [
-        ("dot.radiowaves.left.and.right", "Live"),
-        ("rectangle.split.3x3", "Pools"),
-        ("person.text.rectangle", "Mine"),
-        ("slider.horizontal.3", "Settings")
+        ("waveform.path.ecg", "LIVE"),
+        ("cube.transparent", "POOLS"),
+        ("person.crop.rectangle.stack", "MINE"),
+        ("gearshape.2", "CONFIG")
     ]
 
     var body: some View {
         HStack(spacing: 0) {
             ForEach(Array(tabs.enumerated()), id: \.offset) { index, tab in
-                TabBarButton(
+                FuturisticTabButton(
                     icon: tab.0,
                     label: tab.1,
                     isSelected: selectedTab == index,
@@ -68,21 +68,32 @@ struct FloatingTabBar: View {
                 }
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 28)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28)
-                        .stroke(DesignSystem.Colors.glassBorder, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 20)
+                .fill(DesignSystem.Colors.surface.opacity(0.9))
+        )
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.ultraThinMaterial.opacity(0.5))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(
+                    LinearGradient(
+                        colors: [DesignSystem.Colors.accent.opacity(0.3), DesignSystem.Colors.holoPurple.opacity(0.2), Color.clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
                 )
         )
-        .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
+        .shadow(color: DesignSystem.Colors.accent.opacity(0.2), radius: 20, y: 5)
     }
 }
 
-struct TabBarButton: View {
+struct FuturisticTabButton: View {
     let icon: String
     let label: String
     let isSelected: Bool
@@ -94,22 +105,29 @@ struct TabBarButton: View {
             VStack(spacing: 4) {
                 ZStack {
                     if isSelected {
-                        Circle()
-                            .fill(DesignSystem.Colors.accent)
-                            .frame(width: 44, height: 44)
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(
+                                LinearGradient(
+                                    colors: [DesignSystem.Colors.accent, DesignSystem.Colors.holoPurple],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 48, height: 36)
                             .matchedGeometryEffect(id: "tabIndicator", in: namespace)
                             .shadow(color: DesignSystem.Colors.accentGlow, radius: 12)
                     }
 
                     Image(systemName: icon)
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(isSelected ? .white : DesignSystem.Colors.textTertiary)
-                        .frame(width: 44, height: 44)
+                        .foregroundColor(isSelected ? .white : DesignSystem.Colors.textMuted)
+                        .frame(width: 48, height: 36)
                 }
 
                 Text(label)
-                    .font(DesignSystem.Typography.captionSmall)
-                    .foregroundColor(isSelected ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textTertiary)
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundColor(isSelected ? DesignSystem.Colors.accent : DesignSystem.Colors.textMuted)
+                    .tracking(1)
             }
             .frame(maxWidth: .infinity)
         }
@@ -117,83 +135,104 @@ struct TabBarButton: View {
     }
 }
 
-// MARK: - Live Dashboard
-struct LiveDashboardView: View {
+// MARK: - Futuristic Dashboard
+struct FuturisticDashboard: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedPoolIndex = 0
-    @State private var showRefresh = false
+
+    var currentPool: BoxGrid? {
+        guard selectedPoolIndex >= 0 && selectedPoolIndex < appState.pools.count else { return nil }
+        return appState.pools[selectedPoolIndex]
+    }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 24) {
-                // Header
+            VStack(spacing: 0) {
+                // Header with brand
                 HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("SquareUp")
-                            .font(DesignSystem.Typography.title)
-                            .foregroundColor(DesignSystem.Colors.textPrimary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("SQUAREUP")
+                            .font(.system(size: 28, weight: .black, design: .monospaced))
+                            .foregroundStyle(DesignSystem.Colors.cyberGradient)
 
-                        Text("Live Score Tracking")
-                            .font(DesignSystem.Typography.caption)
-                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                        Text("LIVE TRACKING SYSTEM")
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .foregroundColor(DesignSystem.Colors.textMuted)
+                            .tracking(2)
                     }
 
                     Spacer()
 
-                    Button {
-                        withAnimation(DesignSystem.Animation.springSnappy) {
-                            showRefresh = true
-                        }
-                        Haptics.impact(.light)
-                        Task {
-                            await appState.scoreService.fetchCurrentScore()
-                            try? await Task.sleep(nanoseconds: 500_000_000)
-                            withAnimation { showRefresh = false }
-                        }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(DesignSystem.Colors.textSecondary)
-                            .rotationEffect(.degrees(showRefresh ? 360 : 0))
-                            .frame(width: 44, height: 44)
-                            .background(DesignSystem.Colors.surfaceElevated)
-                            .clipShape(Circle())
+                    // Status indicator
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(DesignSystem.Colors.live)
+                            .frame(width: 8, height: 8)
+                            .glow(DesignSystem.Colors.live, radius: 6)
+
+                        Text("ONLINE")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundColor(DesignSystem.Colors.live)
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(DesignSystem.Colors.live.opacity(0.1))
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(DesignSystem.Colors.live.opacity(0.3), lineWidth: 1)
+                    )
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 60)
+                .padding(.bottom, 24)
 
-                // Hero Score Card
-                HeroScoreCard(score: appState.scoreService.currentScore ?? GameScore.mock)
-                    .padding(.horizontal, 20)
+                // Main Score Display - Orbital Style
+                if let score = appState.scoreService.currentScore {
+                    OrbitalScoreDisplay(score: score)
+                        .padding(.horizontal, 20)
+                } else {
+                    WaitingForGameView()
+                        .padding(.horizontal, 20)
+                }
 
-                // Pool Selector (if multiple pools)
+                // Live Waveform
+                DataWaveform(color: DesignSystem.Colors.accent)
+                    .frame(height: 40)
+                    .padding(.horizontal, 40)
+                    .padding(.vertical, 20)
+                    .opacity(0.6)
+
+                // Pool Selector
                 if appState.pools.count > 1 {
-                    PoolChipSelector(
+                    FuturisticPoolSelector(
                         pools: appState.pools,
                         selectedIndex: $selectedPoolIndex
                     )
+                    .padding(.bottom, 20)
                 }
 
-                // Current Winner
+                // Winner Command Center
                 if let pool = currentPool,
                    let score = appState.scoreService.currentScore {
-                    WinnerCard(pool: pool, score: score)
+                    CommandCenterCard(pool: pool, score: score)
                         .padding(.horizontal, 20)
+                        .padding(.bottom, 16)
                 }
 
-                // On The Hunt Card
+                // On The Hunt Radar
                 if !appState.scoreService.onTheHuntSquares.isEmpty {
-                    OnTheHuntCard(huntSquares: appState.scoreService.onTheHuntSquares)
+                    HuntRadarCard(huntSquares: appState.scoreService.onTheHuntSquares)
                         .padding(.horizontal, 20)
+                        .padding(.bottom, 16)
                 }
 
-                // Grid Preview
+                // Grid Matrix Preview
                 if let pool = currentPool {
                     NavigationLink {
                         GridDetailView(pool: binding(for: pool))
                     } label: {
-                        GridPreviewCard(
+                        MatrixGridPreview(
                             pool: pool,
                             score: appState.scoreService.currentScore,
                             myName: appState.myName
@@ -203,15 +242,9 @@ struct LiveDashboardView: View {
                     .padding(.horizontal, 20)
                 }
 
-                Spacer(minLength: 120)
+                Spacer(minLength: 140)
             }
         }
-        .background(DesignSystem.Colors.background)
-    }
-
-    var currentPool: BoxGrid? {
-        guard selectedPoolIndex >= 0 && selectedPoolIndex < appState.pools.count else { return nil }
-        return appState.pools[selectedPoolIndex]
     }
 
     func binding(for pool: BoxGrid) -> Binding<BoxGrid> {
@@ -222,182 +255,227 @@ struct LiveDashboardView: View {
     }
 }
 
-// MARK: - Hero Score Card
-struct HeroScoreCard: View {
+// MARK: - Orbital Score Display
+struct OrbitalScoreDisplay: View {
     let score: GameScore
-    @State private var pulse = false
+    @State private var pulseScale: CGFloat = 1.0
 
     var body: some View {
-        VStack(spacing: 20) {
-            // Live Badge
+        VStack(spacing: 24) {
+            // Live Status
             if score.isGameActive {
                 HStack(spacing: 8) {
-                    Circle()
-                        .fill(DesignSystem.Colors.live)
-                        .frame(width: 8, height: 8)
-                        .scaleEffect(pulse ? 1.2 : 1.0)
-                        .glow(DesignSystem.Colors.live, radius: 8)
+                    ZStack {
+                        PulseRings(color: DesignSystem.Colors.live)
+                            .frame(width: 20, height: 20)
+
+                        Circle()
+                            .fill(DesignSystem.Colors.live)
+                            .frame(width: 10, height: 10)
+                    }
 
                     Text("LIVE")
-                        .font(DesignSystem.Typography.captionSmall)
+                        .font(.system(size: 14, weight: .black, design: .monospaced))
                         .foregroundColor(DesignSystem.Colors.live)
-                        .tracking(2)
+                        .tracking(4)
 
-                    if !score.timeRemaining.isEmpty {
-                        Text("Q\(score.quarter) \(score.timeRemaining)")
-                            .font(DesignSystem.Typography.caption)
-                            .foregroundColor(DesignSystem.Colors.textTertiary)
-                    }
+                    Text("Q\(score.quarter) • \(score.timeRemaining)")
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(
-                    Capsule()
-                        .fill(DesignSystem.Colors.live.opacity(0.15))
-                        .overlay(
-                            Capsule()
-                                .stroke(DesignSystem.Colors.live.opacity(0.3), lineWidth: 1)
+            }
+
+            // Orbital Score Container
+            ZStack {
+                // Outer orbital rings
+                OrbitalRing(
+                    progress: Double(score.homeScore) / 50.0,
+                    color: DesignSystem.Colors.accent,
+                    size: 280,
+                    lineWidth: 3
+                )
+
+                OrbitalRing(
+                    progress: Double(score.awayScore) / 50.0,
+                    color: DesignSystem.Colors.danger,
+                    size: 240,
+                    lineWidth: 3
+                )
+
+                // Center content
+                VStack(spacing: 16) {
+                    // Teams
+                    HStack(spacing: 40) {
+                        TeamScoreUnit(
+                            team: score.awayTeam,
+                            teamScore: score.awayScore,
+                            lastDigit: score.awayLastDigit,
+                            isLeading: score.awayScore > score.homeScore,
+                            color: DesignSystem.Colors.danger
                         )
-                )
-                .onAppear {
-                    withAnimation(.easeInOut(duration: 1).repeatForever(autoreverses: true)) {
-                        pulse = true
+
+                        VStack(spacing: 4) {
+                            Text("VS")
+                                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                .foregroundColor(DesignSystem.Colors.textMuted)
+
+                            Rectangle()
+                                .fill(DesignSystem.Colors.glassBorder)
+                                .frame(width: 1, height: 30)
+                        }
+
+                        TeamScoreUnit(
+                            team: score.homeTeam,
+                            teamScore: score.homeScore,
+                            lastDigit: score.homeLastDigit,
+                            isLeading: score.homeScore > score.awayScore,
+                            color: DesignSystem.Colors.accent
+                        )
                     }
                 }
-            } else {
-                Text(score.gameStatusText.uppercased())
-                    .font(DesignSystem.Typography.captionSmall)
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
-                    .tracking(2)
             }
+            .frame(height: 300)
 
-            // Scores
-            HStack(spacing: 0) {
-                // Away Team
-                TeamScoreView(
-                    team: score.awayTeam,
-                    teamScore: score.awayScore,
-                    lastDigit: score.awayLastDigit,
-                    isLeading: score.awayScore > score.homeScore
-                )
-
-                // Divider
-                VStack(spacing: 8) {
-                    Text("VS")
-                        .font(DesignSystem.Typography.captionSmall)
-                        .foregroundColor(DesignSystem.Colors.textMuted)
-
-                    Rectangle()
-                        .fill(DesignSystem.Colors.glassBorder)
-                        .frame(width: 1, height: 40)
-                }
-                .frame(width: 60)
-
-                // Home Team
-                TeamScoreView(
-                    team: score.homeTeam,
-                    teamScore: score.homeScore,
-                    lastDigit: score.homeLastDigit,
-                    isLeading: score.homeScore > score.awayScore
-                )
-            }
-
-            // Winning Numbers
-            HStack(spacing: 12) {
+            // Winning Numbers Display
+            HStack(spacing: 16) {
                 Text("WINNING DIGITS")
-                    .font(DesignSystem.Typography.captionSmall)
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
-                    .tracking(1)
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundColor(DesignSystem.Colors.textMuted)
+                    .tracking(2)
 
                 HStack(spacing: 8) {
-                    NumberBadge(number: score.awayLastDigit, color: DesignSystem.Colors.danger)
-                    Text("-")
+                    DigitBadge(digit: score.awayLastDigit, color: DesignSystem.Colors.danger)
+                    Text("—")
                         .foregroundColor(DesignSystem.Colors.textMuted)
-                    NumberBadge(number: score.homeLastDigit, color: DesignSystem.Colors.accent)
+                    DigitBadge(digit: score.homeLastDigit, color: DesignSystem.Colors.accent)
                 }
             }
-            .padding(.top, 8)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(DesignSystem.Colors.surface.opacity(0.5))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(DesignSystem.Colors.glassBorder, lineWidth: 1)
+            )
         }
         .padding(24)
-        .glassCard()
-        .overlay(
-            RoundedRectangle(cornerRadius: DesignSystem.Radius.xl)
-                .stroke(
-                    score.isGameActive ?
-                        DesignSystem.Colors.live.opacity(0.3) :
-                        Color.clear,
-                    lineWidth: 1
-                )
-        )
+        .neonCard(score.isGameActive ? DesignSystem.Colors.live : DesignSystem.Colors.accent, intensity: score.isGameActive ? 0.3 : 0.15)
     }
 }
 
-struct TeamScoreView: View {
+struct TeamScoreUnit: View {
     let team: Team
     let teamScore: Int
     let lastDigit: Int
     let isLeading: Bool
+    let color: Color
 
     var teamColor: Color {
-        Color(hex: team.primaryColor) ?? DesignSystem.Colors.accent
+        Color(hex: team.primaryColor) ?? color
     }
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
             // Team badge
             ZStack {
                 Circle()
+                    .fill(teamColor.opacity(0.2))
+                    .frame(width: 50, height: 50)
+
+                Circle()
                     .fill(teamColor.gradient)
-                    .frame(width: 56, height: 56)
+                    .frame(width: 40, height: 40)
 
                 Text(team.abbreviation)
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundColor(.white)
             }
-            .shadow(color: teamColor.opacity(0.4), radius: 12, y: 4)
+            .glow(teamColor, radius: isLeading ? 12 : 0)
 
             // Score
-            Text("\(teamScore)")
-                .font(DesignSystem.Typography.scoreLarge)
-                .foregroundColor(isLeading ? DesignSystem.Colors.live : DesignSystem.Colors.textPrimary)
-                .contentTransition(.numericText())
+            AnimatedCounter(
+                value: teamScore,
+                font: DesignSystem.Typography.scoreMedium,
+                color: isLeading ? color : DesignSystem.Colors.textPrimary
+            )
 
             // Last digit
             Text("(\(lastDigit))")
-                .font(DesignSystem.Typography.caption)
+                .font(.system(size: 14, weight: .medium, design: .monospaced))
                 .foregroundColor(DesignSystem.Colors.textTertiary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .background(DesignSystem.Colors.surfaceElevated)
-                .clipShape(Capsule())
         }
-        .frame(maxWidth: .infinity)
     }
 }
 
-struct NumberBadge: View {
-    let number: Int
+struct DigitBadge: View {
+    let digit: Int
     let color: Color
 
     var body: some View {
-        Text("\(number)")
-            .font(DesignSystem.Typography.monoLarge)
+        Text("\(digit)")
+            .font(.system(size: 20, weight: .black, design: .monospaced))
             .foregroundColor(.white)
             .frame(width: 36, height: 36)
             .background(color.gradient)
             .clipShape(RoundedRectangle(cornerRadius: 8))
-            .shadow(color: color.opacity(0.4), radius: 8, y: 2)
+            .shadow(color: color.opacity(0.5), radius: 8, y: 2)
     }
 }
 
-// MARK: - Pool Chip Selector
-struct PoolChipSelector: View {
+// MARK: - Waiting For Game View
+struct WaitingForGameView: View {
+    @State private var rotation: Double = 0
+
+    var body: some View {
+        VStack(spacing: 24) {
+            ZStack {
+                // Scanning animation
+                Circle()
+                    .stroke(DesignSystem.Colors.accent.opacity(0.1), lineWidth: 2)
+                    .frame(width: 150, height: 150)
+
+                Circle()
+                    .trim(from: 0, to: 0.3)
+                    .stroke(DesignSystem.Colors.accent, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .frame(width: 150, height: 150)
+                    .rotationEffect(.degrees(rotation))
+
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .font(.system(size: 40))
+                    .foregroundStyle(DesignSystem.Colors.cyberGradient)
+            }
+            .onAppear {
+                withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
+                    rotation = 360
+                }
+            }
+
+            VStack(spacing: 8) {
+                Text("SCANNING FOR SIGNAL")
+                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                    .tracking(2)
+
+                Text("Waiting for game data...")
+                    .font(DesignSystem.Typography.caption)
+                    .foregroundColor(DesignSystem.Colors.textTertiary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(40)
+        .neonCard(DesignSystem.Colors.accent, intensity: 0.15)
+    }
+}
+
+// MARK: - Futuristic Pool Selector
+struct FuturisticPoolSelector: View {
     let pools: [BoxGrid]
     @Binding var selectedIndex: Int
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 ForEach(Array(pools.enumerated()), id: \.element.id) { index, pool in
                     Button {
                         withAnimation(DesignSystem.Animation.springSnappy) {
@@ -406,23 +484,31 @@ struct PoolChipSelector: View {
                         }
                     } label: {
                         HStack(spacing: 8) {
-                            Image(systemName: "square.grid.3x3.fill")
+                            Image(systemName: "cube.fill")
                                 .font(.system(size: 12))
 
-                            Text(pool.name)
-                                .font(DesignSystem.Typography.bodyMedium)
+                            Text(pool.name.uppercased())
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .tracking(1)
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
                         .background(
-                            Capsule()
-                                .fill(selectedIndex == index ?
-                                      DesignSystem.Colors.accent :
-                                      DesignSystem.Colors.surfaceElevated)
+                            selectedIndex == index ?
+                                AnyShapeStyle(DesignSystem.Colors.cyberGradient) :
+                                AnyShapeStyle(DesignSystem.Colors.surface)
                         )
-                        .foregroundColor(selectedIndex == index ?
-                                        .white :
-                                        DesignSystem.Colors.textSecondary)
+                        .foregroundColor(selectedIndex == index ? .white : DesignSystem.Colors.textSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(
+                                    selectedIndex == index ?
+                                        Color.clear :
+                                        DesignSystem.Colors.glassBorder,
+                                    lineWidth: 1
+                                )
+                        )
                     }
                 }
             }
@@ -431,11 +517,11 @@ struct PoolChipSelector: View {
     }
 }
 
-// MARK: - Winner Card
-struct WinnerCard: View {
+// MARK: - Command Center Card (Winner)
+struct CommandCenterCard: View {
     let pool: BoxGrid
     let score: GameScore
-    @State private var celebrateAnimation = false
+    @State private var glowPulse = false
 
     var winner: BoxSquare? {
         pool.winningSquare(for: score)
@@ -443,254 +529,231 @@ struct WinnerCard: View {
 
     var body: some View {
         VStack(spacing: 16) {
+            // Header
             HStack {
-                Image(systemName: "crown.fill")
-                    .font(.title3)
-                    .foregroundColor(DesignSystem.Colors.gold)
-                    .scaleEffect(celebrateAnimation ? 1.1 : 1.0)
+                HStack(spacing: 8) {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(DesignSystem.Colors.goldGradient)
+                        .scaleEffect(glowPulse ? 1.1 : 1.0)
 
-                Text("Current Leader")
-                    .font(DesignSystem.Typography.subheadline)
-                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                    Text("COMMAND CENTER")
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                        .tracking(2)
+                }
 
                 Spacer()
 
                 if score.isGameActive {
                     Text("Q\(score.quarter)")
-                        .font(DesignSystem.Typography.captionSmall)
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
                         .foregroundColor(DesignSystem.Colors.gold)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
                         .background(DesignSystem.Colors.gold.opacity(0.15))
-                        .clipShape(Capsule())
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
             }
 
             if let winner = winner {
                 HStack(spacing: 16) {
-                    // Avatar
+                    // Winner avatar with glow
                     ZStack {
                         Circle()
+                            .fill(DesignSystem.Colors.gold.opacity(0.2))
+                            .frame(width: 64, height: 64)
+                            .scaleEffect(glowPulse ? 1.1 : 1.0)
+
+                        Circle()
                             .fill(DesignSystem.Colors.goldGradient)
-                            .frame(width: 56, height: 56)
+                            .frame(width: 52, height: 52)
 
                         Text(winner.initials)
                             .font(.system(size: 20, weight: .bold))
                             .foregroundColor(.white)
                     }
-                    .glow(DesignSystem.Colors.gold, radius: 12)
+                    .glow(DesignSystem.Colors.gold, radius: 15)
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(winner.displayName)
-                            .font(DesignSystem.Typography.headline)
+                        Text(winner.displayName.uppercased())
+                            .font(.system(size: 16, weight: .bold, design: .monospaced))
                             .foregroundColor(DesignSystem.Colors.textPrimary)
+                            .tracking(1)
 
-                        Text("\(pool.awayTeam.abbreviation): \(score.awayLastDigit)  \(pool.homeTeam.abbreviation): \(score.homeLastDigit)")
-                            .font(DesignSystem.Typography.caption)
+                        Text("\(pool.awayTeam.abbreviation): \(score.awayLastDigit)  •  \(pool.homeTeam.abbreviation): \(score.homeLastDigit)")
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
                             .foregroundColor(DesignSystem.Colors.textTertiary)
                     }
 
                     Spacer()
 
-                    // Winning combo
+                    // Winning numbers
                     VStack(spacing: 2) {
                         Text("\(score.awayLastDigit)")
-                            .font(DesignSystem.Typography.scoreMedium)
+                            .font(.system(size: 24, weight: .black, design: .monospaced))
                         Rectangle()
-                            .fill(DesignSystem.Colors.textMuted)
+                            .fill(DesignSystem.Colors.gold)
                             .frame(width: 24, height: 2)
                         Text("\(score.homeLastDigit)")
-                            .font(DesignSystem.Typography.scoreMedium)
+                            .font(.system(size: 24, weight: .black, design: .monospaced))
                     }
                     .foregroundColor(DesignSystem.Colors.gold)
                 }
             } else {
                 HStack(spacing: 12) {
                     Image(systemName: "hourglass")
-                        .font(.title2)
+                        .font(.system(size: 24))
                         .foregroundColor(DesignSystem.Colors.textMuted)
 
-                    Text("Waiting for game...")
-                        .font(DesignSystem.Typography.body)
+                    Text("AWAITING DATA...")
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
                         .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .tracking(2)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 20)
             }
         }
         .padding(20)
-        .glassCard()
-        .overlay(
-            RoundedRectangle(cornerRadius: DesignSystem.Radius.xl)
-                .stroke(
-                    LinearGradient(
-                        colors: [DesignSystem.Colors.gold.opacity(0.4), DesignSystem.Colors.gold.opacity(0.1)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        )
+        .neonCard(DesignSystem.Colors.gold, intensity: winner != nil ? 0.25 : 0.1)
         .onAppear {
-            withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
-                celebrateAnimation = true
+            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                glowPulse = true
             }
         }
     }
 }
 
-// MARK: - On The Hunt Card
-struct OnTheHuntCard: View {
+// MARK: - Hunt Radar Card
+struct HuntRadarCard: View {
     let huntSquares: [NFLScoreService.OnTheHuntInfo]
-    @State private var targetPulse = false
+    @State private var scanRotation: Double = 0
 
     var body: some View {
         VStack(spacing: 16) {
-            // Header
+            // Header with radar
             HStack {
-                ZStack {
-                    Circle()
-                        .fill(DesignSystem.Colors.danger.opacity(0.2))
-                        .frame(width: 40, height: 40)
-                        .scaleEffect(targetPulse ? 1.15 : 1.0)
+                HStack(spacing: 12) {
+                    // Mini radar
+                    ZStack {
+                        Circle()
+                            .stroke(DesignSystem.Colors.danger.opacity(0.2), lineWidth: 1)
+                            .frame(width: 36, height: 36)
 
-                    Image(systemName: "viewfinder.circle.fill")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundColor(DesignSystem.Colors.danger)
-                        .symbolEffect(.variableColor.iterative)
-                }
+                        Circle()
+                            .trim(from: 0, to: 0.25)
+                            .stroke(DesignSystem.Colors.danger, lineWidth: 2)
+                            .frame(width: 36, height: 36)
+                            .rotationEffect(.degrees(scanRotation))
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("ON THE HUNT")
-                        .font(DesignSystem.Typography.captionSmall)
-                        .foregroundColor(DesignSystem.Colors.danger)
-                        .tracking(2)
+                        Circle()
+                            .fill(DesignSystem.Colors.danger)
+                            .frame(width: 6, height: 6)
+                    }
 
-                    Text("Your squares are close!")
-                        .font(DesignSystem.Typography.caption)
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("TRACKING RADAR")
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                            .foregroundColor(DesignSystem.Colors.danger)
+                            .tracking(2)
+
+                        Text("\(huntSquares.count) squares in range")
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                    }
                 }
 
                 Spacer()
 
                 Text("\(huntSquares.count)")
-                    .font(DesignSystem.Typography.scoreMedium)
-                    .foregroundColor(DesignSystem.Colors.danger)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
-                    .background(DesignSystem.Colors.danger.opacity(0.15))
-                    .clipShape(Capsule())
+                    .font(.system(size: 28, weight: .black, design: .monospaced))
+                    .foregroundStyle(DesignSystem.Colors.dangerGradient)
             }
 
             // Hunt items
-            VStack(spacing: 10) {
+            VStack(spacing: 8) {
                 ForEach(huntSquares.prefix(3)) { huntInfo in
-                    HuntSquareRow(huntInfo: huntInfo)
+                    HuntTargetRow(huntInfo: huntInfo)
                 }
             }
 
             if huntSquares.count > 3 {
-                Text("+ \(huntSquares.count - 3) more...")
-                    .font(DesignSystem.Typography.captionSmall)
+                Text("+ \(huntSquares.count - 3) MORE TARGETS")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundColor(DesignSystem.Colors.textMuted)
+                    .tracking(1)
             }
         }
         .padding(20)
-        .glassCard()
-        .overlay(
-            RoundedRectangle(cornerRadius: DesignSystem.Radius.xl)
-                .stroke(
-                    LinearGradient(
-                        colors: [DesignSystem.Colors.danger.opacity(0.4), DesignSystem.Colors.danger.opacity(0.1)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        )
+        .neonCard(DesignSystem.Colors.danger, intensity: 0.2)
         .onAppear {
-            withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
-                targetPulse = true
+            withAnimation(.linear(duration: 3).repeatForever(autoreverses: false)) {
+                scanRotation = 360
             }
         }
     }
 }
 
-struct HuntSquareRow: View {
+struct HuntTargetRow: View {
     let huntInfo: NFLScoreService.OnTheHuntInfo
+
+    var urgencyColor: Color {
+        if huntInfo.pointsAway <= 3 { return DesignSystem.Colors.danger }
+        if huntInfo.pointsAway <= 6 { return DesignSystem.Colors.gold }
+        return DesignSystem.Colors.accent
+    }
 
     var body: some View {
         HStack(spacing: 12) {
-            // Square numbers badge
-            HStack(spacing: 4) {
-                Text(huntInfo.squareNumbers)
-                    .font(DesignSystem.Typography.monoLarge)
-                    .foregroundColor(DesignSystem.Colors.textPrimary)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(DesignSystem.Colors.surfaceElevated)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            // Square numbers
+            Text(huntInfo.squareNumbers)
+                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .foregroundColor(DesignSystem.Colors.textPrimary)
+                .frame(width: 60)
+                .padding(.vertical, 8)
+                .background(DesignSystem.Colors.surfaceElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(huntInfo.poolName)
-                    .font(DesignSystem.Typography.caption)
+                Text(huntInfo.poolName.uppercased())
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundColor(DesignSystem.Colors.textSecondary)
+                    .tracking(1)
 
-                HStack(spacing: 4) {
-                    Image(systemName: scoringIcon)
-                        .font(.system(size: 10))
-                        .foregroundColor(scoringColor)
-
-                    Text("\(huntInfo.scoringTeam) needs \(huntInfo.pointsAway) pts")
-                        .font(DesignSystem.Typography.captionSmall)
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
-                }
+                Text("\(huntInfo.scoringTeam) needs \(huntInfo.pointsAway) pts")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundColor(DesignSystem.Colors.textTertiary)
             }
 
             Spacer()
 
-            // Points away indicator
-            VStack(spacing: 2) {
+            // Distance indicator
+            HStack(spacing: 4) {
                 Text("\(huntInfo.pointsAway)")
-                    .font(DesignSystem.Typography.headline)
-                    .foregroundColor(scoringColor)
-                Text("pts")
-                    .font(.system(size: 8, weight: .medium))
-                    .foregroundColor(DesignSystem.Colors.textMuted)
+                    .font(.system(size: 20, weight: .black, design: .monospaced))
+
+                Text("PTS")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
             }
-            .frame(width: 44)
+            .foregroundColor(urgencyColor)
+            .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(scoringColor.opacity(0.15))
+            .background(urgencyColor.opacity(0.15))
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(DesignSystem.Colors.surfaceElevated.opacity(0.5))
+        .padding(12)
+        .background(DesignSystem.Colors.surface.opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-
-    var scoringIcon: String {
-        if huntInfo.pointsAway <= 3 {
-            return "bolt.horizontal.fill"
-        } else if huntInfo.pointsAway <= 6 {
-            return "arrow.up.right.circle.fill"
-        }
-        return "circle.dotted"
-    }
-
-    var scoringColor: Color {
-        if huntInfo.pointsAway <= 3 {
-            return DesignSystem.Colors.danger
-        } else if huntInfo.pointsAway <= 6 {
-            return DesignSystem.Colors.gold
-        }
-        return DesignSystem.Colors.accent
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(urgencyColor.opacity(0.2), lineWidth: 1)
+        )
     }
 }
 
-// MARK: - Grid Preview Card
-struct GridPreviewCard: View {
+// MARK: - Matrix Grid Preview
+struct MatrixGridPreview: View {
     let pool: BoxGrid
     let score: GameScore?
     let myName: String
@@ -705,44 +768,45 @@ struct GridPreviewCard: View {
             // Header
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(pool.name)
-                        .font(DesignSystem.Typography.subheadline)
+                    Text(pool.name.uppercased())
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
                         .foregroundColor(DesignSystem.Colors.textPrimary)
+                        .tracking(1)
 
                     Text("\(pool.awayTeam.abbreviation) vs \(pool.homeTeam.abbreviation)")
-                        .font(DesignSystem.Typography.caption)
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundColor(DesignSystem.Colors.textTertiary)
                 }
 
                 Spacer()
 
                 HStack(spacing: 4) {
-                    Text("View Grid")
-                        .font(DesignSystem.Typography.caption)
+                    Text("VIEW MATRIX")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .tracking(1)
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 10, weight: .bold))
                 }
                 .foregroundColor(DesignSystem.Colors.accent)
             }
 
-            // Mini Grid
+            // Matrix Grid
             GeometryReader { geo in
-                let cellSize = (geo.size.width - 10) / 11
+                let cellSize = (geo.size.width - 11) / 11
 
                 VStack(spacing: 1) {
                     // Header row
                     HStack(spacing: 1) {
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(DesignSystem.Colors.surfaceElevated)
+                        Rectangle()
+                            .fill(DesignSystem.Colors.surface)
                             .frame(width: cellSize, height: cellSize)
 
                         ForEach(0..<10, id: \.self) { col in
                             Text("\(pool.homeNumbers[col])")
                                 .font(.system(size: 8, weight: .bold, design: .monospaced))
                                 .frame(width: cellSize, height: cellSize)
-                                .background(DesignSystem.Colors.accent.opacity(0.8))
-                                .foregroundColor(.white)
-                                .cornerRadius(2)
+                                .background(DesignSystem.Colors.accent.opacity(0.3))
+                                .foregroundColor(DesignSystem.Colors.accent)
                         }
                     }
 
@@ -752,16 +816,15 @@ struct GridPreviewCard: View {
                             Text("\(pool.awayNumbers[row])")
                                 .font(.system(size: 8, weight: .bold, design: .monospaced))
                                 .frame(width: cellSize, height: cellSize)
-                                .background(DesignSystem.Colors.danger.opacity(0.8))
-                                .foregroundColor(.white)
-                                .cornerRadius(2)
+                                .background(DesignSystem.Colors.danger.opacity(0.3))
+                                .foregroundColor(DesignSystem.Colors.danger)
 
                             ForEach(0..<10, id: \.self) { col in
                                 let square = pool.squares[row][col]
                                 let isWinning = winningPosition?.row == row && winningPosition?.column == col
                                 let isMine = !myName.isEmpty && square.playerName.lowercased().contains(myName.lowercased())
 
-                                MiniGridCell(
+                                MatrixCell(
                                     square: square,
                                     isWinning: isWinning,
                                     isMine: isMine,
@@ -774,66 +837,60 @@ struct GridPreviewCard: View {
             }
             .aspectRatio(1.0, contentMode: .fit)
 
-            // Footer
-            HStack {
-                HStack(spacing: 12) {
-                    LegendDot(color: DesignSystem.Colors.live, label: "Winner")
-                    LegendDot(color: DesignSystem.Colors.accent.opacity(0.6), label: "Filled")
-                    if !myName.isEmpty {
-                        LegendDot(color: DesignSystem.Colors.gold, label: "Mine")
-                    }
+            // Legend
+            HStack(spacing: 16) {
+                LegendItem(color: DesignSystem.Colors.live, label: "WINNER")
+                LegendItem(color: DesignSystem.Colors.accent.opacity(0.5), label: "FILLED")
+                if !myName.isEmpty {
+                    LegendItem(color: DesignSystem.Colors.gold, label: "MINE")
                 }
 
                 Spacer()
 
                 Text("\(pool.filledCount)/100")
-                    .font(DesignSystem.Typography.mono)
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundColor(DesignSystem.Colors.textTertiary)
             }
         }
         .padding(20)
-        .glassCard()
+        .neonCard(DesignSystem.Colors.accent, intensity: 0.15)
     }
 }
 
-struct MiniGridCell: View {
+struct MatrixCell: View {
     let square: BoxSquare
     let isWinning: Bool
     let isMine: Bool
     let size: CGFloat
 
+    var cellColor: Color {
+        if isWinning { return DesignSystem.Colors.live }
+        if isMine { return DesignSystem.Colors.gold.opacity(0.7) }
+        if !square.isEmpty { return DesignSystem.Colors.accent.opacity(0.3) }
+        return DesignSystem.Colors.surface
+    }
+
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 2)
+            Rectangle()
                 .fill(cellColor)
+                .frame(width: size, height: size)
 
             if isWinning {
-                RoundedRectangle(cornerRadius: 2)
-                    .stroke(DesignSystem.Colors.gold, lineWidth: 1.5)
+                Rectangle()
+                    .stroke(DesignSystem.Colors.gold, lineWidth: 1)
             }
 
             if !square.isEmpty {
                 Text(square.initials)
-                    .font(.system(size: 6, weight: .medium))
+                    .font(.system(size: 6, weight: .bold))
                     .foregroundColor(isWinning || isMine ? .white : DesignSystem.Colors.textSecondary)
             }
         }
-        .frame(width: size, height: size)
-    }
-
-    var cellColor: Color {
-        if isWinning {
-            return DesignSystem.Colors.live
-        } else if isMine {
-            return DesignSystem.Colors.gold.opacity(0.7)
-        } else if !square.isEmpty {
-            return DesignSystem.Colors.accent.opacity(0.3)
-        }
-        return DesignSystem.Colors.surfaceElevated
     }
 }
 
-struct LegendDot: View {
+struct LegendItem: View {
     let color: Color
     let label: String
 
@@ -842,9 +899,10 @@ struct LegendDot: View {
             Circle()
                 .fill(color)
                 .frame(width: 8, height: 8)
+
             Text(label)
-                .font(DesignSystem.Typography.captionSmall)
-                .foregroundColor(DesignSystem.Colors.textTertiary)
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .foregroundColor(DesignSystem.Colors.textMuted)
         }
     }
 }
