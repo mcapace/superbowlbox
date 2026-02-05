@@ -6,7 +6,7 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            DashboardView()
+            DashboardView(onAddPoolTapped: { selectedTab = 1 })
                 .tabItem {
                     Label("Live", systemImage: "dot.radiowaves.left.and.right")
                 }
@@ -61,6 +61,11 @@ struct ContentView: View {
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = UIColor(red: 0.09, green: 0.09, blue: 0.11, alpha: 1)
+        // Inactive tabs readable (sportsbook-style contrast)
+        appearance.stackedLayoutAppearance.normal.iconColor = UIColor(white: 0.55, alpha: 1)
+        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor(white: 0.55, alpha: 1)]
+        appearance.stackedLayoutAppearance.selected.iconColor = UIColor(red: 0.04, green: 0.52, blue: 1, alpha: 1)
+        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(red: 0.04, green: 0.52, blue: 1, alpha: 1)]
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
     }
@@ -71,20 +76,27 @@ struct DashboardView: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedPoolIndex = 0
     @State private var showingRefreshAnimation = false
+    var onAddPoolTapped: (() -> Void)?
 
     var body: some View {
         NavigationStack {
             ZStack {
-                SportsbookBackgroundView()
+                DesignSystem.Colors.backgroundPrimary
+                    .ignoresSafeArea()
                 ScrollView {
-                    VStack(spacing: DesignSystem.Layout.sectionSpacing) {
+                    VStack(alignment: .leading, spacing: DesignSystem.Layout.sectionSpacing) {
+                    SectionHeaderView(title: "Featured Game")
                     LiveScoreCard(
                         score: appState.scoreService.currentScore ?? GameScore.mock,
                         isLoading: appState.scoreService.isLoading
                     )
                     .padding(.horizontal, DesignSystem.Layout.screenInset)
 
-                    if appState.pools.count > 1 {
+                    SectionHeaderView(title: "Your Pools")
+                    if appState.pools.isEmpty {
+                        AddPoolChipView(onTap: { onAddPoolTapped?() })
+                            .padding(.horizontal, DesignSystem.Layout.screenInset)
+                    } else {
                         PoolSelectorView(
                             selectedIndex: $selectedPoolIndex,
                             pools: appState.pools
@@ -95,6 +107,7 @@ struct DashboardView: View {
                     if let pool = currentPool,
                        let score = appState.scoreService.currentScore,
                        !onTheHuntItems(pool: pool, score: score).isEmpty {
+                        SectionHeaderView(title: "On the Hunt")
                         OnTheHuntCard(
                             items: onTheHuntItems(pool: pool, score: score)
                         )
@@ -103,11 +116,13 @@ struct DashboardView: View {
 
                     if let pool = currentPool,
                        let score = appState.scoreService.currentScore {
+                        SectionHeaderView(title: "Current Leader")
                         WinnerSpotlightCard(pool: pool, score: score)
                             .padding(.horizontal, DesignSystem.Layout.screenInset)
                     }
 
                     if let pool = currentPool {
+                        SectionHeaderView(title: "Grid")
                         NavigationLink {
                             GridDetailView(pool: binding(for: pool))
                         } label: {
@@ -122,23 +137,30 @@ struct DashboardView: View {
                     }
 
                     if let pool = currentPool {
+                        SectionHeaderView(title: "Stats")
                         QuickStatsCard(pool: pool, globalMyName: appState.myName)
                             .padding(.horizontal, DesignSystem.Layout.screenInset)
                     }
 
                     Spacer(minLength: 120)
                     }
-                    .padding(.top, 24)
+                    .padding(.top, 12)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
+            .toolbarBackground(DesignSystem.Colors.headerGreen, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    SquareUpLogoView(showIcon: true, wordmarkSize: 24)
+                    SquareUpLogoView(showIcon: true, wordmarkSize: 20, iconSize: 20, inline: true)
+                        .foregroundStyle(.white)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
+                    HStack(spacing: 12) {
+                        Text("Today")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white.opacity(0.9))
+                        Button {
                         HapticService.impactLight()
                         withAnimation(.appSpring) {
                             showingRefreshAnimation = true
@@ -156,6 +178,7 @@ struct DashboardView: View {
                             .rotationEffect(.degrees(showingRefreshAnimation ? 360 : 0))
                             .animation(.easeInOut(duration: 0.5), value: showingRefreshAnimation)
                     }
+                }
                 }
             }
         }
@@ -179,22 +202,12 @@ struct DashboardView: View {
     }
 }
 
-// MARK: - On the Hunt Card (glass, urgency colors)
+// MARK: - On the Hunt Card (urgency list; section title from SectionHeaderView)
 struct OnTheHuntCard: View {
     let items: [OnTheHuntItem]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 8) {
-                Image(systemName: "viewfinder.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(DesignSystem.Colors.accentBlue)
-                    .pulse(isActive: true)
-                Text("On the Hunt")
-                    .font(DesignSystem.Typography.title)
-                    .foregroundColor(DesignSystem.Colors.textPrimary)
-            }
-
+        VStack(alignment: .leading, spacing: 12) {
             ForEach(items.prefix(5)) { item in
                 HStack(spacing: 12) {
                     urgencyIcon(item.urgency)
@@ -242,27 +255,35 @@ struct ScaleButtonStyle: ButtonStyle {
     }
 }
 
-// MARK: - Live Score Card (hero, glass)
+// MARK: - Live Score Card (Apple Sports style: league + status top, team gradient, simple winning strip)
 struct LiveScoreCard: View {
     let score: GameScore
     let isLoading: Bool
 
-    @State private var pulseAnimation = false
-
     var body: some View {
-        VStack(spacing: 20) {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(score.isGameActive ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.textMuted)
-                    .frame(width: 8, height: 8)
-                    .pulse(isActive: score.isGameActive)
-
-                Text(score.isGameActive ? "LIVE" : score.gameStatusText.uppercased())
-                    .font(DesignSystem.Typography.caption2)
-                    .tracking(0.8)
-                    .foregroundColor(score.isGameActive ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.textSecondary)
+        VStack(spacing: 0) {
+            // Top: League + status (like Apple Sports "MLB" "▲ 8th")
+            HStack {
+                Text("NFL")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                Spacer()
+                HStack(spacing: 4) {
+                    if score.isGameActive {
+                        Circle()
+                            .fill(DesignSystem.Colors.liveGreen)
+                            .frame(width: 5, height: 5)
+                            .pulse(isActive: true)
+                    }
+                    Text(score.isGameActive ? "LIVE" : score.gameStatusText.uppercased())
+                        .font(.system(size: 11, weight: .semibold))
+                        .tracking(0.6)
+                        .foregroundColor(score.isGameActive ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.textTertiary)
+                }
             }
+            .padding(.bottom, 14)
 
+            // Teams + scores
             HStack(spacing: 0) {
                 TeamScoreColumn(
                     team: score.awayTeam,
@@ -270,13 +291,10 @@ struct LiveScoreCard: View {
                     lastDigit: score.awayLastDigit,
                     isLeading: score.awayScore > score.homeScore
                 )
-                VStack {
-                    Text("VS")
-                        .font(DesignSystem.Typography.caption2)
-                        .fontWeight(.bold)
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
-                }
-                .frame(width: 44)
+                Text("–")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                    .frame(width: 24)
                 TeamScoreColumn(
                     team: score.homeTeam,
                     score: score.homeScore,
@@ -285,17 +303,61 @@ struct LiveScoreCard: View {
                 )
             }
 
-            HStack(spacing: 8) {
-                Text("Winning Numbers:")
-                    .font(DesignSystem.Typography.caption)
-                    .foregroundColor(DesignSystem.Colors.textSecondary)
-                Text("\(score.awayLastDigit) – \(score.homeLastDigit)")
-                    .font(DesignSystem.Typography.headline)
-                    .foregroundColor(DesignSystem.Colors.accentBlue)
+            // Winning numbers — informative strip
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Winning numbers")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                Text("Last digit of each score → row × column")
+                    .font(.system(size: 10, weight: .regular))
+                    .foregroundColor(DesignSystem.Colors.textMuted)
+                HStack {
+                    Text("\(score.awayTeam.abbreviation)")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                    Text("\(score.awayLastDigit) – \(score.homeLastDigit)")
+                        .font(.system(size: 18, weight: .bold))
+                        .monospacedDigit()
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                    Text("\(score.homeTeam.abbreviation)")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                }
             }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 14)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 4)
+            .background(
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                    .fill(DesignSystem.Colors.backgroundTertiary.opacity(0.6))
+            )
         }
-        .sportsbookCard(accentBorder: score.isGameActive ? DesignSystem.Colors.liveGreen.opacity(0.5) : nil)
-        .onAppear { pulseAnimation = true }
+        .padding(DesignSystem.Layout.cardPadding)
+        .frame(maxWidth: .infinity)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                    .fill(DesignSystem.Colors.cardSurface)
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                (Color(hex: score.awayTeam.primaryColor) ?? Color.clear).opacity(0.06),
+                                Color.clear,
+                                (Color(hex: score.homeTeam.primaryColor) ?? Color.clear).opacity(0.06)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 0.5)
+        )
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.5), radius: 6, x: 0, y: 2)
     }
 }
 
@@ -306,75 +368,139 @@ struct TeamScoreColumn: View {
     let isLeading: Bool
 
     var body: some View {
-        VStack(spacing: 8) {
-            Circle()
-                .fill(Color(hex: team.primaryColor) ?? DesignSystem.Colors.textTertiary)
-                .frame(width: 48, height: 48)
-                .overlay(
+        VStack(spacing: 6) {
+            ZStack {
+                Circle()
+                    .fill(Color(hex: team.primaryColor) ?? DesignSystem.Colors.textTertiary)
+                    .frame(width: 40, height: 40)
+                if let urlString = team.logoURL, let url = URL(string: urlString) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 32, height: 32)
+                                .clipShape(Circle())
+                        case .failure:
+                            Text(team.abbreviation)
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.white)
+                        case .empty:
+                            ProgressView()
+                                .tint(.white)
+                                .scaleEffect(0.8)
+                        @unknown default:
+                            Text(team.abbreviation)
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                    }
+                } else {
                     Text(team.abbreviation)
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundColor(.white)
-                )
-
+                }
+            }
+            .frame(width: 40, height: 40)
             Text(team.abbreviation)
-                .font(DesignSystem.Typography.caption)
-                .foregroundColor(DesignSystem.Colors.textSecondary)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(DesignSystem.Colors.textTertiary)
 
             Text("\(score)")
-                .font(DesignSystem.Typography.scoreLarge)
+                .font(.system(size: 32, weight: .bold))
+                .monospacedDigit()
                 .foregroundColor(isLeading ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.textPrimary)
                 .contentTransition(.numericText())
 
-            Text("(\(lastDigit))")
-                .font(DesignSystem.Typography.caption2)
+            Text("\(lastDigit)")
+                .font(.system(size: 12, weight: .medium))
+                .monospacedDigit()
                 .foregroundColor(DesignSystem.Colors.textTertiary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Capsule().fill(DesignSystem.Colors.backgroundTertiary))
+                .frame(minWidth: 22)
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(DesignSystem.Colors.backgroundTertiary)
+                )
         }
         .frame(maxWidth: .infinity)
     }
 }
 
-// MARK: - Pool Selector (animated pills)
+// MARK: - Add pool chip (when no pools — sends user to Pools tab)
+struct AddPoolChipView: View {
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: {
+            HapticService.selection()
+            onTap()
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 16))
+                Text("Add your first pool")
+                    .font(DesignSystem.Typography.callout)
+                    .fontWeight(.semibold)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                    .fill(DesignSystem.Colors.accentBlue.opacity(0.2))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                            .strokeBorder(DesignSystem.Colors.accentBlue.opacity(0.6), lineWidth: 1)
+                    )
+            )
+            .foregroundColor(DesignSystem.Colors.accentBlue)
+        }
+        .buttonStyle(ScaleButtonStyle())
+    }
+}
+
+// MARK: - Pool Selector (Apple Sports style: one bar, selected segment filled)
 struct PoolSelectorView: View {
     @Binding var selectedIndex: Int
     let pools: [BoxGrid]
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                ForEach(Array(pools.enumerated()), id: \.element.id) { index, pool in
-                    Button {
-                        HapticService.selection()
-                        withAnimation(.appSpring) {
-                            selectedIndex = index
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "rectangle.split.3x3")
-                                .font(.caption)
-                            Text(pool.name)
-                                .font(AppTypography.callout)
-                                .fontWeight(selectedIndex == index ? .semibold : .regular)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(
-                            Capsule()
-                                .fill(selectedIndex == index ? DesignSystem.Colors.accentBlue : DesignSystem.Colors.backgroundTertiary)
-                        )
-                        .foregroundColor(selectedIndex == index ? .white : DesignSystem.Colors.textPrimary)
+        HStack(spacing: 0) {
+            ForEach(Array(pools.enumerated()), id: \.element.id) { index, pool in
+                Button {
+                    HapticService.selection()
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedIndex = index
                     }
-                    .buttonStyle(ScaleButtonStyle())
+                } label: {
+                    Text(pool.name)
+                        .font(.system(size: 15, weight: selectedIndex == index ? .semibold : .regular))
+                        .foregroundColor(selectedIndex == index ? DesignSystem.Colors.textPrimary : DesignSystem.Colors.textTertiary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(selectedIndex == index ? DesignSystem.Colors.cardSurface : Color.clear)
+                        )
                 }
+                .buttonStyle(ScaleButtonStyle())
             }
-            .padding(.horizontal)
         }
+        .padding(3)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(DesignSystem.Colors.backgroundTertiary)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 0.5)
+        )
     }
 }
 
-// MARK: - Winner Spotlight Card (glass)
+// MARK: - Winner Spotlight Card (gold accent, chip badge, data strip)
 struct WinnerSpotlightCard: View {
     let pool: BoxGrid
     let score: GameScore
@@ -394,68 +520,98 @@ struct WinnerSpotlightCard: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: "crown.fill")
-                    .font(.title2)
-                    .foregroundColor(DesignSystem.Colors.winnerGold)
-                Text("Current Leader")
-                    .font(DesignSystem.Typography.title)
-                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                HStack(spacing: 6) {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(DesignSystem.Colors.winnerGold)
+                    Text("Current Leader")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                }
                 Spacer()
                 if let periodLabel = currentPeriodLabel {
                     Text(periodLabel)
-                        .font(DesignSystem.Typography.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(DesignSystem.Colors.liveGreen)
-                        .padding(.horizontal, 10)
+                        .font(.system(size: 10, weight: .semibold))
+                        .tracking(0.5)
+                        .foregroundColor(DesignSystem.Colors.winnerGold)
+                        .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Capsule().fill(DesignSystem.Colors.liveGreen.opacity(0.2)))
+                        .background(Capsule().fill(DesignSystem.Colors.winnerGold.opacity(0.15)))
                 }
             }
 
             if let winner = winner {
-                HStack(spacing: 16) {
+                HStack(spacing: 12) {
                     ZStack {
                         Circle()
-                            .fill(LinearGradient(colors: [DesignSystem.Colors.winnerGold, DesignSystem.Colors.winnerGold.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .frame(width: 56, height: 56)
+                            .fill(
+                                LinearGradient(
+                                    colors: [DesignSystem.Colors.winnerGold, DesignSystem.Colors.winnerGold.opacity(0.8)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 44, height: 44)
                         Text(winner.initials)
-                            .font(DesignSystem.Typography.headline)
+                            .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
                     }
 
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(winner.displayName)
-                            .font(DesignSystem.Typography.headline)
+                            .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(DesignSystem.Colors.textPrimary)
-                        HStack(spacing: 4) {
-                            Text("\(pool.awayTeam.abbreviation): \(score.awayLastDigit)  \(pool.homeTeam.abbreviation): \(score.homeLastDigit)")
-                                .font(DesignSystem.Typography.caption)
-                                .foregroundColor(DesignSystem.Colors.textSecondary)
-                        }
+                        Text("Leads this period")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(DesignSystem.Colors.liveGreen)
+                        Text("\(pool.awayTeam.abbreviation): \(score.awayLastDigit) · \(pool.homeTeam.abbreviation): \(score.homeLastDigit)")
+                            .font(.system(size: 12))
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
                     }
                     Spacer()
                     VStack(spacing: 2) {
                         Text("\(score.awayLastDigit)")
-                            .font(DesignSystem.Typography.title)
-                        Rectangle().fill(DesignSystem.Colors.textTertiary).frame(width: 24, height: 2)
+                            .font(.system(size: 20, weight: .semibold))
+                            .monospacedDigit()
+                            .foregroundColor(DesignSystem.Colors.textPrimary)
+                        Rectangle().fill(DesignSystem.Colors.textTertiary).frame(width: 20, height: 1)
                         Text("\(score.homeLastDigit)")
-                            .font(DesignSystem.Typography.title)
+                            .font(.system(size: 20, weight: .semibold))
+                            .monospacedDigit()
+                            .foregroundColor(DesignSystem.Colors.textPrimary)
                     }
-                    .foregroundColor(DesignSystem.Colors.accentBlue)
                 }
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                        .fill(DesignSystem.Colors.backgroundTertiary)
+                )
             } else {
-                HStack {
+                HStack(spacing: 8) {
                     Image(systemName: "hourglass")
+                        .font(.system(size: 16))
                         .foregroundColor(DesignSystem.Colors.textTertiary)
                     Text("Waiting for game to start...")
+                        .font(.system(size: 14))
                         .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
-                .padding()
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
             }
         }
-        .sportsbookCard(accentBorder: DesignSystem.Colors.winnerGold.opacity(0.4))
+        .padding(DesignSystem.Layout.cardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                .fill(DesignSystem.Colors.cardSurface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 0.5)
+        )
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.4), radius: 6, x: 0, y: 2)
     }
 }
 
@@ -472,66 +628,66 @@ struct InteractiveGridCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(pool.name)
-                        .font(DesignSystem.Typography.headline)
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(DesignSystem.Colors.textPrimary)
-                    Text("\(pool.awayTeam.abbreviation) vs \(pool.homeTeam.abbreviation)")
-                        .font(DesignSystem.Typography.caption)
-                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                    Text("\(pool.awayTeam.abbreviation) × \(pool.homeTeam.abbreviation)")
+                        .font(.system(size: 12))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
                 }
                 Spacer()
                 HStack(spacing: 4) {
-                    Text("View Full Grid")
-                        .font(DesignSystem.Typography.caption)
+                    Text("View grid")
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(DesignSystem.Colors.accentBlue)
                     Image(systemName: "chevron.right")
-                        .font(DesignSystem.Typography.caption)
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(DesignSystem.Colors.accentBlue)
                 }
             }
 
-            // Grid
+            // Sleek grid: 2pt gap, small radius, clear axes
             GeometryReader { geometry in
-                let cellSize = (geometry.size.width - 22) / 11
+                let gap: CGFloat = 2
+                let totalGap = gap * 11
+                let cellSize = (geometry.size.width - totalGap) / 11
 
-                VStack(spacing: 1) {
-                    // Header row
-                    HStack(spacing: 1) {
-                        // Empty corner
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.clear)
+                VStack(spacing: gap) {
+                    // Top row: corner + column headers (home)
+                    HStack(spacing: gap) {
+                        Text("·")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(DesignSystem.Colors.textMuted)
                             .frame(width: cellSize, height: cellSize)
-
-                        // Column headers (home team numbers)
                         ForEach(0..<10, id: \.self) { col in
+                            let isWin = winningPosition?.column == col
                             Text("\(pool.homeNumbers[col])")
-                                .font(.system(size: cellSize * 0.4, weight: .bold))
+                                .font(.system(size: max(9, cellSize * 0.38), weight: .bold))
+                                .monospacedDigit()
                                 .frame(width: cellSize, height: cellSize)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(Color(hex: pool.homeTeam.primaryColor)?.opacity(0.8) ?? Color.blue.opacity(0.8))
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(isWin ? DesignSystem.Colors.liveGreen : (Color(hex: pool.homeTeam.primaryColor) ?? .blue).opacity(0.85))
                                 )
                                 .foregroundColor(.white)
                         }
                     }
 
-                    // Grid rows
                     ForEach(0..<10, id: \.self) { row in
-                        HStack(spacing: 1) {
-                            // Row header (away team number)
+                        HStack(spacing: gap) {
                             Text("\(pool.awayNumbers[row])")
-                                .font(.system(size: cellSize * 0.4, weight: .bold))
+                                .font(.system(size: max(9, cellSize * 0.38), weight: .bold))
+                                .monospacedDigit()
                                 .frame(width: cellSize, height: cellSize)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(Color(hex: pool.awayTeam.primaryColor)?.opacity(0.8) ?? Color.red.opacity(0.8))
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(winningPosition?.row == row ? DesignSystem.Colors.liveGreen : (Color(hex: pool.awayTeam.primaryColor) ?? .red).opacity(0.85))
                                 )
                                 .foregroundColor(.white)
 
-                            // Grid cells
                             ForEach(0..<10, id: \.self) { col in
                                 let square = pool.squares[row][col]
                                 let isWinning = winningPosition?.row == row && winningPosition?.column == col
@@ -551,16 +707,17 @@ struct InteractiveGridCard: View {
             }
             .aspectRatio(1.0, contentMode: .fit)
 
-            HStack(spacing: 16) {
-                LegendItem(color: DesignSystem.Colors.liveGreen, label: "Winner")
-                LegendItem(color: DesignSystem.Colors.accentBlue.opacity(0.8), label: "Filled")
+            // Compact legend + count
+            HStack(spacing: 12) {
+                LegendDot(color: DesignSystem.Colors.liveGreen, label: "Winner")
+                LegendDot(color: DesignSystem.Colors.accentBlue.opacity(0.9), label: "Filled")
                 if !pool.effectiveOwnerLabels(globalName: globalMyName).isEmpty {
-                    LegendItem(color: DesignSystem.Colors.winnerGold, label: "My Squares")
+                    LegendDot(color: DesignSystem.Colors.winnerGold, label: "Yours")
                 }
                 Spacer()
                 Text("\(pool.filledCount)/100")
-                    .font(DesignSystem.Typography.caption)
-                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(DesignSystem.Colors.textTertiary)
             }
         }
         .sportsbookCard()
@@ -575,20 +732,20 @@ struct GridCellView: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 3)
+            RoundedRectangle(cornerRadius: 2)
                 .fill(cellColor)
 
             if !square.isEmpty {
                 Text(square.initials)
-                    .font(.system(size: cellSize * 0.35, weight: .medium))
+                    .font(.system(size: cellSize * 0.36, weight: .semibold))
                     .foregroundColor(textColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
             }
 
             if isWinning {
-                RoundedRectangle(cornerRadius: 3)
-                    .stroke(DesignSystem.Colors.winnerGold, lineWidth: 2)
+                RoundedRectangle(cornerRadius: 2)
+                    .strokeBorder(Color.white, lineWidth: 1.5)
             }
         }
         .frame(width: cellSize, height: cellSize)
@@ -598,21 +755,34 @@ struct GridCellView: View {
         if isWinning {
             return DesignSystem.Colors.liveGreen
         } else if isHighlighted {
-            return DesignSystem.Colors.winnerGold.opacity(0.7)
+            return DesignSystem.Colors.winnerGold.opacity(0.75)
         } else if square.isWinner {
-            return DesignSystem.Colors.winnerGold.opacity(0.5)
+            return DesignSystem.Colors.winnerGold.opacity(0.45)
         } else if !square.isEmpty {
-            return DesignSystem.Colors.accentBlue.opacity(0.4)
+            return DesignSystem.Colors.accentBlue.opacity(0.35)
         } else {
-            return DesignSystem.Colors.backgroundTertiary
+            return DesignSystem.Colors.backgroundTertiary.opacity(0.8)
         }
     }
 
     var textColor: Color {
-        if isWinning || isHighlighted {
-            return .white
+        if isWinning || isHighlighted { return .white }
+        return DesignSystem.Colors.textPrimary
+    }
+}
+
+struct LegendDot: View {
+    let color: Color
+    let label: String
+    var body: some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundColor(DesignSystem.Colors.textTertiary)
         }
-        return .primary
     }
 }
 
@@ -632,48 +802,59 @@ struct LegendItem: View {
     }
 }
 
-// MARK: - Quick Stats Card
+// MARK: - Quick Stats Card (sleek strip with dividers)
 struct QuickStatsCard: View {
     let pool: BoxGrid
-    /// Global "my name" from Settings; pool may override with ownerLabels (how name appears on this sheet).
     let globalMyName: String
 
-    var ownerLabels: [String] {
+    private var ownerLabels: [String] {
         pool.effectiveOwnerLabels(globalName: globalMyName)
     }
 
-    var mySquares: [BoxSquare] {
+    private var mySquares: [BoxSquare] {
         pool.squaresForOwner(ownerLabels: ownerLabels)
     }
 
     var body: some View {
-        HStack(spacing: 16) {
-            StatItem(
-                icon: "rectangle.split.3x3",
-                value: "\(pool.filledCount)",
-                label: "Filled",
-                color: DesignSystem.Colors.accentBlue
-            )
-
+        HStack(spacing: 0) {
+            StatPill(value: "\(pool.filledCount)", label: "Filled", color: DesignSystem.Colors.accentBlue)
             if !ownerLabels.isEmpty {
-                StatItem(
-                    icon: "person.text.rectangle",
-                    value: "\(mySquares.count)",
-                    label: "My Squares",
-                    color: DesignSystem.Colors.winnerGold
-                )
-
-                StatItem(
-                    icon: "crown.fill",
-                    value: "\(mySquares.filter { $0.isWinner }.count)",
-                    label: "Wins",
-                    color: DesignSystem.Colors.winnerGold
-                )
+                Rectangle().fill(DesignSystem.Colors.cardBorder).frame(width: 0.5).padding(.vertical, 8)
+                StatPill(value: "\(mySquares.count)", label: "Yours", color: DesignSystem.Colors.winnerGold)
+                Rectangle().fill(DesignSystem.Colors.cardBorder).frame(width: 0.5).padding(.vertical, 8)
+                StatPill(value: "\(mySquares.filter { $0.isWinner }.count)", label: "Wins", color: DesignSystem.Colors.winnerGold)
             }
-
-            Spacer()
+            Spacer(minLength: 0)
         }
-        .sportsbookCard(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+        .padding(.vertical, 12)
+        .padding(.horizontal, DesignSystem.Layout.cardPadding)
+        .background(
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                .fill(DesignSystem.Colors.cardSurface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                        .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 0.5)
+                )
+        )
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.4), radius: 6, x: 0, y: 2)
+    }
+}
+
+struct StatPill: View {
+    let value: String
+    let label: String
+    let color: Color
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.system(size: 20, weight: .bold))
+                .monospacedDigit()
+                .foregroundColor(DesignSystem.Colors.textPrimary)
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(DesignSystem.Colors.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

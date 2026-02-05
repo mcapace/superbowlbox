@@ -95,11 +95,11 @@ struct SquareDetailView: View {
 
                                 Text(pool.awayTeam.abbreviation)
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
 
                                 Text("Row")
                                     .font(.caption2)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
                             }
 
                             VStack(spacing: 8) {
@@ -115,18 +115,18 @@ struct SquareDetailView: View {
 
                                 Text(pool.homeTeam.abbreviation)
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
 
                                 Text("Column")
                                     .font(.caption2)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
                             }
                         }
                     }
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(.systemGray6))
+                            .fill(DesignSystem.Colors.surfaceElevated)
                     )
 
                     // Win conditions
@@ -136,7 +136,7 @@ struct SquareDetailView: View {
 
                         Text("This square wins when:")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
 
                         VStack(alignment: .leading, spacing: 8) {
                             WinScenarioRow(
@@ -167,7 +167,7 @@ struct SquareDetailView: View {
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(.systemGray6))
+                            .fill(DesignSystem.Colors.surfaceElevated)
                     )
 
                     // Period wins (quarters, halftime, final, first score)
@@ -200,7 +200,7 @@ struct SquareDetailView: View {
                         .padding()
                         .background(
                             RoundedRectangle(cornerRadius: 16)
-                                .fill(Color(.systemGray6))
+                                .fill(DesignSystem.Colors.surfaceElevated)
                         )
                     }
 
@@ -238,7 +238,7 @@ struct WinScenarioRow: View {
 
             Text("Last digits: \(awayScore % 10)-\(homeScore % 10)")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(DesignSystem.Colors.textSecondary)
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 12)

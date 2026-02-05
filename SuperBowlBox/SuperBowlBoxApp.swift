@@ -9,6 +9,7 @@ struct SquareUpApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(appState)
+                .font(DesignSystem.Typography.body)
                 .preferredColorScheme(.dark)
         }
     }
@@ -234,21 +235,38 @@ struct SquareUpLogoView: View {
     var showIcon: Bool = true
     var wordmarkSize: CGFloat = 48
     var iconSize: CGFloat = 44
+    /// Inline = one row (icon + text) for nav bar; false = stacked for large layouts
+    var inline: Bool = false
 
     var body: some View {
-        VStack(spacing: 8) {
-            if showIcon {
-                Image("SquareUpLogo")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: iconSize, height: iconSize)
+        if inline {
+            HStack(spacing: 5) {
+                if showIcon {
+                    Image("SquareUpLogo")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 18, height: 18)
+                }
+                Text("squareup")
+                    .font(.system(size: wordmarkSize, weight: .bold, design: .rounded))
+                    .tracking(0.2)
             }
-            Text("squareup")
-                .font(.system(size: wordmarkSize, weight: .bold, design: .rounded))
-                .foregroundColor(DesignSystem.Colors.liveGreen)
-                .tracking(0.5)
+            .frame(height: 24)
+        } else {
+            VStack(spacing: 8) {
+                if showIcon {
+                    Image("SquareUpLogo")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: iconSize, height: iconSize)
+                }
+                Text("squareup")
+                    .font(.system(size: wordmarkSize, weight: .bold, design: .rounded))
+                    .foregroundColor(DesignSystem.Colors.liveGreen)
+                    .tracking(0.5)
+            }
+            .padding(.vertical, 4)
         }
-        .padding(.vertical, 4)
     }
 }
 

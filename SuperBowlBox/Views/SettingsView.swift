@@ -31,14 +31,14 @@ struct SettingsView: View {
                             if appState.myName.isEmpty {
                                 Text("Set Your Name")
                                     .font(.headline)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
                             } else {
                                 Text(appState.myName)
                                     .font(.headline)
                             }
                             Text("Tap to edit")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
                         }
                         .padding(.leading, 8)
                     }
@@ -68,7 +68,7 @@ struct SettingsView: View {
                                 if let email = user.email {
                                     Text(email)
                                         .font(AppTypography.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(DesignSystem.Colors.textSecondary)
                                 }
                             }
                             Spacer()
@@ -124,10 +124,10 @@ struct SettingsView: View {
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
                         }
                     }
-                    .foregroundColor(.primary)
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
                 } header: {
                     Text("Join Pool")
                 } footer: {
@@ -217,9 +217,9 @@ struct SettingsView: View {
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
                         }
-                        .foregroundColor(.primary)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
                     }
 
                     Button {
@@ -232,9 +232,9 @@ struct SettingsView: View {
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
                         }
-                        .foregroundColor(.primary)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
                     }
 
                     Button {
@@ -312,11 +312,11 @@ struct SettingsView: View {
 // MARK: - Share Pool Row
 struct SharePoolRow: View {
     let pool: BoxGrid
+    @EnvironmentObject var appState: AppState
     @State private var showingShareSheet = false
 
-    var inviteCode: String {
-        // Generate a simple invite code from the pool ID
-        String(pool.id.uuidString.prefix(8)).uppercased()
+    var displayCode: String {
+        pool.sharedCode ?? "—"
     }
 
     var body: some View {
@@ -328,9 +328,9 @@ struct SharePoolRow: View {
                     Text(pool.name)
                         .font(.subheadline)
                         .fontWeight(.medium)
-                    Text("Code: \(inviteCode)")
+                    Text("Code: \(displayCode)")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
 
                 Spacer()
@@ -338,10 +338,17 @@ struct SharePoolRow: View {
                 Image(systemName: "paperplane.fill")
                     .foregroundColor(DesignSystem.Colors.accentBlue)
             }
-            .foregroundColor(.primary)
+            .foregroundColor(DesignSystem.Colors.textPrimary)
         }
         .sheet(isPresented: $showingShareSheet) {
-            SharePoolSheet(pool: pool, inviteCode: inviteCode)
+            SharePoolSheet(
+                pool: pool,
+                onCodeGenerated: { code in
+                    var p = pool
+                    p.sharedCode = code
+                    appState.updatePool(p)
+                }
+            )
         }
     }
 }
@@ -349,9 +356,16 @@ struct SharePoolRow: View {
 // MARK: - Share Pool Sheet
 struct SharePoolSheet: View {
     let pool: BoxGrid
-    let inviteCode: String
+    let onCodeGenerated: (String) -> Void
     @Environment(\.dismiss) var dismiss
+    @State private var displayedCode: String? = nil
+    @State private var isUploading = false
+    @State private var uploadError: String? = nil
     @State private var copied = false
+
+    private var inviteCode: String {
+        displayedCode ?? pool.sharedCode ?? ""
+    }
 
     var body: some View {
         NavigationStack {
@@ -367,44 +381,63 @@ struct SharePoolSheet: View {
                         .fontWeight(.bold)
 
                     Text("\(pool.awayTeam.abbreviation) vs \(pool.homeTeam.abbreviation)")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
 
                 // Invite code
                 VStack(spacing: 12) {
                     Text("Invite Code")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
 
-                    HStack(spacing: 8) {
-                        ForEach(Array(inviteCode), id: \.self) { char in
-                            Text(String(char))
-                                .font(.system(size: 28, weight: .bold, design: .monospaced))
-                                .frame(width: 36, height: 48)
-                                .background(Color(.systemGray6))
-                                .cornerRadius(8)
+                    if isUploading {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                            .padding()
+                        Text("Generating code…")
+                            .font(.caption)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
+                    } else if let err = uploadError {
+                        Text(err)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                    } else if !inviteCode.isEmpty {
+                        HStack(spacing: 8) {
+                            ForEach(Array(inviteCode), id: \.self) { char in
+                                Text(String(char))
+                                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                                    .frame(width: 36, height: 48)
+                                    .background(DesignSystem.Colors.surfaceElevated)
+                                    .cornerRadius(8)
+                            }
                         }
-                    }
 
-                    Button {
-                        UIPasteboard.general.string = inviteCode
-                        copied = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            copied = false
+                        Button {
+                            UIPasteboard.general.string = inviteCode
+                            copied = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                copied = false
+                            }
+                        } label: {
+                            HStack {
+                                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                                Text(copied ? "Copied!" : "Copy Code")
+                            }
+                            .font(.subheadline)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(
+                                Capsule()
+                                    .fill(copied ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.accentBlue)
+                            )
+                            .foregroundColor(.white)
                         }
-                    } label: {
-                        HStack {
-                            Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                            Text(copied ? "Copied!" : "Copy Code")
-                        }
-                        .font(.subheadline)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(
-                            Capsule()
-                                .fill(copied ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.accentBlue)
-                        )
-                        .foregroundColor(.white)
+                    } else if !SharedPoolsConfig.isConfigured {
+                        Text("Configure SharedPoolsURL or LoginDatabaseURL in Secrets.plist to generate codes.")
+                            .font(.caption)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
+                            .multilineTextAlignment(.center)
                     }
                 }
 
@@ -414,7 +447,7 @@ struct SharePoolSheet: View {
                 VStack(spacing: 16) {
                     Text("Share via")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
 
                     HStack(spacing: 24) {
                         ShareOptionButton(icon: "message.fill", label: "Message", color: .green) {
@@ -441,20 +474,20 @@ struct SharePoolSheet: View {
 
                     Text("1. Download SquareUp from the App Store")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
 
                     Text("2. Go to Settings > Join Pool with Code")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
 
                     Text("3. Enter the code above")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.systemGray6))
+                        .fill(DesignSystem.Colors.surfaceElevated)
                 )
             }
             .padding()
@@ -465,6 +498,29 @@ struct SharePoolSheet: View {
                     Button("Done") {
                         dismiss()
                     }
+                }
+            }
+            .onAppear {
+                if displayedCode == nil, pool.sharedCode == nil, SharedPoolsConfig.isConfigured {
+                    isUploading = true
+                    uploadError = nil
+                    Task {
+                        do {
+                            let code = try await SharedPoolsService.uploadPool(pool)
+                            await MainActor.run {
+                                displayedCode = code
+                                isUploading = false
+                                onCodeGenerated(code)
+                            }
+                        } catch {
+                            await MainActor.run {
+                                uploadError = error.localizedDescription
+                                isUploading = false
+                            }
+                        }
+                    }
+                } else if displayedCode == nil, let existing = pool.sharedCode {
+                    displayedCode = existing
                 }
             }
         }
@@ -505,7 +561,7 @@ struct ShareOptionButton: View {
 
                 Text(label)
                     .font(.caption)
-                    .foregroundColor(.primary)
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
             }
         }
     }
@@ -533,7 +589,7 @@ struct JoinPoolSheet: View {
 
                     Text("Enter the invite code shared by the pool host")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                         .multilineTextAlignment(.center)
                 }
 
@@ -547,7 +603,7 @@ struct JoinPoolSheet: View {
                         .padding()
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(Color(.systemGray6))
+                                .fill(DesignSystem.Colors.surfaceElevated)
                         )
                         .onChange(of: code) { _, newValue in
                             // Limit to 8 characters
@@ -584,11 +640,12 @@ struct JoinPoolSheet: View {
 
                 Spacer()
 
-                // Note
-                Text("Note: In this demo version, invite codes create a local copy of the pool. Full cloud sync coming soon!")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+                if !SharedPoolsConfig.isConfigured {
+                    Text("Configure SharedPoolsURL or LoginDatabaseURL in Secrets.plist to join with a code.")
+                        .font(.caption)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
             }
             .padding()
             .navigationTitle("Join Pool")
@@ -604,17 +661,26 @@ struct JoinPoolSheet: View {
     }
 
     private func joinPool() {
+        guard SharedPoolsConfig.isConfigured else {
+            error = "Share/join is not configured. Add SharedPoolsURL or LoginDatabaseURL in Secrets.plist."
+            return
+        }
         isLoading = true
         error = nil
-
-        // Simulate network delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            // In a real app, this would fetch the pool from a server
-            // For demo, create a sample pool
-            let pool = BoxGrid(name: "Joined Pool - \(code)")
-            appState.addPool(pool)
-            isLoading = false
-            dismiss()
+        Task {
+            do {
+                let pool = try await SharedPoolsService.fetchPool(code: code.trimmingCharacters(in: .whitespaces).uppercased())
+                await MainActor.run {
+                    appState.addPool(pool)
+                    HapticService.success()
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    self.error = error.localizedDescription
+                    isLoading = false
+                }
+            }
         }
     }
 }
@@ -634,7 +700,7 @@ struct AboutView: View {
 
                         Text("Pools, boxes & brackets. Any event.")
                             .font(AppTypography.callout)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
                     }
                     .padding(.top, 32)
 
@@ -667,14 +733,14 @@ struct AboutView: View {
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(.systemGray6))
+                            .fill(DesignSystem.Colors.surfaceElevated)
                     )
 
                     // Footer
                     VStack(spacing: 8) {
                         Text("Made with love for football fans")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
 
                         HStack(spacing: 4) {
                             Image(systemName: "checkmark.seal.fill")
@@ -717,7 +783,7 @@ struct FeatureRow: View {
                     .font(.headline)
                 Text(description)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
             }
         }
     }

@@ -44,6 +44,8 @@
 		A11111110000000000000024 /* GoogleSignInButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000025 /* GoogleSignInButton.swift */; };
 		A11111110000000000000025 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000026 /* DesignSystem.swift */; };
 		A11111110000000000000026 /* OnTheHuntItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000027 /* OnTheHuntItem.swift */; };
+		A11111110000000000000027 /* SharedPoolsConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000028 /* SharedPoolsConfig.swift */; };
+		A11111110000000000000028 /* SharedPoolsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000029 /* SharedPoolsService.swift */; };
 		CECC4FC82F33D68F004AAD0D /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = CECC4FC72F33D68F004AAD0D /* GoogleSignIn */; };
 		CECC4FCA2F33D68F004AAD0D /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = CECC4FC92F33D68F004AAD0D /* GoogleSignInSwift */; };
 /* End PBXBuildFile section */
@@ -89,6 +91,8 @@
 		A00000000000000000000025 /* GoogleSignInButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInButton.swift; sourceTree = "<group>"; };
 		A00000000000000000000026 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		A00000000000000000000027 /* OnTheHuntItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnTheHuntItem.swift; sourceTree = "<group>"; };
+		A00000000000000000000028 /* SharedPoolsConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPoolsConfig.swift; sourceTree = "<group>"; };
+		A00000000000000000000029 /* SharedPoolsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPoolsService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -214,6 +218,8 @@
 				A00000000000000000000020 /* GameContextService.swift */,
 				A00000000000000000000023 /* LoginDatabaseConfig.swift */,
 				A00000000000000000000024 /* LoginDatabaseService.swift */,
+				A00000000000000000000028 /* SharedPoolsConfig.swift */,
+				A00000000000000000000029 /* SharedPoolsService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -337,6 +343,8 @@
 				A11111110000000000000024 /* GoogleSignInButton.swift in Sources */,
 				A11111110000000000000025 /* DesignSystem.swift in Sources */,
 				A11111110000000000000026 /* OnTheHuntItem.swift in Sources */,
+				A11111110000000000000027 /* SharedPoolsConfig.swift in Sources */,
+				A11111110000000000000028 /* SharedPoolsService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

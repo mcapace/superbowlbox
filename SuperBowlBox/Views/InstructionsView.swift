@@ -71,7 +71,7 @@ struct InstructionsView: View {
                             dismiss()
                         }
                         .font(AppTypography.callout)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                         .padding(.horizontal, 20)
                         .padding(.top, 12)
                     }
@@ -112,7 +112,7 @@ struct InstructionsView: View {
                 HStack(spacing: 8) {
                     ForEach(0..<pageCount, id: \.self) { index in
                         Circle()
-                            .fill(index == currentPage ? AppColors.techCyan : Color(.systemGray4))
+                            .fill(index == currentPage ? AppColors.techCyan : DesignSystem.Colors.textMuted)
                             .frame(width: index == currentPage ? 10 : 8, height: index == currentPage ? 10 : 8)
                             .scaleEffect(index == currentPage ? 1.0 : 0.9)
                             .overlay(
@@ -198,11 +198,11 @@ private struct OnboardingSignInView: View {
             VStack(spacing: 12) {
                 Text("Sign in to sync")
                     .font(AppTypography.title2)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(DesignSystem.Colors.textPrimary)
                     .multilineTextAlignment(.center)
                 Text("Optional—sign in with Apple or Google to sync your pools and preferences across devices.")
                     .font(AppTypography.body)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
             }
@@ -241,7 +241,7 @@ private struct OnboardingSignInView: View {
                 onSkip()
             }
             .font(AppTypography.callout)
-            .foregroundColor(.secondary)
+            .foregroundColor(DesignSystem.Colors.textSecondary)
             .padding(.top, 16)
 
             Spacer(minLength: 80)
@@ -303,7 +303,7 @@ private struct InstructionStepView: View {
 
                 Text(step.subtitle)
                     .font(AppTypography.body)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
                     .padding(.horizontal, 8)

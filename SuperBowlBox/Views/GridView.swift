@@ -20,70 +20,57 @@ struct GridDetailView: View {
     var body: some View {
         ScrollView([.horizontal, .vertical], showsIndicators: true) {
             VStack(spacing: 0) {
-                // Pool structure & payouts summary
+                // Pool structure & payouts summary (sleek)
                 HStack {
                     Label(pool.resolvedPoolStructure.periodLabels.joined(separator: " · "), systemImage: "calendar.badge.clock")
-                        .font(AppTypography.caption)
-                        .foregroundColor(AppColors.fieldGreen)
+                        .font(.system(size: 12))
+                        .foregroundColor(DesignSystem.Colors.liveGreen)
                     Spacer()
                     if !pool.resolvedPoolStructure.payoutDescriptions.isEmpty {
                         Text(pool.resolvedPoolStructure.payoutDescriptions.joined(separator: "  "))
-                            .font(AppTypography.caption2)
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 11))
+                            .foregroundColor(DesignSystem.Colors.textTertiary)
                     }
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color(.systemGray6).opacity(0.6))
-                .cornerRadius(8)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(DesignSystem.Colors.backgroundTertiary.opacity(0.8))
+                .cornerRadius(DesignSystem.Layout.cornerRadiusSmall)
                 .padding(.horizontal)
-                .padding(.bottom, 8)
+                .padding(.bottom, 10)
 
-                // Team header for columns (Home team)
+                // Grid: column headers (home) + rows
                 HStack(spacing: 0) {
-                    // Corner cell with team info
-                    VStack(spacing: 2) {
-                        Text(pool.awayTeam.abbreviation)
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                        Rectangle()
-                            .fill(Color.secondary)
-                            .frame(height: 1)
-                            .rotationEffect(.degrees(-45))
-                        Text(pool.homeTeam.abbreviation)
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                    }
-                    .frame(width: 44, height: 44)
-                    .background(Color(.systemGray4))
+                    Text("·")
+                        .font(.system(size: 16))
+                        .foregroundColor(DesignSystem.Colors.textMuted)
+                        .frame(width: 44, height: 44)
+                        .background(DesignSystem.Colors.backgroundTertiary)
 
-                    // Column numbers (home team)
                     ForEach(0..<10, id: \.self) { col in
                         let isWinningCol = winningPosition?.column == col
                         Text("\(pool.homeNumbers[col])")
                             .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .monospacedDigit()
                             .frame(width: 44, height: 44)
                             .background(
-                                isWinningCol ?
-                                    AppColors.fieldGreen :
-                                    (Color(hex: pool.homeTeam.primaryColor) ?? .blue)
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(isWinningCol ? DesignSystem.Colors.liveGreen : (Color(hex: pool.homeTeam.primaryColor) ?? .blue).opacity(0.9))
                             )
                             .foregroundColor(.white)
                     }
                 }
 
-                // Grid rows
                 ForEach(0..<10, id: \.self) { row in
                     HStack(spacing: 0) {
-                        // Row number (away team)
                         let isWinningRow = winningPosition?.row == row
                         Text("\(pool.awayNumbers[row])")
                             .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .monospacedDigit()
                             .frame(width: 44, height: 44)
                             .background(
-                                isWinningRow ?
-                                    AppColors.fieldGreen :
-                                    (Color(hex: pool.awayTeam.primaryColor) ?? .red)
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(isWinningRow ? DesignSystem.Colors.liveGreen : (Color(hex: pool.awayTeam.primaryColor) ?? .red).opacity(0.9))
                             )
                             .foregroundColor(.white)
 
@@ -174,16 +161,15 @@ struct GridDetailView: View {
 
                     Spacer()
 
-                    // Current score indicator
                     if let score = score {
                         HStack(spacing: 4) {
                             Text("Winner:")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text("\(score.awayLastDigit)-\(score.homeLastDigit)")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundColor(AppColors.fieldGreen)
+                                .font(.system(size: 12))
+                                .foregroundColor(DesignSystem.Colors.textTertiary)
+                            Text("\(score.awayLastDigit)–\(score.homeLastDigit)")
+                                .font(.system(size: 15, weight: .bold))
+                                .monospacedDigit()
+                                .foregroundColor(DesignSystem.Colors.liveGreen)
                         }
                     }
                 }
@@ -232,7 +218,7 @@ struct FullGridCellView: View {
 
     var body: some View {
         ZStack {
-            Rectangle()
+            RoundedRectangle(cornerRadius: 4)
                 .fill(cellColor)
                 .frame(width: 44, height: 44)
 
@@ -250,8 +236,8 @@ struct FullGridCellView: View {
             }
 
             if isWinning {
-                Rectangle()
-                    .stroke(AppColors.gold, lineWidth: 3)
+                RoundedRectangle(cornerRadius: 4)
+                    .strokeBorder(Color.white, lineWidth: 2)
                     .frame(width: 44, height: 44)
             }
 
@@ -264,7 +250,7 @@ struct FullGridCellView: View {
                                 .font(.system(size: 6, weight: .bold))
                                 .foregroundColor(.white)
                                 .padding(2)
-                                .background(AppColors.gold)
+                                .background(DesignSystem.Colors.winnerGold)
                                 .cornerRadius(2)
                         }
                     }
@@ -274,28 +260,29 @@ struct FullGridCellView: View {
                 .padding(2)
             }
         }
-        .border(Color(.systemGray4), width: 0.5)
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 0.5)
+        )
     }
 
     var cellColor: Color {
         if isWinning {
-            return AppColors.fieldGreen
+            return DesignSystem.Colors.liveGreen
         } else if isHighlighted {
-            return .orange.opacity(0.6)
+            return DesignSystem.Colors.winnerGold.opacity(0.7)
         } else if square.isWinner {
-            return AppColors.gold.opacity(0.4)
+            return DesignSystem.Colors.winnerGold.opacity(0.4)
         } else if !square.isEmpty {
-            return Color(.systemGray6)
+            return DesignSystem.Colors.accentBlue.opacity(0.35)
         } else {
-            return Color(.systemBackground)
+            return DesignSystem.Colors.backgroundTertiary
         }
     }
 
     var textColor: Color {
-        if isWinning {
-            return .white
-        }
-        return .primary
+        if isWinning || isHighlighted { return .white }
+        return DesignSystem.Colors.textPrimary
     }
 }
 
@@ -315,7 +302,7 @@ struct SquareEditSheet: View {
                         VStack(alignment: .leading) {
                             Text("Row Number")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
                             Text("\(pool.awayNumbers[square.row])")
                                 .font(.title)
                                 .fontWeight(.bold)
@@ -326,7 +313,7 @@ struct SquareEditSheet: View {
                         VStack(alignment: .trailing) {
                             Text("Column Number")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
                             Text("\(pool.homeNumbers[square.column])")
                                 .font(.title)
                                 .fontWeight(.bold)
@@ -335,12 +322,12 @@ struct SquareEditSheet: View {
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.systemGray6))
+                            .fill(DesignSystem.Colors.surfaceElevated)
                     )
 
                     Text("Position: (\(square.row), \(square.column))")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
 
                 // Name Input
@@ -359,7 +346,7 @@ struct SquareEditSheet: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Quick Select")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
 
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
@@ -373,9 +360,9 @@ struct SquareEditSheet: View {
                                             .padding(.vertical, 6)
                                             .background(
                                                 Capsule()
-                                                    .fill(playerName == name ? AppColors.fieldGreen : Color(.systemGray5))
+                                                    .fill(playerName == name ? AppColors.fieldGreen : DesignSystem.Colors.surfaceElevated)
                                             )
-                                            .foregroundColor(playerName == name ? .white : .primary)
+                                            .foregroundColor(playerName == name ? .white : DesignSystem.Colors.textPrimary)
                                     }
                                 }
                             }

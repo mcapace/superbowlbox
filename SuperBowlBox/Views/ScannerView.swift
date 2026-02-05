@@ -14,9 +14,13 @@ struct ScannerView: View {
     @State private var showingManualEntry = false
     @State private var scanProgress: ScanProgress = .idle
     @State private var selectedItem: PhotosPickerItem?
+    /// Name(s) and pool name entered before OCR, so we match and pre-fill the review step.
+    @State private var ownerNameFieldsBeforeScan: [String] = [""]
+    @State private var poolNameBeforeScan: String = ""
 
     enum ScanProgress {
         case idle
+        case enteringName
         case processing
         case reviewing
         case error(String)
@@ -32,6 +36,21 @@ struct ScannerView: View {
                         onPhotoSelected: { showingImagePicker = true },
                         onManualEntry: { showingManualEntry = true }
                     )
+
+                case .enteringName:
+                    if let image = selectedImage {
+                        EnterNameForScanView(
+                            image: image,
+                            ownerNameFields: $ownerNameFieldsBeforeScan,
+                            poolName: $poolNameBeforeScan,
+                            onContinue: { startOCRWithEnteredName() },
+                            onChooseDifferentImage: {
+                                selectedImage = nil
+                                scanProgress = .idle
+                            }
+                        )
+                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                    }
 
                 case .processing:
                     ProcessingScanView()
@@ -52,6 +71,8 @@ struct ScannerView: View {
                                 scanProgress = .idle
                                 selectedImage = nil
                                 scannedPool = nil
+                                ownerNameFieldsBeforeScan = [""]
+                                poolNameBeforeScan = ""
                             }
                         )
                         .transition(.asymmetric(
@@ -67,6 +88,8 @@ struct ScannerView: View {
                             HapticService.impactMedium()
                             scanProgress = .idle
                             selectedImage = nil
+                            ownerNameFieldsBeforeScan = [""]
+                            poolNameBeforeScan = ""
                         },
                         onManualEntry: {
                             HapticService.selection()
@@ -123,7 +146,23 @@ struct ScannerView: View {
 
     private func handleCapturedImage(_ image: UIImage) {
         Task { @MainActor in
+            showingCamera = false
             selectedImage = image
+            ownerNameFieldsBeforeScan = [""]
+            poolNameBeforeScan = ""
+            if !appState.myName.isEmpty {
+                ownerNameFieldsBeforeScan[0] = appState.myName
+            }
+            withAnimation(.appReveal) {
+                scanProgress = .enteringName
+            }
+        }
+    }
+
+    /// Run OCR after user has entered their name as on sheet; then match and show review.
+    private func startOCRWithEnteredName() {
+        guard let image = selectedImage else { return }
+        Task { @MainActor in
             withAnimation(.appReveal) {
                 scanProgress = .processing
             }
@@ -131,8 +170,15 @@ struct ScannerView: View {
         Task {
             do {
                 let pool = try await visionService.processImage(image)
+                let names = ownerNameFieldsBeforeScan
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+                let poolName = poolNameBeforeScan.trimmingCharacters(in: .whitespacesAndNewlines)
                 await MainActor.run {
-                    scannedPool = pool
+                    var poolToReview = pool
+                    poolToReview.ownerLabels = names.isEmpty ? nil : names
+                    poolToReview.name = poolName.isEmpty ? "Scanned Pool" : poolName
+                    scannedPool = poolToReview
                     withAnimation(.appEntrance) {
                         scanProgress = .reviewing
                     }
@@ -171,12 +217,12 @@ struct IdleScanView: View {
                     )
 
                 Text("Scan Your Pool Sheet")
-                    .font(.title2)
+                    .font(DesignSystem.Typography.title)
                     .fontWeight(.bold)
 
                 Text("Take a photo or choose an image of your pool or box sheet")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .font(DesignSystem.Typography.callout)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
@@ -228,11 +274,11 @@ struct IdleScanView: View {
                         Spacer()
                         Image(systemName: "chevron.right")
                     }
-                    .foregroundColor(.primary)
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(.systemGray6))
+                            .fill(DesignSystem.Colors.surfaceElevated)
                     )
                 }
                 .buttonStyle(ScaleButtonStyle())
@@ -253,11 +299,11 @@ struct IdleScanView: View {
                         Spacer()
                         Image(systemName: "chevron.right")
                     }
-                    .foregroundColor(.primary)
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(.systemGray6))
+                            .fill(DesignSystem.Colors.surfaceElevated)
                     )
                 }
                 .buttonStyle(ScaleButtonStyle())
@@ -277,7 +323,7 @@ struct IdleScanView: View {
                         .foregroundColor(.yellow)
                     Text("Ensure good lighting and keep the sheet flat")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
 
                 HStack(alignment: .top, spacing: 8) {
@@ -285,17 +331,120 @@ struct IdleScanView: View {
                         .foregroundColor(AppColors.fieldGreen)
                     Text("Include the full grid with all numbers visible")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
             }
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6))
+                    .fill(DesignSystem.Colors.surfaceElevated)
             )
             .padding(.horizontal)
         }
         .padding(.vertical)
+    }
+}
+
+// MARK: - Enter Name (before OCR) – name as on sheet, then we match via OCR
+struct EnterNameForScanView: View {
+    let image: UIImage
+    @Binding var ownerNameFields: [String]
+    @Binding var poolName: String
+    let onContinue: () -> Void
+    let onChooseDifferentImage: () -> Void
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                Text("We’ll use your name to find and highlight your squares on the sheet.")
+                    .font(.subheadline)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
+
+                // Thumbnail
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxHeight: 180)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(DesignSystem.Colors.textMuted, lineWidth: 1)
+                    )
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Your name as it appears on the sheet")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    Text("Enter exactly how your name is written on the pool sheet so we can match it.")
+                        .font(.caption)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                    ForEach(ownerNameFields.indices, id: \.self) { index in
+                        HStack {
+                            TextField("Name on sheet", text: $ownerNameFields[index])
+                                .textFieldStyle(.roundedBorder)
+                                .autocorrectionDisabled()
+                            if ownerNameFields.count > 1 {
+                                Button {
+                                    ownerNameFields.remove(at: index)
+                                } label: {
+                                    Image(systemName: "minus.circle.fill")
+                                        .foregroundColor(.red)
+                                }
+                            }
+                        }
+                    }
+                    Button {
+                        ownerNameFields.append("")
+                    } label: {
+                        Label("I have more than one box", systemImage: "plus.circle.fill")
+                            .font(.subheadline)
+                            .foregroundColor(AppColors.fieldGreen)
+                    }
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(DesignSystem.Colors.surfaceElevated)
+                )
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Pool name (optional)")
+                        .font(.caption)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                    TextField("e.g. Super Bowl Pool", text: $poolName)
+                        .textFieldStyle(.roundedBorder)
+                }
+
+                Button {
+                    HapticService.impactLight()
+                    onContinue()
+                } label: {
+                    Text("Continue – Match with OCR")
+                        .font(DesignSystem.Typography.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(AppColors.fieldGreen)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                }
+
+                Button {
+                    onChooseDifferentImage()
+                } label: {
+                    Text("Use a different photo")
+                        .font(.subheadline)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding()
+        }
+        .onAppear {
+            if ownerNameFields == [""], !appState.myName.isEmpty {
+                ownerNameFields[0] = appState.myName
+            }
+        }
     }
 }
 
@@ -311,7 +460,7 @@ struct ProcessingScanView: View {
 
             ZStack {
                 Circle()
-                    .stroke(Color(.systemGray4).opacity(0.5), lineWidth: 4)
+                    .stroke(DesignSystem.Colors.cardBorder, lineWidth: 4)
                     .frame(width: 100, height: 100)
 
                 Circle()
@@ -351,7 +500,7 @@ struct ProcessingScanView: View {
 
                 Text("Detecting grid and reading names")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
             }
 
             Spacer()
@@ -382,7 +531,7 @@ struct ReviewScanView: View {
                         .foregroundColor(.green)
                         .font(.title2)
                     Text("Scan Complete!")
-                        .font(.headline)
+                        .font(DesignSystem.Typography.headline)
                     Spacer()
                     if image != nil {
                         Button("View Image") {
@@ -401,7 +550,7 @@ struct ReviewScanView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Pool Name")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                     TextField("Enter pool name", text: $poolName)
                         .textFieldStyle(.roundedBorder)
                         .onChange(of: poolName) { _, newValue in
@@ -416,7 +565,7 @@ struct ReviewScanView: View {
                         .fontWeight(.medium)
                     Text("We use this to find and highlight your squares. Add another row if you have more than one box.")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                     ForEach(ownerNameFields.indices, id: \.self) { index in
                         HStack {
                             TextField("Name as written on sheet", text: $ownerNameFields[index])
@@ -443,7 +592,7 @@ struct ReviewScanView: View {
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.systemGray6))
+                        .fill(DesignSystem.Colors.surfaceElevated)
                 )
 
                 // Stats
@@ -464,7 +613,7 @@ struct ReviewScanView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Grid Preview")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
 
                     MiniGridPreview(pool: pool, score: nil)
                         .frame(height: 150)
@@ -474,7 +623,7 @@ struct ReviewScanView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Detected Numbers")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
 
                     HStack {
                         VStack(alignment: .leading) {
@@ -498,7 +647,7 @@ struct ReviewScanView: View {
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(.systemGray6))
+                            .fill(DesignSystem.Colors.surfaceElevated)
                     )
                 }
 
@@ -524,8 +673,8 @@ struct ReviewScanView: View {
                         Text("Retry Scan")
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color(.systemGray6))
-                            .foregroundColor(.primary)
+                            .background(DesignSystem.Colors.surfaceElevated)
+                            .foregroundColor(DesignSystem.Colors.textPrimary)
                             .cornerRadius(12)
                     }
                 }
@@ -574,13 +723,13 @@ struct StatBox: View {
                 .fontWeight(.bold)
             Text(title)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(DesignSystem.Colors.textSecondary)
         }
         .frame(maxWidth: .infinity)
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemGray6))
+                .fill(DesignSystem.Colors.surfaceElevated)
         )
     }
 }
@@ -626,12 +775,12 @@ struct ErrorScanView: View {
 
             VStack(spacing: 8) {
                 Text("Scan Failed")
-                    .font(.title2)
+                    .font(DesignSystem.Typography.title)
                     .fontWeight(.bold)
 
                 Text(message)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
@@ -655,8 +804,8 @@ struct ErrorScanView: View {
                     Text("Enter Manually Instead")
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color(.systemGray6))
-                        .foregroundColor(.primary)
+                        .background(DesignSystem.Colors.surfaceElevated)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
                         .cornerRadius(12)
                 }
             }

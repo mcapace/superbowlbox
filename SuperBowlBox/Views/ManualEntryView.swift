@@ -82,7 +82,7 @@ struct ManualEntryView: View {
                             }
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(Color(.systemGray6))
+                            .background(DesignSystem.Colors.surfaceElevated)
                             .cornerRadius(12)
                         }
                     }
@@ -174,7 +174,7 @@ struct ProgressBar: View {
         HStack(spacing: 4) {
             ForEach(0..<totalSteps, id: \.self) { step in
                 Rectangle()
-                    .fill(step <= currentStep ? AppColors.fieldGreen : Color(.systemGray4))
+                    .fill(step <= currentStep ? AppColors.fieldGreen : DesignSystem.Colors.textMuted)
                     .frame(height: 4)
                     .cornerRadius(2)
             }
@@ -197,7 +197,7 @@ struct PoolInfoStep: View {
                         .fontWeight(.bold)
                     Text("Name your pool and select the teams")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -277,7 +277,7 @@ struct NumbersStep: View {
                         .fontWeight(.bold)
                     Text("Set the numbers for each team or randomize")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
 
                 // Home team numbers
@@ -326,7 +326,7 @@ struct NumbersStep: View {
                     Label("Randomize Both", systemImage: "shuffle")
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color(.systemGray6))
+                        .background(DesignSystem.Colors.surfaceElevated)
                         .cornerRadius(12)
                 }
 
@@ -336,7 +336,7 @@ struct NumbersStep: View {
                         .foregroundColor(.blue)
                     Text("In traditional pools, numbers are randomized after all squares are sold to keep it fair.")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
                 .padding()
                 .background(
@@ -387,7 +387,7 @@ struct NamesEntryStep: View {
                 HStack {
                     Text("Row \(currentRow + 1) of 10")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                     Spacer()
                     Text("Number: \(awayNumbers[currentRow])")
                         .font(.caption)
@@ -468,7 +468,7 @@ struct NamesEntryStep: View {
                                 .multilineTextAlignment(.center)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 36)
-                                .background(Color(.systemGray6))
+                                .background(DesignSystem.Colors.surfaceElevated)
                                 .cornerRadius(4)
                         }
                     }
@@ -484,7 +484,7 @@ struct NamesEntryStep: View {
                     } label: {
                         Image(systemName: "chevron.up")
                             .padding()
-                            .background(Color(.systemGray5))
+                            .background(DesignSystem.Colors.surfaceElevated)
                             .cornerRadius(8)
                     }
                     .disabled(currentRow == 0)
@@ -503,7 +503,7 @@ struct NamesEntryStep: View {
                     } label: {
                         Image(systemName: "chevron.down")
                             .padding()
-                            .background(Color(.systemGray5))
+                            .background(DesignSystem.Colors.surfaceElevated)
                             .cornerRadius(8)
                     }
                     .disabled(currentRow == 9)
@@ -519,7 +519,7 @@ struct NamesEntryStep: View {
                             .font(.caption)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
-                            .background(Color(.systemGray6))
+                            .background(DesignSystem.Colors.surfaceElevated)
                             .cornerRadius(8)
                     }
 
@@ -535,7 +535,7 @@ struct NamesEntryStep: View {
                                 .font(.caption)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 8)
-                                .background(Color(.systemGray6))
+                                .background(DesignSystem.Colors.surfaceElevated)
                                 .cornerRadius(8)
                         }
                     }
@@ -569,7 +569,7 @@ struct ReviewStep: View {
                         .fontWeight(.bold)
                     Text("Review your pool before saving")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
 
                 // How does your name appear on this sheet?
@@ -579,7 +579,7 @@ struct ReviewStep: View {
                         .fontWeight(.medium)
                     Text("We use this to find and highlight your squares. Add another row if you have more than one box.")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                     ForEach(ownerNameFields.indices, id: \.self) { index in
                         HStack {
                             TextField("Name as written on sheet", text: $ownerNameFields[index])
@@ -606,14 +606,14 @@ struct ReviewStep: View {
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.systemGray6))
+                        .fill(DesignSystem.Colors.surfaceElevated)
                 )
 
                 // Pool info
                 VStack(spacing: 12) {
                     HStack {
                         Text("Pool Name")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
                         Spacer()
                         Text(poolName.isEmpty ? "My Pool" : poolName)
                             .fontWeight(.semibold)
@@ -623,7 +623,7 @@ struct ReviewStep: View {
 
                     HStack {
                         Text("Teams")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
                         Spacer()
                         Text("\(awayTeam.abbreviation) vs \(homeTeam.abbreviation)")
                             .fontWeight(.semibold)
@@ -633,7 +633,7 @@ struct ReviewStep: View {
 
                     HStack {
                         Text("Squares Filled")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
                         Spacer()
                         Text("\(filledCount) / 100")
                             .fontWeight(.semibold)
@@ -643,14 +643,14 @@ struct ReviewStep: View {
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.systemGray6))
+                        .fill(DesignSystem.Colors.surfaceElevated)
                 )
 
                 // Mini preview
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Grid Preview")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
 
                     ReviewGridPreview(
                         grid: grid,
@@ -668,7 +668,7 @@ struct ReviewStep: View {
                             .foregroundColor(.orange)
                         Text("Your pool has \(100 - filledCount) empty squares. You can still create it and fill them later.")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
                     }
                     .padding()
                     .background(
@@ -715,7 +715,7 @@ struct ReviewGridPreview: View {
                     ForEach(0..<10, id: \.self) { col in
                         let name = grid[row][col]
                         Rectangle()
-                            .fill(name.isEmpty ? Color(.systemGray5) : Color.blue.opacity(0.4))
+                            .fill(name.isEmpty ? DesignSystem.Colors.surfaceElevated : Color.blue.opacity(0.4))
                             .frame(width: 20, height: 20)
                             .overlay(
                                 Text(String(name.prefix(2)).uppercased())
@@ -726,7 +726,7 @@ struct ReviewGridPreview: View {
                 }
             }
         }
-        .background(Color(.systemGray4))
+        .background(DesignSystem.Colors.surfaceElevated)
         .cornerRadius(8)
     }
 }

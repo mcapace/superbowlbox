@@ -28,7 +28,7 @@ struct CreateFromGameView: View {
                                     .padding(.vertical, 8)
                                     .background(
                                         Capsule()
-                                            .fill(selectedSport == sport ? AppColors.fieldGreen : Color(.systemGray5))
+                                            .fill(selectedSport == sport ? AppColors.fieldGreen : DesignSystem.Colors.surfaceElevated)
                                     )
                             }
                             .buttonStyle(.plain)

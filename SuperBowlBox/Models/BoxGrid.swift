@@ -15,6 +15,8 @@ struct BoxGrid: Codable, Identifiable {
     var poolStructure: PoolStructure?
     /// Names as they appear on this sheet that identify the current user's squares (e.g. "Mike" or "Mike", "Mike 2" for multiple boxes).
     var ownerLabels: [String]?
+    /// After sharing via SharedPoolsService, the generated invite code is stored so we can show it again without re-uploading.
+    var sharedCode: String?
 
     init(
         id: UUID = UUID(),
@@ -28,7 +30,8 @@ struct BoxGrid: Codable, Identifiable {
         lastModified: Date = Date(),
         currentScore: GameScore? = nil,
         poolStructure: PoolStructure = .standardQuarterly,
-        ownerLabels: [String]? = nil
+        ownerLabels: [String]? = nil,
+        sharedCode: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -41,6 +44,7 @@ struct BoxGrid: Codable, Identifiable {
         self.currentScore = currentScore
         self.poolStructure = poolStructure
         self.ownerLabels = ownerLabels
+        self.sharedCode = sharedCode
 
         if let existingSquares = squares {
             self.squares = existingSquares
@@ -64,7 +68,7 @@ struct BoxGrid: Codable, Identifiable {
 
     private enum CodingKeys: String, CodingKey {
         case id, name, homeTeam, awayTeam, homeNumbers, awayNumbers, squares
-        case createdAt, lastModified, currentScore, poolStructure, ownerLabels
+        case createdAt, lastModified, currentScore, poolStructure, ownerLabels, sharedCode
     }
 
     init(from decoder: Decoder) throws {
@@ -81,6 +85,7 @@ struct BoxGrid: Codable, Identifiable {
         currentScore = try c.decodeIfPresent(GameScore.self, forKey: .currentScore)
         poolStructure = try c.decodeIfPresent(PoolStructure.self, forKey: .poolStructure)
         ownerLabels = try c.decodeIfPresent([String].self, forKey: .ownerLabels)
+        sharedCode = try c.decodeIfPresent(String.self, forKey: .sharedCode)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -97,6 +102,7 @@ struct BoxGrid: Codable, Identifiable {
         try c.encodeIfPresent(currentScore, forKey: .currentScore)
         try c.encodeIfPresent(poolStructure, forKey: .poolStructure)
         try c.encodeIfPresent(ownerLabels, forKey: .ownerLabels)
+        try c.encodeIfPresent(sharedCode, forKey: .sharedCode)
     }
 
     // Get the square at a specific position

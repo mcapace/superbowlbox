@@ -30,7 +30,7 @@ struct ScoreOverlayView: View {
                     Text("\(score.awayTeam.abbreviation) \(score.awayScore)")
                         .fontWeight(.bold)
                     Text("-")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                     Text("\(score.homeScore) \(score.homeTeam.abbreviation)")
                         .fontWeight(.bold)
 
@@ -46,7 +46,7 @@ struct ScoreOverlayView: View {
 
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
                 .padding()
                 .background(
@@ -70,7 +70,7 @@ struct ScoreOverlayView: View {
                     HStack {
                         Text(score.gameStatusText)
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
 
                         Spacer()
 
@@ -151,11 +151,11 @@ struct QuarterCell: View {
             } else if quarter <= score.quarter || score.isGameOver {
                 Text("--")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
             } else {
                 Text("--")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
             }
 
             if let winner = winner {
@@ -168,7 +168,7 @@ struct QuarterCell: View {
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(isCurrent ? AppColors.fieldGreen : Color(.systemGray6))
+                .fill(isCurrent ? AppColors.fieldGreen : DesignSystem.Colors.surfaceElevated)
         )
     }
 }

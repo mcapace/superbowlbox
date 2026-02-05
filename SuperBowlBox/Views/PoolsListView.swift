@@ -13,39 +13,49 @@ struct PoolsListView: View {
         NavigationStack {
             ZStack {
                 SportsbookBackgroundView()
-            Group {
-                if appState.pools.isEmpty {
-                    EmptyPoolsView(
-                        onCreateNew: { newPoolPrefill = nil; showingNewPoolSheet = true },
-                        onCreateFromGame: { showingCreateFromGame = true },
-                        onScan: { showingScanner = true }
-                    )
-                } else {
-                        List {
-                            ForEach(Array(appState.pools.enumerated()), id: \.element.id) { index, pool in
-                                NavigationLink {
-                                    GridDetailView(pool: binding(for: pool))
-                                } label: {
-                                    PoolRowView(pool: pool, score: appState.scoreService.currentScore)
-                                }
-                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    Button(role: .destructive) {
-                                        poolToDelete = pool
-                                        showingDeleteConfirmation = true
+                ScrollView {
+                    VStack(alignment: .leading, spacing: DesignSystem.Layout.sectionSpacing) {
+                        // Import / add boxes — always first (Apple Sports–style)
+                        SectionHeaderView(title: "Add Pool")
+                        ImportPoolCard(
+                            onScan: { showingScanner = true },
+                            onCreateNew: { newPoolPrefill = nil; showingNewPoolSheet = true },
+                            onCreateFromGame: { showingCreateFromGame = true }
+                        )
+                        .padding(.horizontal, DesignSystem.Layout.screenInset)
+
+                        if appState.pools.isEmpty {
+                            EmptyPoolsPromptCard()
+                                .padding(.horizontal, DesignSystem.Layout.screenInset)
+                        } else {
+                            SectionHeaderView(title: "My Pools")
+                            LazyVStack(spacing: 12) {
+                                ForEach(Array(appState.pools.enumerated()), id: \.element.id) { index, pool in
+                                    NavigationLink {
+                                        GridDetailView(pool: binding(for: pool))
                                     } label: {
-                                        Label("Delete", systemImage: "trash")
+                                        PoolGameCard(pool: pool, score: appState.scoreService.currentScore)
+                                    }
+                                    .buttonStyle(ScaleButtonStyle())
+                                    .contextMenu {
+                                        Button(role: .destructive) {
+                                            poolToDelete = pool
+                                            showingDeleteConfirmation = true
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
                                     }
                                 }
-                                .listRowBackground(DesignSystem.Colors.backgroundSecondary)
                             }
+                            .padding(.horizontal, DesignSystem.Layout.screenInset)
                         }
-                        .listStyle(.insetGrouped)
-                        .scrollContentBackground(.hidden)
+                        Spacer(minLength: 100)
+                    }
+                    .padding(.top, 20)
                 }
             }
-            }
             .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
-            .navigationTitle("My Pools")
+            .navigationTitle("Pools")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
@@ -55,20 +65,18 @@ struct PoolsListView: View {
                         } label: {
                             Label("Create New Pool", systemImage: "plus.square")
                         }
-
                         Button {
                             showingCreateFromGame = true
                         } label: {
                             Label("Create from Game", systemImage: "sportscourt")
                         }
-
                         Button {
                             showingScanner = true
                         } label: {
                             Label("Scan Pool Sheet", systemImage: "text.viewfinder")
                         }
                     } label: {
-                        Image(systemName: "plus")
+                        Image(systemName: "plus.circle")
                     }
                 }
             }
@@ -104,6 +112,7 @@ struct PoolsListView: View {
                     appState.addPool(scannedPool)
                     showingScanner = false
                 }
+                .environmentObject(appState)
             }
             .alert("Delete Pool?", isPresented: $showingDeleteConfirmation) {
                 Button("Cancel", role: .cancel) {}
@@ -130,6 +139,141 @@ struct PoolsListView: View {
     }
 }
 
+// MARK: - Import pool card (Scan / Create / From game — always first)
+struct ImportPoolCard: View {
+    let onScan: () -> Void
+    let onCreateNew: () -> Void
+    let onCreateFromGame: () -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ImportPoolButton(icon: "camera.viewfinder", label: "Scan", action: onScan)
+            Rectangle().fill(DesignSystem.Colors.cardBorder).frame(width: 1).padding(.vertical, 12)
+            ImportPoolButton(icon: "plus.square.fill", label: "New", action: onCreateNew)
+            Rectangle().fill(DesignSystem.Colors.cardBorder).frame(width: 1).padding(.vertical, 12)
+            ImportPoolButton(icon: "sportscourt.fill", label: "From Game", action: onCreateFromGame)
+        }
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                .fill(DesignSystem.Colors.cardSurface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                        .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
+                )
+        )
+    }
+}
+
+private struct ImportPoolButton: View {
+    let icon: String
+    let label: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: {
+            HapticService.selection()
+            action()
+        }) {
+            VStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 22))
+                    .foregroundColor(DesignSystem.Colors.accentBlue)
+                Text(label)
+                    .font(DesignSystem.Typography.caption2)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+        }
+        .buttonStyle(ScaleButtonStyle())
+    }
+}
+
+// MARK: - Empty state (when no pools yet)
+struct EmptyPoolsPromptCard: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "rectangle.split.3x3")
+                .font(.system(size: 40))
+                .foregroundColor(DesignSystem.Colors.textTertiary)
+            Text("Your pools will appear here")
+                .font(DesignSystem.Typography.callout)
+                .foregroundColor(DesignSystem.Colors.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+        .background(
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                .fill(DesignSystem.Colors.cardSurface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                        .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
+                )
+        )
+    }
+}
+
+// MARK: - Pool as game-style card
+struct PoolGameCard: View {
+    let pool: BoxGrid
+    let score: GameScore?
+
+    private var winner: BoxSquare? {
+        guard let score = score else { return nil }
+        return pool.winningSquare(for: score)
+    }
+
+    var body: some View {
+        HStack(spacing: 16) {
+            HStack(spacing: 2) {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color(hex: pool.awayTeam.primaryColor) ?? DesignSystem.Colors.textTertiary)
+                    .frame(width: 6, height: 44)
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color(hex: pool.homeTeam.primaryColor) ?? DesignSystem.Colors.textTertiary)
+                    .frame(width: 6, height: 44)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(pool.name)
+                    .font(DesignSystem.Typography.headline)
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                Text("\(pool.awayTeam.abbreviation) vs \(pool.homeTeam.abbreviation)")
+                    .font(DesignSystem.Typography.caption)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                HStack(spacing: 12) {
+                    Text("\(pool.filledCount)/100 filled")
+                        .font(DesignSystem.Typography.caption2)
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                    if let winner = winner {
+                        HStack(spacing: 4) {
+                            Image(systemName: "crown.fill")
+                                .font(.caption2)
+                                .foregroundColor(DesignSystem.Colors.winnerGold)
+                            Text(winner.displayName)
+                                .font(DesignSystem.Typography.caption2)
+                                .foregroundColor(DesignSystem.Colors.winnerGold)
+                        }
+                    }
+                }
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(DesignSystem.Colors.textTertiary)
+        }
+        .padding(DesignSystem.Layout.cardPadding)
+        .background(
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                .fill(DesignSystem.Colors.cardSurface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                        .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
+                )
+        )
+    }
+}
+
 struct PoolRowView: View {
     let pool: BoxGrid
     let score: GameScore?
@@ -141,7 +285,6 @@ struct PoolRowView: View {
 
     var body: some View {
         HStack(spacing: 16) {
-            // Mini grid preview
             MiniGridPreview(pool: pool, score: score)
                 .frame(width: 60, height: 60)
 
@@ -152,7 +295,7 @@ struct PoolRowView: View {
 
                 Text("\(pool.awayTeam.abbreviation) vs \(pool.homeTeam.abbreviation)")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
 
                 Text(pool.resolvedPoolStructure.periodLabels.joined(separator: " · "))
                     .font(.caption2)
@@ -161,7 +304,7 @@ struct PoolRowView: View {
                 HStack(spacing: 12) {
                     Label("\(pool.filledCount)/100", systemImage: "rectangle.split.3x3")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
 
                     if let winner = winner {
                         HStack(spacing: 4) {
@@ -205,7 +348,7 @@ struct MiniGridPreview: View {
                 }
             }
         }
-        .background(Color(.systemGray4))
+        .background(DesignSystem.Colors.surfaceElevated)
         .cornerRadius(4)
     }
 
@@ -217,7 +360,7 @@ struct MiniGridPreview: View {
         } else if !square.isEmpty {
             return .blue.opacity(0.5)
         }
-        return Color(.systemGray5)
+        return DesignSystem.Colors.surfaceElevated
     }
 }
 
@@ -434,7 +577,7 @@ struct NewPoolSheet: View {
                                 .fill(Color(hex: selectedAwayTeam.primaryColor) ?? .red)
                                 .frame(width: 30, height: 30)
                                 .overlay(Text(selectedAwayTeam.abbreviation).font(.caption2).fontWeight(.bold).foregroundColor(.white))
-                            Text("vs").foregroundColor(.secondary)
+                            Text("vs").foregroundColor(DesignSystem.Colors.textSecondary)
                             Circle()
                                 .fill(Color(hex: selectedHomeTeam.primaryColor) ?? .blue)
                                 .frame(width: 30, height: 30)
@@ -443,7 +586,7 @@ struct NewPoolSheet: View {
                         }
                         Text(effectivePoolStructure.periodLabels.joined(separator: " · "))
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
                         if !effectivePoolStructure.payoutDescriptions.isEmpty {
                             Text(effectivePoolStructure.payoutDescriptions.joined(separator: "  "))
                                 .font(.caption)

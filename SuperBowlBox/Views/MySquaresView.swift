@@ -23,7 +23,7 @@ struct MySquaresView: View {
                 // Search bar
                 HStack {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                     TextField("Search by name", text: $searchName)
                         .textFieldStyle(.plain)
                         .autocorrectionDisabled()
@@ -33,7 +33,7 @@ struct MySquaresView: View {
                             searchName = ""
                         } label: {
                             Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
                         }
                     }
                 }
@@ -50,7 +50,8 @@ struct MySquaresView: View {
                     EmptyNameView()
                 } else {
                     ScrollView {
-                        VStack(spacing: DesignSystem.Layout.sectionSpacing) {
+                        VStack(alignment: .leading, spacing: DesignSystem.Layout.sectionSpacing) {
+                            SectionHeaderView(title: "Summary")
                             MySquaresSummaryCard(
                                 pools: appState.pools,
                                 globalMyName: appState.myName,
@@ -58,6 +59,7 @@ struct MySquaresView: View {
                             )
                             .padding(.horizontal, DesignSystem.Layout.screenInset)
 
+                            SectionHeaderView(title: "By Pool")
                             ForEach(appState.pools) { pool in
                                 let squares = searchName.isEmpty
                                     ? pool.squaresForOwner(ownerLabels: pool.effectiveOwnerLabels(globalName: appState.myName))
@@ -256,7 +258,7 @@ struct SquareNumberCell: View {
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                 Text("-")
                     .font(.system(size: 14))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
                 Text("\(colNumber)")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
             }

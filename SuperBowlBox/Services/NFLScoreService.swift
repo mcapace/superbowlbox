@@ -146,11 +146,13 @@ class NFLScoreService: ObservableObject {
                 let name = team["displayName"] as? String ?? "Team"
                 let abbrev = team["abbreviation"] as? String ?? "TM"
                 let color = team["color"] as? String ?? "000000"
+                let logoURL = team["logo"] as? String
 
                 let teamObj = Team(
                     name: name,
                     abbreviation: abbrev,
-                    primaryColor: "#\(color)"
+                    primaryColor: "#\(color)",
+                    logoURL: logoURL
                 )
 
                 if isHome {
