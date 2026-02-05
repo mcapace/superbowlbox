@@ -63,7 +63,7 @@ struct PoolsListView: View {
                         Button {
                             showingScanner = true
                         } label: {
-                            Label("Scan Pool Sheet", systemImage: "camera.viewfinder")
+                            Label("Scan Pool Sheet", systemImage: "text.viewfinder")
                         }
                     } label: {
                         Image(systemName: "plus")
@@ -157,14 +157,14 @@ struct PoolRowView: View {
                     .foregroundColor(AppColors.fieldGreen.opacity(0.9))
 
                 HStack(spacing: 12) {
-                    Label("\(pool.filledCount)/100", systemImage: "square.grid.3x3")
+                    Label("\(pool.filledCount)/100", systemImage: "rectangle.split.3x3")
                         .font(.caption2)
                         .foregroundColor(.secondary)
 
                     if let winner = winner {
                         HStack(spacing: 4) {
-                            Image(systemName: "trophy.fill")
-                                .foregroundColor(AppColors.gold)
+                            Image(systemName: "crown.fill")
+                                .foregroundColor(DesignSystem.Colors.winnerGold)
                             Text(winner.displayName)
                         }
                         .font(.caption2)
@@ -226,7 +226,7 @@ struct EmptyPoolsView: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            Image(systemName: "square.grid.3x3.topleft.filled")
+            Image(systemName: "rectangle.split.3x3")
                 .font(.system(size: 60))
                 .foregroundColor(DesignSystem.Colors.accentBlue)
 
@@ -272,7 +272,7 @@ struct EmptyPoolsView: View {
                 Button {
                     onScan()
                 } label: {
-                    Label("Scan Pool Sheet", systemImage: "camera.viewfinder")
+                    Label("Scan Pool Sheet", systemImage: "text.viewfinder")
                         .frame(maxWidth: .infinity)
                         .padding(DesignSystem.Layout.cardPadding)
                         .background(

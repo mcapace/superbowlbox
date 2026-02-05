@@ -30,13 +30,13 @@ private let steps: [InstructionStep] = [
         accent: AppColors.fieldGreenLight
     ),
     InstructionStep(
-        icon: "play.circle.fill",
+        icon: "dot.radiowaves.left.and.right",
         title: "Watch live scores",
         subtitle: "Scores update automatically during the game. The winning numbers (last digit of each team’s score) drive who’s ahead.",
         accent: AppColors.gold
     ),
     InstructionStep(
-        icon: "trophy.fill",
+        icon: "crown.fill",
         title: "See who wins",
         subtitle: "The app highlights the current winning square and tracks winners by quarter, halftime, or final—depending on your pool’s rules.",
         accent: AppColors.goldMuted

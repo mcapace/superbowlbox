@@ -146,25 +146,34 @@ struct SettingsView: View {
                 // Live Scores Section
                 Section {
                     HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .foregroundColor(DesignSystem.Colors.accentBlue)
+                            .frame(width: 28, alignment: .center)
                         Text("Auto-refresh Scores")
                         Spacer()
                         Toggle("", isOn: .constant(true))
-                            .tint(AppColors.fieldGreen)
+                            .tint(DesignSystem.Colors.accentBlue)
                     }
 
                     HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                            .frame(width: 28, alignment: .center)
                         Text("Refresh Interval")
                         Spacer()
                         Text("30 seconds")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
                     }
 
                     if let lastUpdated = appState.scoreService.lastUpdated {
                         HStack {
+                            Image(systemName: "clock.badge.checkmark.fill")
+                                .foregroundColor(DesignSystem.Colors.accentBlue)
+                                .frame(width: 28, alignment: .center)
                             Text("Last Updated")
                             Spacer()
                             Text(lastUpdated, style: .relative)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
                         }
                     }
                 } header: {
@@ -177,7 +186,7 @@ struct SettingsView: View {
                         appState.savePools()
                     } label: {
                         HStack {
-                            Image(systemName: "icloud.and.arrow.up")
+                            Image(systemName: "externaldrive.fill.badge.icloud")
                             Text("Backup Data")
                         }
                     }
@@ -230,20 +239,26 @@ struct SettingsView: View {
                         showingAbout = true
                     } label: {
                         HStack {
+                            Image(systemName: "apps.iphone")
+                                .foregroundColor(DesignSystem.Colors.accentBlue)
+                                .frame(width: 28, alignment: .center)
                             Text("About SquareUp")
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
                         }
-                        .foregroundColor(.primary)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
                     }
 
                     HStack {
+                        Image(systemName: "checkmark.seal.fill")
+                            .foregroundColor(DesignSystem.Colors.liveGreen)
+                            .frame(width: 28, alignment: .center)
                         Text("Version")
                         Spacer()
                         Text("1.0.0")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
                     }
                 } header: {
                     Text("About")
@@ -318,8 +333,8 @@ struct SharePoolRow: View {
 
                 Spacer()
 
-                Image(systemName: "square.and.arrow.up")
-                    .foregroundColor(AppColors.fieldGreen)
+                Image(systemName: "paperplane.fill")
+                    .foregroundColor(DesignSystem.Colors.accentBlue)
             }
             .foregroundColor(.primary)
         }
@@ -341,9 +356,9 @@ struct SharePoolSheet: View {
             VStack(spacing: 32) {
                 // Pool info
                 VStack(spacing: 8) {
-                    Image(systemName: "square.grid.3x3.fill")
+                    Image(systemName: "rectangle.split.3x3")
                         .font(.system(size: 50))
-                        .foregroundColor(AppColors.fieldGreen)
+                        .foregroundColor(DesignSystem.Colors.accentBlue)
 
                     Text(pool.name)
                         .font(.title2)
@@ -385,7 +400,7 @@ struct SharePoolSheet: View {
                         .padding(.vertical, 10)
                         .background(
                             Capsule()
-                                .fill(copied ? Color.green : AppColors.fieldGreen)
+                                .fill(copied ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.accentBlue)
                         )
                         .foregroundColor(.white)
                     }
@@ -624,25 +639,25 @@ struct AboutView: View {
                     // Features
                     VStack(alignment: .leading, spacing: 16) {
                         FeatureRow(
-                            icon: "camera.viewfinder",
+                            icon: "text.viewfinder",
                             title: "Smart Scanning",
                             description: "Scan your pool sheet with OCR technology"
                         )
 
                         FeatureRow(
-                            icon: "play.circle",
+                            icon: "dot.radiowaves.left.and.right",
                             title: "Live Scores",
                             description: "Real-time score updates during the game"
                         )
 
                         FeatureRow(
-                            icon: "person.2",
+                            icon: "rectangle.split.3x3",
                             title: "Multiple Pools",
                             description: "Manage all your pools in one place"
                         )
 
                         FeatureRow(
-                            icon: "square.and.arrow.up",
+                            icon: "paperplane.fill",
                             title: "Easy Sharing",
                             description: "Share pools with friends via invite codes"
                         )
@@ -659,9 +674,13 @@ struct AboutView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
 
-                        Text("Version 1.0.0")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.caption2)
+                            Text("Version 1.0.0")
+                                .font(.caption2)
+                        }
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                     }
                 }
                 .padding()
@@ -688,7 +707,7 @@ struct FeatureRow: View {
         HStack(alignment: .top, spacing: 16) {
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundColor(AppColors.fieldGreen)
+                .foregroundColor(DesignSystem.Colors.accentBlue)
                 .frame(width: 32)
 
             VStack(alignment: .leading, spacing: 4) {

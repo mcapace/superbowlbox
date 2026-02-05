@@ -261,7 +261,7 @@ struct SquareNumberCell: View {
 
             if isCurrentWinner {
                 HStack(spacing: 2) {
-                    Image(systemName: "star.fill")
+                    Image(systemName: "person.text.rectangle")
                         .font(.system(size: 8))
                     Text("LIVE")
                         .font(.system(size: 8, weight: .bold))

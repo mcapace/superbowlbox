@@ -76,7 +76,7 @@ struct ScoreOverlayView: View {
 
                         if let winner = winner {
                             HStack(spacing: 4) {
-                                Image(systemName: "trophy.fill")
+                                Image(systemName: "crown.fill")
                                     .foregroundColor(AppColors.gold)
                                 Text(winner.displayName)
                                     .fontWeight(.semibold)

@@ -174,7 +174,7 @@ struct SquareDetailView: View {
                     if !square.allWonPeriodLabels.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
-                                Image(systemName: "trophy.fill")
+                                Image(systemName: "crown.fill")
                                     .foregroundColor(AppColors.gold)
                                 Text("Wins")
                                     .font(.headline)

@@ -160,11 +160,11 @@ struct IdleScanView: View {
         VStack(spacing: 32) {
             // Illustration
             VStack(spacing: 16) {
-                Image(systemName: "doc.viewfinder")
+                Image(systemName: "text.viewfinder")
                     .font(.system(size: 80))
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [AppColors.fieldGreen, AppColors.fieldGreen.opacity(0.6)],
+                            colors: [DesignSystem.Colors.accentBlue, DesignSystem.Colors.accentBlue.opacity(0.6)],
                             startPoint: .top,
                             endPoint: .bottom
                         )
@@ -327,9 +327,9 @@ struct ProcessingScanView: View {
                     .frame(width: 100, height: 100)
                     .rotationEffect(.degrees(rotationAngle))
 
-                Image(systemName: "doc.text.viewfinder")
+                Image(systemName: "text.viewfinder")
                     .font(.system(size: 40))
-                    .foregroundStyle(AppColors.gradientGlow)
+                    .foregroundStyle(DesignSystem.Colors.accentBlue)
                     .scaleEffect(appeared ? pulseScale : 0.8)
             }
             .onAppear {

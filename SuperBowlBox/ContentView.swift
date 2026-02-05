@@ -8,25 +8,25 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             DashboardView()
                 .tabItem {
-                    Label("Live", systemImage: "play.circle.fill")
+                    Label("Live", systemImage: "dot.radiowaves.left.and.right")
                 }
                 .tag(0)
 
             PoolsListView()
                 .tabItem {
-                    Label("Pools", systemImage: "square.grid.3x3.fill")
+                    Label("Pools", systemImage: "rectangle.split.3x3")
                 }
                 .tag(1)
 
             MySquaresView()
                 .tabItem {
-                    Label("My Squares", systemImage: "star.fill")
+                    Label("My Squares", systemImage: "person.text.rectangle")
                 }
                 .tag(2)
 
             SettingsView()
                 .tabItem {
-                    Label("Settings", systemImage: "gearshape.fill")
+                    Label("Settings", systemImage: "slider.horizontal.3")
                 }
                 .tag(3)
         }
@@ -149,7 +149,7 @@ struct DashboardView: View {
                             }
                         }
                     } label: {
-                        Image(systemName: "arrow.clockwise")
+                        Image(systemName: "arrow.triangle.2.circlepath")
                             .font(.system(size: 18, weight: .semibold))
                             .rotationEffect(.degrees(showingRefreshAnimation ? 360 : 0))
                             .animation(.easeInOut(duration: 0.5), value: showingRefreshAnimation)
@@ -184,7 +184,7 @@ struct OnTheHuntCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 8) {
-                Image(systemName: "scope")
+                Image(systemName: "viewfinder.circle.fill")
                     .font(.title2)
                     .foregroundColor(DesignSystem.Colors.accentBlue)
                     .pulse(isActive: true)
@@ -220,9 +220,9 @@ struct OnTheHuntCard: View {
     private func urgencyIcon(_ urgency: OnTheHuntItem.Urgency) -> some View {
         let (icon, color): (String, Color) = {
             switch urgency {
-            case .oneFG: return ("flame.fill", DesignSystem.Colors.dangerRed)
-            case .oneTD: return ("bolt.fill", DesignSystem.Colors.winnerGold)
-            case .close: return ("target", DesignSystem.Colors.accentBlue)
+            case .oneFG: return ("bolt.horizontal.fill", DesignSystem.Colors.dangerRed)
+            case .oneTD: return ("arrow.up.right.circle.fill", DesignSystem.Colors.winnerGold)
+            case .close: return ("viewfinder.circle.fill", DesignSystem.Colors.accentBlue)
             }
         }()
         Image(systemName: icon)
@@ -353,7 +353,7 @@ struct PoolSelectorView: View {
                         }
                     } label: {
                         HStack(spacing: 8) {
-                            Image(systemName: "square.grid.3x3.fill")
+                            Image(systemName: "rectangle.split.3x3")
                                 .font(.caption)
                             Text(pool.name)
                                 .font(AppTypography.callout)
@@ -397,7 +397,7 @@ struct WinnerSpotlightCard: View {
     var body: some View {
         VStack(spacing: 16) {
             HStack {
-                Image(systemName: "trophy.fill")
+                Image(systemName: "crown.fill")
                     .font(.title2)
                     .foregroundColor(DesignSystem.Colors.winnerGold)
                 Text("Current Leader")
@@ -650,25 +650,25 @@ struct QuickStatsCard: View {
     var body: some View {
         HStack(spacing: 16) {
             StatItem(
-                icon: "square.grid.3x3.fill",
+                icon: "rectangle.split.3x3",
                 value: "\(pool.filledCount)",
                 label: "Filled",
-                color: .blue
+                color: DesignSystem.Colors.accentBlue
             )
 
             if !ownerLabels.isEmpty {
                 StatItem(
-                    icon: "star.fill",
+                    icon: "person.text.rectangle",
                     value: "\(mySquares.count)",
                     label: "My Squares",
-                    color: .orange
+                    color: DesignSystem.Colors.winnerGold
                 )
 
                 StatItem(
-                    icon: "trophy.fill",
+                    icon: "crown.fill",
                     value: "\(mySquares.filter { $0.isWinner }.count)",
                     label: "Wins",
-                    color: AppColors.gold
+                    color: DesignSystem.Colors.winnerGold
                 )
             }
 
