@@ -37,18 +37,32 @@ struct PoolsListView: View {
                             SectionHeaderView(title: "My Pools")
                             LazyVStack(spacing: 12) {
                                 ForEach(Array(appState.pools.enumerated()), id: \.element.id) { index, pool in
-                                    NavigationLink {
-                                        GridDetailView(pool: binding(for: pool))
-                                    } label: {
-                                        PoolGameCard(pool: pool, score: appState.scoreService.currentScore)
+                                    HStack(spacing: 0) {
+                                        NavigationLink {
+                                            GridDetailView(pool: binding(for: pool))
+                                        } label: {
+                                            PoolGameCard(pool: pool, score: appState.scoreService.currentScore)
+                                        }
+                                        .buttonStyle(ScaleButtonStyle())
+                                        .frame(maxWidth: .infinity)
+
+                                        Button {
+                                            poolToDelete = pool
+                                            showingDeleteConfirmation = true
+                                        } label: {
+                                            Image(systemName: "trash")
+                                                .font(.system(size: 18, weight: .medium))
+                                                .foregroundColor(DesignSystem.Colors.dangerRed)
+                                                .frame(width: 44, height: 44)
+                                        }
+                                        .buttonStyle(.plain)
                                     }
-                                    .buttonStyle(ScaleButtonStyle())
                                     .contextMenu {
                                         Button(role: .destructive) {
                                             poolToDelete = pool
                                             showingDeleteConfirmation = true
                                         } label: {
-                                            Label("Delete", systemImage: "trash")
+                                            Label("Delete pool", systemImage: "trash")
                                         }
                                     }
                                 }

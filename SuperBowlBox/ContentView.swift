@@ -186,11 +186,7 @@ struct DashboardView: View {
                         .foregroundStyle(.white)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 12) {
-                        Text("Today")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.white.opacity(0.9))
-                        Button {
+                    Button {
                         HapticService.impactLight()
                         withAnimation(.appSpring) {
                             showingRefreshAnimation = true
@@ -205,10 +201,10 @@ struct DashboardView: View {
                     } label: {
                         Image(systemName: "arrow.triangle.2.circlepath")
                             .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.white)
                             .rotationEffect(.degrees(showingRefreshAnimation ? 360 : 0))
                             .animation(.easeInOut(duration: 0.5), value: showingRefreshAnimation)
                     }
-                }
                 }
             }
         }

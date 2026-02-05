@@ -3,10 +3,12 @@ import SwiftUI
 struct GridDetailView: View {
     @Binding var pool: BoxGrid
     @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) private var dismiss
     @State private var selectedSquare: BoxSquare?
     @State private var showingEditSheet = false
     @State private var zoomScale: CGFloat = 1.0
     @State private var showingShareSheet = false
+    @State private var showingDeletePoolConfirmation = false
 
     var score: GameScore? {
         appState.scoreService.currentScore
@@ -129,9 +131,29 @@ struct GridDetailView: View {
                     } label: {
                         Label("Clear All Names", systemImage: "trash")
                     }
+
+                    Divider()
+
+                    Button(role: .destructive) {
+                        showingDeletePoolConfirmation = true
+                    } label: {
+                        Label("Delete pool", systemImage: "trash.fill")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
+            }
+            .alert("Delete pool?", isPresented: $showingDeletePoolConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) {
+                    if let index = appState.pools.firstIndex(where: { $0.id == pool.id }) {
+                        HapticService.impactHeavy()
+                        appState.removePool(at: index)
+                        dismiss()
+                    }
+                }
+            } message: {
+                Text("'\(pool.name)' will be permanently deleted. This cannot be undone.")
             }
 
             ToolbarItem(placement: .bottomBar) {
