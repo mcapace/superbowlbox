@@ -75,22 +75,21 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                MeshBackgroundView()
-                TechGridOverlay()
+                SportsbookBackgroundView()
                 ScrollView {
-                    VStack(spacing: AppCardStyle.sectionSpacing) {
+                    VStack(spacing: DesignSystem.Layout.sectionSpacing) {
                     LiveScoreCard(
                         score: appState.scoreService.currentScore ?? GameScore.mock,
                         isLoading: appState.scoreService.isLoading
                     )
-                    .padding(.horizontal, AppCardStyle.screenHorizontalInset)
+                    .padding(.horizontal, DesignSystem.Layout.screenInset)
 
                     if appState.pools.count > 1 {
                         PoolSelectorView(
                             selectedIndex: $selectedPoolIndex,
                             pools: appState.pools
                         )
-                        .padding(.horizontal, AppCardStyle.screenHorizontalInset)
+                        .padding(.horizontal, DesignSystem.Layout.screenInset)
                     }
 
                     if let pool = currentPool,
@@ -99,13 +98,13 @@ struct DashboardView: View {
                         OnTheHuntCard(
                             items: onTheHuntItems(pool: pool, score: score)
                         )
-                        .padding(.horizontal, AppCardStyle.screenHorizontalInset)
+                        .padding(.horizontal, DesignSystem.Layout.screenInset)
                     }
 
                     if let pool = currentPool,
                        let score = appState.scoreService.currentScore {
                         WinnerSpotlightCard(pool: pool, score: score)
-                            .padding(.horizontal, AppCardStyle.screenHorizontalInset)
+                            .padding(.horizontal, DesignSystem.Layout.screenInset)
                     }
 
                     if let pool = currentPool {
@@ -119,12 +118,12 @@ struct DashboardView: View {
                             )
                         }
                         .buttonStyle(ScaleButtonStyle())
-                        .padding(.horizontal, AppCardStyle.screenHorizontalInset)
+                        .padding(.horizontal, DesignSystem.Layout.screenInset)
                     }
 
                     if let pool = currentPool {
                         QuickStatsCard(pool: pool, globalMyName: appState.myName)
-                            .padding(.horizontal, AppCardStyle.screenHorizontalInset)
+                            .padding(.horizontal, DesignSystem.Layout.screenInset)
                     }
 
                     Spacer(minLength: 120)
@@ -216,7 +215,7 @@ struct OnTheHuntCard: View {
                 .background(RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall).fill(DesignSystem.Colors.backgroundTertiary.opacity(0.6)))
             }
         }
-        .neonCard(glowColor: DesignSystem.Colors.neonCyanGlow)
+        .sportsbookCard()
     }
 
     @ViewBuilder
@@ -295,10 +294,7 @@ struct LiveScoreCard: View {
                     .foregroundColor(DesignSystem.Colors.accentBlue)
             }
         }
-        .padding(DesignSystem.Layout.cardPadding)
-        .frame(maxWidth: .infinity)
-        .neonCard(glowColor: score.isGameActive ? DesignSystem.Colors.matrixGreenGlow : DesignSystem.Colors.neonCyanGlow)
-        .glow(color: score.isGameActive ? DesignSystem.Colors.matrixGreenGlow : DesignSystem.Colors.neonCyanGlow.opacity(0.3), radius: 10)
+        .sportsbookCard(accentBorder: score.isGameActive ? DesignSystem.Colors.liveGreen.opacity(0.5) : nil)
         .onAppear { pulseAnimation = true }
     }
 }
@@ -459,7 +455,7 @@ struct WinnerSpotlightCard: View {
                 .padding()
             }
         }
-        .neonCard(glowColor: DesignSystem.Colors.winnerGold.opacity(0.6))
+        .sportsbookCard(accentBorder: DesignSystem.Colors.winnerGold.opacity(0.4))
     }
 }
 
@@ -567,7 +563,7 @@ struct InteractiveGridCard: View {
                     .foregroundColor(DesignSystem.Colors.textSecondary)
             }
         }
-        .neonCard(glowColor: DesignSystem.Colors.matrixGreenGlow.opacity(0.5))
+        .sportsbookCard()
     }
 }
 
@@ -677,7 +673,7 @@ struct QuickStatsCard: View {
 
             Spacer()
         }
-        .neonCard(cornerRadius: DesignSystem.Layout.cornerRadiusSmall, glowColor: DesignSystem.Colors.neonCyanGlow)
+        .sportsbookCard(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
     }
 }
 

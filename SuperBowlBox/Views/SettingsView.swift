@@ -11,14 +11,12 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                MeshBackgroundView()
-                TechGridOverlay()
+                SportsbookBackgroundView()
             List {
                 // Profile Section
                 Section {
                     HStack {
                         ZStack {
-                            OrbitalRingView(progress: 1, size: 64, color: DesignSystem.Colors.cyberCyan)
                             Circle()
                                 .fill(DesignSystem.Colors.accentBlue)
                                 .frame(width: 60, height: 60)

@@ -106,7 +106,7 @@ struct ScannerView: View {
                 }
                 .environmentObject(appState)
             }
-            .background(ZStack { MeshBackgroundView(); TechGridOverlay() })
+            .background(SportsbookBackgroundView())
         }
     }
 

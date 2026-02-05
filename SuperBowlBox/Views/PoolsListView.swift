@@ -12,8 +12,7 @@ struct PoolsListView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                MeshBackgroundView()
-                TechGridOverlay()
+                SportsbookBackgroundView()
             Group {
                 if appState.pools.isEmpty {
                     EmptyPoolsView(
@@ -286,7 +285,7 @@ struct EmptyPoolsView: View {
                         .foregroundColor(DesignSystem.Colors.textPrimary)
                 }
             }
-            .padding(.horizontal, AppCardStyle.screenHorizontalInset + 8)
+            .padding(.horizontal, DesignSystem.Layout.screenInset + 8)
         }
         .padding(.vertical, 28)
     }

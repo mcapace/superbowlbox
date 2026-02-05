@@ -1,55 +1,57 @@
 import SwiftUI
 
-// MARK: - Futuristic design system (mesh, orbitals, neon, cyber palette)
+// MARK: - Premium sportsbook / analytics design (DraftKings-style)
 
 enum DesignSystem {
-    // MARK: Colors (cyber palette + existing)
+    // MARK: Colors (semantic: live/win = green, winner = gold, alert = red)
     enum Colors {
-        static let backgroundPrimary = Color(hex: "09090B") ?? Color.black
-        static let backgroundSecondary = Color(hex: "18181B") ?? Color(white: 0.09)
-        static let backgroundTertiary = Color(hex: "27272A") ?? Color(white: 0.15)
-        static let glassFill = Color.white.opacity(0.05)
-        static let glassBorder = Color.white.opacity(0.10)
-        static let accentBlue = Color(hex: "3B82F6") ?? Color.blue
-        static let accentBlueGlow = (Color(hex: "3B82F6") ?? Color.blue).opacity(0.5)
-        static let liveGreen = Color(hex: "22C55E") ?? Color.green
-        static let winnerGold = Color(hex: "F59E0B") ?? Color.orange
-        static let dangerRed = Color(hex: "EF4444") ?? Color.red
+        static let backgroundPrimary = Color(hex: "0D0D0F") ?? Color(white: 0.05)
+        static let backgroundSecondary = Color(hex: "161618") ?? Color(white: 0.08)
+        static let backgroundTertiary = Color(hex: "1C1C1E") ?? Color(white: 0.11)
+        static let cardSurface = Color(hex: "1C1C1E") ?? Color(white: 0.11)
+        static let cardBorder = Color.white.opacity(0.08)
+        static let glassFill = Color.white.opacity(0.04)
+        static let glassBorder = Color.white.opacity(0.08)
+        static let accentBlue = Color(hex: "0A84FF") ?? Color.blue
+        static let accentBlueGlow = (Color(hex: "0A84FF") ?? Color.blue).opacity(0.4)
+        static let liveGreen = Color(hex: "30D158") ?? Color.green
+        static let winnerGold = Color(hex: "FF9F0A") ?? Color.orange
+        static let dangerRed = Color(hex: "FF453A") ?? Color.red
         static let textPrimary = Color.white
-        static let textSecondary = Color(hex: "A1A1AA") ?? Color.gray
-        static let textTertiary = Color(hex: "71717A") ?? Color.gray
-        static let textMuted = Color(hex: "52525B") ?? Color.gray
-        // Cyber / futuristic
-        static let cyberCyan = Color(hex: "06B6D4") ?? Color.cyan
-        static let matrixGreen = Color(hex: "10B981") ?? Color.green
-        static let neonPink = Color(hex: "EC4899") ?? Color.pink
-        static let neonCyanGlow = (Color(hex: "06B6D4") ?? Color.cyan).opacity(0.6)
-        static let matrixGreenGlow = (Color(hex: "10B981") ?? Color.green).opacity(0.5)
+        static let textSecondary = Color(hex: "98989D") ?? Color.gray
+        static let textTertiary = Color(hex: "636366") ?? Color.gray
+        static let textMuted = Color(hex: "48484A") ?? Color.gray
+        static let cyberCyan = Color(hex: "64D2FF") ?? Color.cyan
+        static let matrixGreen = liveGreen
+        static let neonPink = Color(hex: "FF375F") ?? Color.pink
+        static let neonCyanGlow = accentBlueGlow
+        static let matrixGreenGlow = liveGreen.opacity(0.4)
     }
 
-    // MARK: Typography (monospaced for tech aesthetic)
+    // MARK: Typography (tabular numbers for scores, clear hierarchy)
     enum Typography {
-        static let scoreHero = Font.system(size: 72, weight: .bold, design: .rounded)
-        static let scoreLarge = Font.system(size: 56, weight: .bold, design: .rounded)
-        static let scoreMedium = Font.system(size: 40, weight: .bold, design: .rounded)
-        static let title = Font.system(size: 22, weight: .bold, design: .rounded)
-        static let headline = Font.system(size: 17, weight: .semibold, design: .rounded)
-        static let body = Font.system(size: 17, weight: .regular, design: .rounded)
-        static let callout = Font.system(size: 16, weight: .medium, design: .rounded)
-        static let caption = Font.system(size: 13, weight: .medium, design: .rounded)
-        static let caption2 = Font.system(size: 11, weight: .medium, design: .rounded)
-        static let mono = Font.system(size: 17, weight: .medium, design: .monospaced)
-        static let monoSmall = Font.system(size: 13, weight: .medium, design: .monospaced)
+        static let scoreHero = Font.system(size: 56, weight: .bold).monospacedDigit()
+        static let scoreLarge = Font.system(size: 44, weight: .bold).monospacedDigit()
+        static let scoreMedium = Font.system(size: 34, weight: .bold).monospacedDigit()
+        static let title = Font.system(size: 20, weight: .semibold)
+        static let headline = Font.system(size: 17, weight: .semibold)
+        static let body = Font.system(size: 17, weight: .regular)
+        static let callout = Font.system(size: 15, weight: .medium)
+        static let caption = Font.system(size: 13, weight: .regular)
+        static let caption2 = Font.system(size: 11, weight: .medium)
+        static let mono = Font.system(size: 15, weight: .medium, design: .monospaced)
+        static let monoSmall = Font.system(size: 12, weight: .medium, design: .monospaced)
+        static let labelUppercase = Font.system(size: 11, weight: .semibold)
     }
-    static let letterTracking: CGFloat = 0.8
+    static let letterTracking: CGFloat = 0.3
 
     // MARK: Layout
     enum Layout {
-        static let cornerRadius: CGFloat = 20
-        static let cornerRadiusSmall: CGFloat = 12
-        static let cardPadding: CGFloat = 20
-        static let sectionSpacing: CGFloat = 24
-        static let screenInset: CGFloat = 20
+        static let cornerRadius: CGFloat = 12
+        static let cornerRadiusSmall: CGFloat = 8
+        static let cardPadding: CGFloat = 16
+        static let sectionSpacing: CGFloat = 16
+        static let screenInset: CGFloat = 16
     }
 }
 
@@ -170,7 +172,7 @@ extension View {
             )
     }
 
-    /// Neon card: dark fill + glowing border (futuristic)
+    /// Neon card: dark fill + glowing border (legacy / optional)
     func neonCard(
         cornerRadius: CGFloat = DesignSystem.Layout.cornerRadius,
         glowColor: Color = DesignSystem.Colors.neonCyanGlow
@@ -187,6 +189,32 @@ extension View {
                     .strokeBorder(glowColor.opacity(0.6), lineWidth: 1)
             )
             .shadow(color: glowColor.opacity(0.25), radius: 12, x: 0, y: 4)
+    }
+
+    /// Sportsbook card: solid surface, subtle border, no glow (DraftKings-style)
+    func sportsbookCard(
+        cornerRadius: CGFloat = DesignSystem.Layout.cornerRadius,
+        accentBorder: Color? = nil
+    ) -> some View {
+        self
+            .padding(DesignSystem.Layout.cardPadding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(DesignSystem.Colors.cardSurface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .strokeBorder(accentBorder ?? DesignSystem.Colors.cardBorder, lineWidth: 1)
+            )
+    }
+}
+
+// MARK: - Solid screen background (sportsbook default)
+struct SportsbookBackgroundView: View {
+    var body: some View {
+        DesignSystem.Colors.backgroundPrimary
+            .ignoresSafeArea()
     }
 }
 

@@ -18,8 +18,7 @@ struct MySquaresView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                MeshBackgroundView()
-                TechGridOverlay()
+                SportsbookBackgroundView()
             VStack(spacing: 0) {
                 // Search bar
                 HStack {
@@ -41,8 +40,8 @@ struct MySquaresView: View {
                 .padding(DesignSystem.Layout.cardPadding)
                 .background(
                     RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
-                        .fill(DesignSystem.Colors.glassFill)
-                        .overlay(RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall).strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 1))
+                        .fill(DesignSystem.Colors.cardSurface)
+                        .overlay(RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall).strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1))
                 )
                 .padding(.horizontal, DesignSystem.Layout.screenInset)
                 .padding(.vertical, 16)
@@ -51,13 +50,13 @@ struct MySquaresView: View {
                     EmptyNameView()
                 } else {
                     ScrollView {
-                        VStack(spacing: AppCardStyle.sectionSpacing) {
+                        VStack(spacing: DesignSystem.Layout.sectionSpacing) {
                             MySquaresSummaryCard(
                                 pools: appState.pools,
                                 globalMyName: appState.myName,
                                 searchName: searchName
                             )
-                            .padding(.horizontal, AppCardStyle.screenHorizontalInset)
+                            .padding(.horizontal, DesignSystem.Layout.screenInset)
 
                             ForEach(appState.pools) { pool in
                                 let squares = searchName.isEmpty
@@ -69,7 +68,7 @@ struct MySquaresView: View {
                                         squares: squares,
                                         score: appState.scoreService.currentScore
                                     )
-                                    .padding(.horizontal, AppCardStyle.screenHorizontalInset)
+                                    .padding(.horizontal, DesignSystem.Layout.screenInset)
                                 }
                             }
                         }
@@ -193,7 +192,7 @@ struct MySquaresSummaryCard: View {
                 }
             }
         }
-        .neonCard(glowColor: DesignSystem.Colors.neonCyanGlow)
+        .sportsbookCard()
     }
 }
 
@@ -233,7 +232,7 @@ struct PoolSquaresCard: View {
                 }
             }
         }
-        .neonCard(glowColor: DesignSystem.Colors.neonCyanGlow)
+        .sportsbookCard()
     }
 }
 

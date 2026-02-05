@@ -60,8 +60,7 @@ struct InstructionsView: View {
 
     var body: some View {
         ZStack {
-            MeshBackgroundView()
-            TechGridOverlay()
+            SportsbookBackgroundView()
 
             VStack(spacing: 0) {
                 // Skip (sheet mode or onboarding)
@@ -144,11 +143,11 @@ struct InstructionsView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(
-                            RoundedRectangle(cornerRadius: AppCardStyle.cornerRadiusSmall)
+                            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
                                 .fill(AppColors.fieldGreen)
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: AppCardStyle.cornerRadiusSmall)
+                            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
                                 .strokeBorder(AppColors.techCyan.opacity(0.4), lineWidth: 1)
                         )
                 }
