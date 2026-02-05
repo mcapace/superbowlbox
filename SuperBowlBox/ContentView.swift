@@ -182,6 +182,12 @@ struct LiveDashboardView: View {
                         .padding(.horizontal, 20)
                 }
 
+                // On The Hunt Card
+                if !appState.scoreService.onTheHuntSquares.isEmpty {
+                    OnTheHuntCard(huntSquares: appState.scoreService.onTheHuntSquares)
+                        .padding(.horizontal, 20)
+                }
+
                 // Grid Preview
                 if let pool = currentPool {
                     NavigationLink {
@@ -530,6 +536,156 @@ struct WinnerCard: View {
                 celebrateAnimation = true
             }
         }
+    }
+}
+
+// MARK: - On The Hunt Card
+struct OnTheHuntCard: View {
+    let huntSquares: [NFLScoreService.OnTheHuntInfo]
+    @State private var targetPulse = false
+
+    var body: some View {
+        VStack(spacing: 16) {
+            // Header
+            HStack {
+                ZStack {
+                    Circle()
+                        .fill(DesignSystem.Colors.danger.opacity(0.2))
+                        .frame(width: 40, height: 40)
+                        .scaleEffect(targetPulse ? 1.15 : 1.0)
+
+                    Image(systemName: "scope")
+                        .font(.title3)
+                        .foregroundColor(DesignSystem.Colors.danger)
+                        .symbolEffect(.pulse)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("ON THE HUNT")
+                        .font(DesignSystem.Typography.captionSmall)
+                        .foregroundColor(DesignSystem.Colors.danger)
+                        .tracking(2)
+
+                    Text("Your squares are close!")
+                        .font(DesignSystem.Typography.caption)
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                }
+
+                Spacer()
+
+                Text("\(huntSquares.count)")
+                    .font(DesignSystem.Typography.scoreMedium)
+                    .foregroundColor(DesignSystem.Colors.danger)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(DesignSystem.Colors.danger.opacity(0.15))
+                    .clipShape(Capsule())
+            }
+
+            // Hunt items
+            VStack(spacing: 10) {
+                ForEach(huntSquares.prefix(3)) { huntInfo in
+                    HuntSquareRow(huntInfo: huntInfo)
+                }
+            }
+
+            if huntSquares.count > 3 {
+                Text("+ \(huntSquares.count - 3) more...")
+                    .font(DesignSystem.Typography.captionSmall)
+                    .foregroundColor(DesignSystem.Colors.textMuted)
+            }
+        }
+        .padding(20)
+        .glassCard()
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignSystem.Radius.xl)
+                .stroke(
+                    LinearGradient(
+                        colors: [DesignSystem.Colors.danger.opacity(0.4), DesignSystem.Colors.danger.opacity(0.1)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                targetPulse = true
+            }
+        }
+    }
+}
+
+struct HuntSquareRow: View {
+    let huntInfo: NFLScoreService.OnTheHuntInfo
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Square numbers badge
+            HStack(spacing: 4) {
+                Text(huntInfo.squareNumbers)
+                    .font(DesignSystem.Typography.monoLarge)
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(DesignSystem.Colors.surfaceElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(huntInfo.poolName)
+                    .font(DesignSystem.Typography.caption)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
+
+                HStack(spacing: 4) {
+                    Image(systemName: scoringIcon)
+                        .font(.system(size: 10))
+                        .foregroundColor(scoringColor)
+
+                    Text("\(huntInfo.scoringTeam) needs \(huntInfo.pointsAway) pts")
+                        .font(DesignSystem.Typography.captionSmall)
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                }
+            }
+
+            Spacer()
+
+            // Points away indicator
+            VStack(spacing: 2) {
+                Text("\(huntInfo.pointsAway)")
+                    .font(DesignSystem.Typography.headline)
+                    .foregroundColor(scoringColor)
+                Text("pts")
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundColor(DesignSystem.Colors.textMuted)
+            }
+            .frame(width: 44)
+            .padding(.vertical, 8)
+            .background(scoringColor.opacity(0.15))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(DesignSystem.Colors.surfaceElevated.opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    var scoringIcon: String {
+        if huntInfo.pointsAway <= 3 {
+            return "flame.fill"
+        } else if huntInfo.pointsAway <= 6 {
+            return "bolt.fill"
+        }
+        return "circle.fill"
+    }
+
+    var scoringColor: Color {
+        if huntInfo.pointsAway <= 3 {
+            return DesignSystem.Colors.danger
+        } else if huntInfo.pointsAway <= 6 {
+            return DesignSystem.Colors.gold
+        }
+        return DesignSystem.Colors.accent
     }
 }
 
