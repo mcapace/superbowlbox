@@ -35,13 +35,13 @@ struct MySquaresView: View {
                         }
                     }
                 }
-                .padding(AppCardStyle.cardPaddingCompact)
+                .padding(DesignSystem.Layout.cardPadding)
                 .background(
-                    RoundedRectangle(cornerRadius: AppCardStyle.cornerRadiusSmall)
-                        .fill(Color(.systemGray6))
-                        .shadow(color: Color.black.opacity(0.06), radius: 8, y: 2)
+                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                        .fill(DesignSystem.Colors.glassFill)
+                        .overlay(RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall).strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 1))
                 )
-                .padding(.horizontal, AppCardStyle.screenHorizontalInset)
+                .padding(.horizontal, DesignSystem.Layout.screenInset)
                 .padding(.vertical, 16)
 
                 if !hasAnythingToShow {
@@ -74,8 +74,8 @@ struct MySquaresView: View {
                     }
                 }
             }
-            .background(AppColors.screenBackground)
-            .toolbarBackground(AppColors.screenBackground, for: .navigationBar)
+            .background(DesignSystem.Colors.backgroundPrimary)
+            .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
             .navigationTitle("My Squares")
         }
     }
@@ -86,15 +86,15 @@ struct EmptyNameView: View {
         VStack(spacing: 16) {
             Image(systemName: "person.crop.square.badge.magnifyingglass")
                 .font(.system(size: 50))
-                .foregroundColor(.secondary)
+                .foregroundColor(DesignSystem.Colors.textTertiary)
 
             Text("Enter Your Name")
-                .font(.title3)
-                .fontWeight(.semibold)
+                .font(DesignSystem.Typography.title)
+                .foregroundColor(DesignSystem.Colors.textPrimary)
 
             Text("Search for your name to see all your squares across pools")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+                .font(DesignSystem.Typography.body)
+                .foregroundColor(DesignSystem.Colors.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }
@@ -146,11 +146,11 @@ struct MySquaresSummaryCard: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(isOwnerMode ? "Your squares" : "Searching for")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(DesignSystem.Typography.caption)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                     Text(displayLabel)
-                        .font(.title2)
-                        .fontWeight(.bold)
+                        .font(DesignSystem.Typography.title)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
                 }
                 Spacer()
             }
@@ -158,11 +158,11 @@ struct MySquaresSummaryCard: View {
             HStack(spacing: 24) {
                 VStack {
                     Text("\(totalSquares)")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
-                        .foregroundColor(AppColors.fieldGreen)
+                        .font(DesignSystem.Typography.scoreMedium)
+                        .foregroundColor(DesignSystem.Colors.accentBlue)
                     Text("Total Squares")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(DesignSystem.Typography.caption)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
 
                 Divider()
@@ -170,11 +170,11 @@ struct MySquaresSummaryCard: View {
 
                 VStack {
                     Text("\(winningSquares)")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
-                        .foregroundColor(AppColors.gold)
+                        .font(DesignSystem.Typography.scoreMedium)
+                        .foregroundColor(DesignSystem.Colors.winnerGold)
                     Text("Quarter Wins")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(DesignSystem.Typography.caption)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
 
                 Divider()
@@ -182,14 +182,15 @@ struct MySquaresSummaryCard: View {
 
                 VStack {
                     Text("\(poolCount)")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .font(DesignSystem.Typography.scoreMedium)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
                     Text("Pools")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(DesignSystem.Typography.caption)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
             }
         }
-        .card()
+        .dsGlassCard()
     }
 }
 
@@ -207,14 +208,14 @@ struct PoolSquaresCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(pool.name)
-                    .font(.headline)
-                    .fontWeight(.semibold)
+                    .font(DesignSystem.Typography.headline)
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
 
                 Spacer()
 
                 Text("\(squares.count) squares")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .font(DesignSystem.Typography.caption)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
             }
 
             // Grid of my numbers
@@ -229,7 +230,7 @@ struct PoolSquaresCard: View {
                 }
             }
         }
-        .card()
+        .dsGlassCard()
     }
 }
 
@@ -268,7 +269,7 @@ struct SquareNumberCell: View {
                 .foregroundColor(.white)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
-                .background(AppColors.fieldGreen)
+                .background(DesignSystem.Colors.liveGreen)
                 .cornerRadius(4)
             } else if !square.quarterWins.isEmpty {
                 HStack(spacing: 2) {
@@ -277,7 +278,7 @@ struct SquareNumberCell: View {
                             .font(.system(size: 8, weight: .bold))
                     }
                 }
-                .foregroundColor(AppColors.gold)
+                .foregroundColor(DesignSystem.Colors.winnerGold)
             }
         }
         .frame(maxWidth: .infinity)
@@ -288,17 +289,17 @@ struct SquareNumberCell: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(isCurrentWinner ? AppColors.gold : Color.clear, lineWidth: 2)
+                .stroke(isCurrentWinner ? DesignSystem.Colors.winnerGold : Color.clear, lineWidth: 2)
         )
     }
 
     var backgroundColor: Color {
         if isCurrentWinner {
-            return AppColors.fieldGreen.opacity(0.2)
+            return DesignSystem.Colors.liveGreen.opacity(0.2)
         } else if !square.quarterWins.isEmpty {
-            return AppColors.gold.opacity(0.15)
+            return DesignSystem.Colors.winnerGold.opacity(0.15)
         }
-        return Color(.systemGray6)
+        return DesignSystem.Colors.backgroundTertiary
     }
 }
 

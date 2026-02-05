@@ -42,6 +42,8 @@
 		A11111110000000000000022 /* LoginDatabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000023 /* LoginDatabaseConfig.swift */; };
 		A11111110000000000000023 /* LoginDatabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000024 /* LoginDatabaseService.swift */; };
 		A11111110000000000000024 /* GoogleSignInButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000025 /* GoogleSignInButton.swift */; };
+		A11111110000000000000025 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000026 /* DesignSystem.swift */; };
+		A11111110000000000000026 /* OnTheHuntItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000027 /* OnTheHuntItem.swift */; };
 		CECC4FC82F33D68F004AAD0D /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = CECC4FC72F33D68F004AAD0D /* GoogleSignIn */; };
 		CECC4FCA2F33D68F004AAD0D /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = CECC4FC92F33D68F004AAD0D /* GoogleSignInSwift */; };
 /* End PBXBuildFile section */
@@ -85,6 +87,8 @@
 		A00000000000000000000023 /* LoginDatabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginDatabaseConfig.swift; sourceTree = "<group>"; };
 		A00000000000000000000024 /* LoginDatabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginDatabaseService.swift; sourceTree = "<group>"; };
 		A00000000000000000000025 /* GoogleSignInButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInButton.swift; sourceTree = "<group>"; };
+		A00000000000000000000026 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
+		A00000000000000000000027 /* OnTheHuntItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnTheHuntItem.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -134,6 +138,7 @@
 			isa = PBXGroup;
 			children = (
 				A00000000000000000000001 /* SuperBowlBoxApp.swift */,
+				A00000000000000000000026 /* DesignSystem.swift */,
 				A00000000000000000000002 /* ContentView.swift */,
 				A30000000000000000000003 /* Models */,
 				A30000000000000000000004 /* Views */,
@@ -162,6 +167,7 @@
 				A00000000000000000000007 /* Team.swift */,
 				A00000000000000000000015 /* PoolStructure.swift */,
 				A0000000000000000000001B /* ListableGame.swift */,
+				A00000000000000000000027 /* OnTheHuntItem.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -329,6 +335,8 @@
 				A11111110000000000000022 /* LoginDatabaseConfig.swift in Sources */,
 				A11111110000000000000023 /* LoginDatabaseService.swift in Sources */,
 				A11111110000000000000024 /* GoogleSignInButton.swift in Sources */,
+				A11111110000000000000025 /* DesignSystem.swift in Sources */,
+				A11111110000000000000026 /* OnTheHuntItem.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

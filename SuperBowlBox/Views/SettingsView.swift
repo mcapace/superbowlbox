@@ -16,7 +16,7 @@ struct SettingsView: View {
                     HStack {
                         ZStack {
                             Circle()
-                                .fill(AppColors.fieldGreen)
+                                .fill(DesignSystem.Colors.accentBlue)
                                 .frame(width: 60, height: 60)
 
                             Text(initials)
@@ -59,7 +59,7 @@ struct SettingsView: View {
                         HStack(spacing: 12) {
                             Image(systemName: user.provider == .apple ? "apple.logo" : "g.circle.fill")
                                 .font(.title2)
-                                .foregroundColor(AppColors.fieldGreen)
+                                .foregroundColor(DesignSystem.Colors.accentBlue)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(user.displayName ?? user.email ?? "Signed in")
                                     .font(AppTypography.headline)
@@ -117,7 +117,7 @@ struct SettingsView: View {
                     } label: {
                         HStack {
                             Image(systemName: "link.badge.plus")
-                                .foregroundColor(AppColors.fieldGreen)
+                                .foregroundColor(DesignSystem.Colors.accentBlue)
                             Text("Join Pool with Code")
                             Spacer()
                             Image(systemName: "chevron.right")
@@ -201,7 +201,7 @@ struct SettingsView: View {
                     } label: {
                         HStack {
                             Image(systemName: "hand.wave.fill")
-                                .foregroundColor(AppColors.fieldGreen)
+                                .foregroundColor(DesignSystem.Colors.accentBlue)
                             Text("Show onboarding again")
                             Spacer()
                             Image(systemName: "chevron.right")
@@ -216,7 +216,7 @@ struct SettingsView: View {
                     } label: {
                         HStack {
                             Image(systemName: "questionmark.circle.fill")
-                                .foregroundColor(AppColors.fieldGreen)
+                                .foregroundColor(DesignSystem.Colors.accentBlue)
                             Text("How it works")
                             Spacer()
                             Image(systemName: "chevron.right")
@@ -250,8 +250,8 @@ struct SettingsView: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .toolbarBackground(AppColors.screenBackground, for: .navigationBar)
-            .background(AppColors.screenBackground)
+            .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
+            .background(DesignSystem.Colors.backgroundPrimary)
             .navigationTitle("Settings")
             .sheet(isPresented: $showingJoinPool) {
                 JoinPoolSheet()

@@ -60,7 +60,7 @@ struct InstructionsView: View {
 
     var body: some View {
         ZStack {
-            AppColors.screenBackground
+            DesignSystem.Colors.backgroundPrimary
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {

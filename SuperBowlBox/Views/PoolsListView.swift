@@ -34,15 +34,15 @@ struct PoolsListView: View {
                                         Label("Delete", systemImage: "trash")
                                     }
                                 }
-                                .listRowBackground(Color(.secondarySystemGroupedBackground).opacity(0.6))
+                                .listRowBackground(DesignSystem.Colors.backgroundSecondary)
                             }
                         }
                         .listStyle(.insetGrouped)
                         .scrollContentBackground(.hidden)
                 }
             }
-            .background(AppColors.screenBackground)
-            .toolbarBackground(AppColors.screenBackground, for: .navigationBar)
+            .background(DesignSystem.Colors.backgroundPrimary)
+            .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
             .navigationTitle("My Pools")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -228,16 +228,16 @@ struct EmptyPoolsView: View {
         VStack(spacing: 24) {
             Image(systemName: "square.grid.3x3.topleft.filled")
                 .font(.system(size: 60))
-                .foregroundColor(AppColors.fieldGreen)
+                .foregroundColor(DesignSystem.Colors.accentBlue)
 
             VStack(spacing: 8) {
                 Text("No Pools Yet")
-                    .font(.title2)
-                    .fontWeight(.bold)
+                    .font(DesignSystem.Typography.title)
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
 
                 Text("Create a pool from a live game, build one from scratch, or scan a sheet")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .font(DesignSystem.Typography.body)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
                     .multilineTextAlignment(.center)
             }
 
@@ -247,11 +247,10 @@ struct EmptyPoolsView: View {
                 } label: {
                     Label("Create New Pool", systemImage: "plus.square.fill")
                         .frame(maxWidth: .infinity)
-                        .padding(AppCardStyle.cardPaddingCompact)
+                        .padding(DesignSystem.Layout.cardPadding)
                         .background(
-                            RoundedRectangle(cornerRadius: AppCardStyle.cornerRadiusSmall)
-                                .fill(AppColors.fieldGreen)
-                                .shadow(color: AppColors.fieldGreen.opacity(0.35), radius: 10, y: 4)
+                            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                                .fill(DesignSystem.Colors.accentBlue)
                         )
                         .foregroundColor(.white)
                 }
@@ -261,13 +260,13 @@ struct EmptyPoolsView: View {
                 } label: {
                     Label("Create from Game", systemImage: "sportscourt")
                         .frame(maxWidth: .infinity)
-                        .padding(AppCardStyle.cardPaddingCompact)
+                        .padding(DesignSystem.Layout.cardPadding)
                         .background(
-                            RoundedRectangle(cornerRadius: AppCardStyle.cornerRadiusSmall)
-                                .fill(Color(.systemBackground))
-                                .shadow(color: Color.black.opacity(0.08), radius: 10, y: 3)
+                            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                                .fill(DesignSystem.Colors.glassFill)
+                                .overlay(RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall).strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 1))
                         )
-                        .foregroundColor(.primary)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
                 }
 
                 Button {
@@ -275,13 +274,13 @@ struct EmptyPoolsView: View {
                 } label: {
                     Label("Scan Pool Sheet", systemImage: "camera.viewfinder")
                         .frame(maxWidth: .infinity)
-                        .padding(AppCardStyle.cardPaddingCompact)
+                        .padding(DesignSystem.Layout.cardPadding)
                         .background(
-                            RoundedRectangle(cornerRadius: AppCardStyle.cornerRadiusSmall)
-                                .fill(Color(.systemBackground))
-                                .shadow(color: Color.black.opacity(0.08), radius: 10, y: 3)
+                            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                                .fill(DesignSystem.Colors.glassFill)
+                                .overlay(RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall).strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 1))
                         )
-                        .foregroundColor(.primary)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
                 }
             }
             .padding(.horizontal, AppCardStyle.screenHorizontalInset + 8)

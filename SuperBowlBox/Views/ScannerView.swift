@@ -106,7 +106,7 @@ struct ScannerView: View {
                 }
                 .environmentObject(appState)
             }
-            .background(AppColors.screenBackground)
+            .background(DesignSystem.Colors.backgroundPrimary)
         }
     }
 

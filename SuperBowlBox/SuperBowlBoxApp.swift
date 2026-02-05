@@ -9,7 +9,7 @@ struct SquareUpApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(appState)
-                .preferredColorScheme(.none) // Respect system setting
+                .preferredColorScheme(.dark)
         }
     }
 }
@@ -245,7 +245,7 @@ struct SquareUpLogoView: View {
             }
             Text("squareup")
                 .font(.system(size: wordmarkSize, weight: .bold, design: .rounded))
-                .foregroundColor(AppColors.fieldGreen)
+                .foregroundColor(DesignSystem.Colors.liveGreen)
                 .tracking(0.5)
         }
         .padding(.vertical, 4)
