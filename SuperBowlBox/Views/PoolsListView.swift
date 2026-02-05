@@ -9,53 +9,74 @@ struct PoolsListView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
+            ZStack {
+                // Background
+                DesignSystem.Colors.background
+                    .ignoresSafeArea()
+
                 if appState.pools.isEmpty {
                     EmptyPoolsView(
                         onCreateNew: { showingNewPoolSheet = true },
                         onScan: { showingScanner = true }
                     )
                 } else {
-                    List {
-                        ForEach(appState.pools) { pool in
-                            NavigationLink {
-                                GridDetailView(pool: binding(for: pool))
-                            } label: {
-                                PoolRowView(pool: pool, score: appState.scoreService.currentScore)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    poolToDelete = pool
-                                    showingDeleteConfirmation = true
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 16) {
+                            ForEach(appState.pools) { pool in
+                                NavigationLink {
+                                    GridDetailView(pool: binding(for: pool))
                                 } label: {
-                                    Label("Delete", systemImage: "trash")
+                                    PoolCardView(pool: pool, score: appState.scoreService.currentScore)
+                                }
+                                .buttonStyle(ScaleButtonStyle())
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        poolToDelete = pool
+                                        showingDeleteConfirmation = true
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
                             }
                         }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
+                        .padding(.bottom, 120)
                     }
-                    .listStyle(.insetGrouped)
                 }
             }
-            .navigationTitle("My Pools")
+            .navigationTitle("")
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("My Pools")
+                        .font(DesignSystem.Typography.headline)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button {
+                            Haptics.selection()
                             showingNewPoolSheet = true
                         } label: {
                             Label("Create New Pool", systemImage: "plus.square")
                         }
 
                         Button {
+                            Haptics.selection()
                             showingScanner = true
                         } label: {
                             Label("Scan Pool Sheet", systemImage: "camera.viewfinder")
                         }
                     } label: {
-                        Image(systemName: "plus")
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(DesignSystem.Colors.accent)
+                            .symbolRenderingMode(.hierarchical)
                     }
                 }
             }
+            .toolbarBackground(DesignSystem.Colors.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .sheet(isPresented: $showingNewPoolSheet) {
                 NewPoolSheet { pool in
                     appState.addPool(pool)
@@ -73,6 +94,7 @@ struct PoolsListView: View {
                 Button("Delete", role: .destructive) {
                     if let pool = poolToDelete,
                        let index = appState.pools.firstIndex(where: { $0.id == pool.id }) {
+                        Haptics.impact(.medium)
                         appState.removePool(at: index)
                     }
                 }
@@ -82,6 +104,7 @@ struct PoolsListView: View {
                 }
             }
         }
+        .preferredColorScheme(.dark)
     }
 
     func binding(for pool: BoxGrid) -> Binding<BoxGrid> {
@@ -92,7 +115,8 @@ struct PoolsListView: View {
     }
 }
 
-struct PoolRowView: View {
+// MARK: - Pool Card View
+struct PoolCardView: View {
     let pool: BoxGrid
     let score: GameScore?
 
@@ -103,39 +127,80 @@ struct PoolRowView: View {
 
     var body: some View {
         HStack(spacing: 16) {
-            // Mini grid preview
-            MiniGridPreview(pool: pool, score: score)
-                .frame(width: 60, height: 60)
+            // Mini grid preview with glow
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(DesignSystem.Colors.surfaceElevated)
+                    .frame(width: 72, height: 72)
 
-            VStack(alignment: .leading, spacing: 4) {
+                MiniGridPreview(pool: pool, score: score)
+                    .frame(width: 60, height: 60)
+            }
+            .shadow(color: winner != nil ? DesignSystem.Colors.liveGlow : .clear, radius: 8)
+
+            VStack(alignment: .leading, spacing: 6) {
                 Text(pool.name)
-                    .font(.headline)
-                    .fontWeight(.semibold)
+                    .font(DesignSystem.Typography.headline)
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
 
-                Text("\(pool.awayTeam.abbreviation) vs \(pool.homeTeam.abbreviation)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                HStack(spacing: 8) {
+                    TeamBadge(team: pool.awayTeam, size: 22)
+                    Text("vs")
+                        .font(DesignSystem.Typography.captionSmall)
+                        .foregroundColor(DesignSystem.Colors.textMuted)
+                    TeamBadge(team: pool.homeTeam, size: 22)
+                }
 
                 HStack(spacing: 12) {
-                    Label("\(pool.filledCount)/100", systemImage: "square.grid.3x3")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                    HStack(spacing: 4) {
+                        Image(systemName: "square.grid.3x3")
+                            .font(.system(size: 10))
+                        Text("\(pool.filledCount)/100")
+                    }
+                    .font(DesignSystem.Typography.captionSmall)
+                    .foregroundColor(DesignSystem.Colors.textTertiary)
 
                     if let winner = winner {
                         HStack(spacing: 4) {
                             Image(systemName: "trophy.fill")
-                                .foregroundColor(AppColors.gold)
+                                .font(.system(size: 10))
                             Text(winner.displayName)
                         }
-                        .font(.caption2)
-                        .foregroundColor(AppColors.gold)
+                        .font(DesignSystem.Typography.captionSmall)
+                        .foregroundColor(DesignSystem.Colors.gold)
                     }
                 }
             }
 
             Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(DesignSystem.Colors.textMuted)
         }
-        .padding(.vertical, 8)
+        .padding(16)
+        .glassCard()
+    }
+}
+
+struct TeamBadge: View {
+    let team: Team
+    let size: CGFloat
+
+    var teamColor: Color {
+        Color(hex: team.primaryColor) ?? DesignSystem.Colors.accent
+    }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(teamColor.gradient)
+                .frame(width: size, height: size)
+
+            Text(team.abbreviation)
+                .font(.system(size: size * 0.4, weight: .bold))
+                .foregroundColor(.white)
+        }
     }
 }
 
@@ -163,64 +228,106 @@ struct MiniGridPreview: View {
                 }
             }
         }
-        .background(Color(.systemGray4))
         .cornerRadius(4)
     }
 
     func cellColor(square: BoxSquare, isWinning: Bool) -> Color {
         if isWinning {
-            return AppColors.fieldGreen
+            return DesignSystem.Colors.live
         } else if square.isWinner {
-            return AppColors.gold
+            return DesignSystem.Colors.gold
         } else if !square.isEmpty {
-            return .blue.opacity(0.5)
+            return DesignSystem.Colors.accent.opacity(0.5)
         }
-        return Color(.systemGray5)
+        return DesignSystem.Colors.surface
     }
 }
 
+// MARK: - Empty Pools View
 struct EmptyPoolsView: View {
     let onCreateNew: () -> Void
     let onScan: () -> Void
+    @State private var iconPulse = false
 
     var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "square.grid.3x3.topleft.filled")
-                .font(.system(size: 60))
-                .foregroundColor(AppColors.fieldGreen)
+        VStack(spacing: 32) {
+            ZStack {
+                Circle()
+                    .fill(DesignSystem.Colors.accent.opacity(0.1))
+                    .frame(width: 120, height: 120)
+                    .scaleEffect(iconPulse ? 1.1 : 1.0)
 
-            VStack(spacing: 8) {
-                Text("No Pools Yet")
-                    .font(.title2)
-                    .fontWeight(.bold)
-
-                Text("Create a new pool or scan an existing sheet to get started")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+                Image(systemName: "square.grid.3x3.topleft.filled")
+                    .font(.system(size: 50))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [DesignSystem.Colors.accent, DesignSystem.Colors.accent.opacity(0.6)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
+            .onAppear {
+                withAnimation(.easeInOut(duration: 2).repeatForever(autoreverses: true)) {
+                    iconPulse = true
+                }
             }
 
             VStack(spacing: 12) {
+                Text("No Pools Yet")
+                    .font(DesignSystem.Typography.title)
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+
+                Text("Create a new pool or scan an existing sheet to get started")
+                    .font(DesignSystem.Typography.body)
+                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                    .multilineTextAlignment(.center)
+            }
+
+            VStack(spacing: 16) {
                 Button {
+                    Haptics.impact(.medium)
                     onCreateNew()
                 } label: {
-                    Label("Create New Pool", systemImage: "plus.square.fill")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(AppColors.fieldGreen)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
+                    HStack(spacing: 12) {
+                        Image(systemName: "plus.square.fill")
+                            .font(.system(size: 18))
+                        Text("Create New Pool")
+                            .font(DesignSystem.Typography.bodyMedium)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        LinearGradient(
+                            colors: [DesignSystem.Colors.accent, DesignSystem.Colors.accent.opacity(0.8)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .foregroundColor(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .shadow(color: DesignSystem.Colors.accentGlow, radius: 12, y: 4)
                 }
 
                 Button {
+                    Haptics.impact(.light)
                     onScan()
                 } label: {
-                    Label("Scan Pool Sheet", systemImage: "camera.viewfinder")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(.systemGray5))
-                        .foregroundColor(.primary)
-                        .cornerRadius(12)
+                    HStack(spacing: 12) {
+                        Image(systemName: "camera.viewfinder")
+                            .font(.system(size: 18))
+                        Text("Scan Pool Sheet")
+                            .font(DesignSystem.Typography.bodyMedium)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(DesignSystem.Colors.surfaceElevated)
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(DesignSystem.Colors.glassBorder, lineWidth: 1)
+                    )
                 }
             }
             .padding(.horizontal, 40)
@@ -229,6 +336,7 @@ struct EmptyPoolsView: View {
     }
 }
 
+// MARK: - New Pool Sheet
 struct NewPoolSheet: View {
     let onSave: (BoxGrid) -> Void
     @Environment(\.dismiss) var dismiss
@@ -239,74 +347,98 @@ struct NewPoolSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Pool Name") {
-                    TextField("Enter pool name", text: $poolName)
-                }
+            ZStack {
+                DesignSystem.Colors.background
+                    .ignoresSafeArea()
 
-                Section("Home Team (Columns)") {
-                    Picker("Home Team", selection: $selectedHomeTeam) {
-                        ForEach(Team.allTeams, id: \.id) { team in
-                            Text(team.name).tag(team)
-                        }
-                    }
-                    .pickerStyle(.navigationLink)
-                }
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Pool Name
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("POOL NAME")
+                                .font(DesignSystem.Typography.captionSmall)
+                                .foregroundColor(DesignSystem.Colors.textTertiary)
+                                .tracking(1)
 
-                Section("Away Team (Rows)") {
-                    Picker("Away Team", selection: $selectedAwayTeam) {
-                        ForEach(Team.allTeams, id: \.id) { team in
-                            Text(team.name).tag(team)
-                        }
-                    }
-                    .pickerStyle(.navigationLink)
-                }
-
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Preview")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-
-                        HStack {
-                            Circle()
-                                .fill(Color(hex: selectedAwayTeam.primaryColor) ?? .red)
-                                .frame(width: 30, height: 30)
+                            TextField("Enter pool name", text: $poolName)
+                                .font(DesignSystem.Typography.body)
+                                .foregroundColor(DesignSystem.Colors.textPrimary)
+                                .padding()
+                                .background(DesignSystem.Colors.surfaceElevated)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                                 .overlay(
-                                    Text(selectedAwayTeam.abbreviation)
-                                        .font(.caption2)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.white)
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(DesignSystem.Colors.glassBorder, lineWidth: 1)
                                 )
-
-                            Text("vs")
-                                .foregroundColor(.secondary)
-
-                            Circle()
-                                .fill(Color(hex: selectedHomeTeam.primaryColor) ?? .blue)
-                                .frame(width: 30, height: 30)
-                                .overlay(
-                                    Text(selectedHomeTeam.abbreviation)
-                                        .font(.caption2)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.white)
-                                )
-
-                            Spacer()
                         }
+                        .padding(.horizontal, 20)
+
+                        // Team Selection
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("HOME TEAM (COLUMNS)")
+                                .font(DesignSystem.Typography.captionSmall)
+                                .foregroundColor(DesignSystem.Colors.textTertiary)
+                                .tracking(1)
+
+                            TeamPickerButton(
+                                selectedTeam: $selectedHomeTeam,
+                                label: "Home Team"
+                            )
+                        }
+                        .padding(.horizontal, 20)
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("AWAY TEAM (ROWS)")
+                                .font(DesignSystem.Typography.captionSmall)
+                                .foregroundColor(DesignSystem.Colors.textTertiary)
+                                .tracking(1)
+
+                            TeamPickerButton(
+                                selectedTeam: $selectedAwayTeam,
+                                label: "Away Team"
+                            )
+                        }
+                        .padding(.horizontal, 20)
+
+                        // Preview
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("MATCHUP PREVIEW")
+                                .font(DesignSystem.Typography.captionSmall)
+                                .foregroundColor(DesignSystem.Colors.textTertiary)
+                                .tracking(1)
+
+                            HStack(spacing: 20) {
+                                TeamPreviewCard(team: selectedAwayTeam, role: "Away")
+
+                                Text("VS")
+                                    .font(DesignSystem.Typography.captionSmall)
+                                    .foregroundColor(DesignSystem.Colors.textMuted)
+
+                                TeamPreviewCard(team: selectedHomeTeam, role: "Home")
+                            }
+                            .padding(20)
+                            .frame(maxWidth: .infinity)
+                            .glassCard()
+                        }
+                        .padding(.horizontal, 20)
                     }
+                    .padding(.top, 20)
                 }
             }
             .navigationTitle("New Pool")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(DesignSystem.Colors.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create") {
+                        Haptics.impact(.medium)
                         let newPool = BoxGrid(
                             name: poolName.isEmpty ? "Pool \(Date().formatted(date: .abbreviated, time: .omitted))" : poolName,
                             homeTeam: selectedHomeTeam,
@@ -314,9 +446,203 @@ struct NewPoolSheet: View {
                         )
                         onSave(newPool)
                     }
-                    .fontWeight(.semibold)
+                    .font(DesignSystem.Typography.bodyMedium)
+                    .foregroundColor(DesignSystem.Colors.accent)
                 }
             }
+        }
+        .preferredColorScheme(.dark)
+    }
+}
+
+struct TeamPickerButton: View {
+    @Binding var selectedTeam: Team
+    let label: String
+    @State private var showingPicker = false
+
+    var teamColor: Color {
+        Color(hex: selectedTeam.primaryColor) ?? DesignSystem.Colors.accent
+    }
+
+    var body: some View {
+        Button {
+            Haptics.selection()
+            showingPicker = true
+        } label: {
+            HStack {
+                ZStack {
+                    Circle()
+                        .fill(teamColor.gradient)
+                        .frame(width: 40, height: 40)
+
+                    Text(selectedTeam.abbreviation)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(selectedTeam.name)
+                        .font(DesignSystem.Typography.bodyMedium)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                    Text(selectedTeam.city)
+                        .font(DesignSystem.Typography.captionSmall)
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.textMuted)
+            }
+            .padding()
+            .background(DesignSystem.Colors.surfaceElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(DesignSystem.Colors.glassBorder, lineWidth: 1)
+            )
+        }
+        .sheet(isPresented: $showingPicker) {
+            TeamPickerSheet(selectedTeam: $selectedTeam)
+        }
+    }
+}
+
+struct TeamPickerSheet: View {
+    @Binding var selectedTeam: Team
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                DesignSystem.Colors.background
+                    .ignoresSafeArea()
+
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        ForEach(Team.allTeams, id: \.id) { team in
+                            TeamSelectionRow(
+                                team: team,
+                                isSelected: team.id == selectedTeam.id
+                            ) {
+                                Haptics.selection()
+                                selectedTeam = team
+                                dismiss()
+                            }
+                        }
+                    }
+                    .padding(20)
+                }
+            }
+            .navigationTitle("Select Team")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(DesignSystem.Colors.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+}
+
+struct TeamSelectionRow: View {
+    let team: Team
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var teamColor: Color {
+        Color(hex: team.primaryColor) ?? DesignSystem.Colors.accent
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(teamColor.gradient)
+                        .frame(width: 44, height: 44)
+
+                    Text(team.abbreviation)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(team.name)
+                        .font(DesignSystem.Typography.bodyMedium)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                    Text(team.city)
+                        .font(DesignSystem.Typography.captionSmall)
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                }
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(DesignSystem.Colors.accent)
+                }
+            }
+            .padding(12)
+            .background(
+                isSelected ? DesignSystem.Colors.accent.opacity(0.15) : DesignSystem.Colors.surfaceElevated
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? DesignSystem.Colors.accent.opacity(0.3) : DesignSystem.Colors.glassBorder, lineWidth: 1)
+            )
+        }
+    }
+}
+
+struct TeamPreviewCard: View {
+    let team: Team
+    let role: String
+
+    var teamColor: Color {
+        Color(hex: team.primaryColor) ?? DesignSystem.Colors.accent
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(teamColor.gradient)
+                    .frame(width: 48, height: 48)
+
+                Text(team.abbreviation)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+            }
+            .shadow(color: teamColor.opacity(0.4), radius: 8, y: 2)
+
+            Text(team.name)
+                .font(DesignSystem.Typography.caption)
+                .foregroundColor(DesignSystem.Colors.textPrimary)
+
+            Text(role)
+                .font(DesignSystem.Typography.captionSmall)
+                .foregroundColor(DesignSystem.Colors.textMuted)
+        }
+    }
+}
+
+// MARK: - Scale Button Style (if not already defined)
+extension PoolsListView {
+    struct ScaleButtonStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
         }
     }
 }
