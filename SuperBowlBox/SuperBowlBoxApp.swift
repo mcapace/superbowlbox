@@ -1,18 +1,19 @@
 import SwiftUI
 
 @main
-struct GridIronApp: App {
+struct SquareUpApp: App {
     @StateObject private var appState = AppState()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(appState)
-                .preferredColorScheme(.none) // Respect system setting
+                .preferredColorScheme(.dark)
         }
     }
 }
 
+// MARK: - App State
 class AppState: ObservableObject {
     @Published var pools: [BoxGrid] = []
     @Published var selectedPoolIndex: Int = 0
@@ -27,9 +28,8 @@ class AppState: ObservableObject {
     init() {
         loadPools()
         if pools.isEmpty {
-            // Create a default pool with some sample data
-            var samplePool = BoxGrid(name: "Super Bowl LIX Pool")
-            // Add some sample names for demo
+            // Create a demo pool
+            var samplePool = BoxGrid(name: "Super Bowl LIX")
             let sampleNames = ["Mike", "Sarah", "John", "Emma", "Chris", "Lisa", "Dave", "Amy", "Tom", "Kate"]
             for row in 0..<10 {
                 for col in 0..<10 {
@@ -79,34 +79,25 @@ class AppState: ObservableObject {
     }
 }
 
-// MARK: - Design System
+// MARK: - Legacy Design System (kept for compatibility)
 struct AppColors {
-    static let primary = Color("AccentColor")
-    static let fieldGreen = Color(red: 0.133, green: 0.545, blue: 0.133)
-    static let endZoneRed = Color(red: 0.8, green: 0.1, blue: 0.1)
-    static let gold = Color(red: 1.0, green: 0.84, blue: 0.0)
+    static let primary = DesignSystem.Colors.accent
+    static let fieldGreen = DesignSystem.Colors.live
+    static let endZoneRed = DesignSystem.Colors.danger
+    static let gold = DesignSystem.Colors.gold
 
-    static let gradientPrimary = LinearGradient(
-        colors: [Color(red: 0.1, green: 0.4, blue: 0.1), Color(red: 0.2, green: 0.6, blue: 0.2)],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+    static let gradientPrimary = DesignSystem.Colors.liveGradient
+    static let gradientGold = DesignSystem.Colors.goldGradient
 
-    static let gradientGold = LinearGradient(
-        colors: [Color(red: 1.0, green: 0.84, blue: 0.0), Color(red: 0.85, green: 0.65, blue: 0.0)],
-        startPoint: .top,
-        endPoint: .bottom
-    )
-
-    static let cardBackground = Color(.systemBackground)
-    static let cardShadow = Color.black.opacity(0.12)
+    static let cardBackground = DesignSystem.Colors.surface
+    static let cardShadow = Color.black.opacity(0.3)
 }
 
 struct AppTypography {
-    static let largeTitle = Font.system(size: 34, weight: .bold, design: .rounded)
-    static let title = Font.system(size: 28, weight: .bold, design: .rounded)
-    static let headline = Font.system(size: 17, weight: .semibold, design: .rounded)
-    static let body = Font.system(size: 17, weight: .regular, design: .default)
-    static let caption = Font.system(size: 12, weight: .medium, design: .rounded)
-    static let scoreDisplay = Font.system(size: 56, weight: .bold, design: .rounded)
+    static let largeTitle = DesignSystem.Typography.title
+    static let title = DesignSystem.Typography.headline
+    static let headline = DesignSystem.Typography.subheadline
+    static let body = DesignSystem.Typography.body
+    static let caption = DesignSystem.Typography.caption
+    static let scoreDisplay = DesignSystem.Typography.scoreLarge
 }
