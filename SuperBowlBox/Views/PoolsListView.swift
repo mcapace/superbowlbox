@@ -68,7 +68,7 @@ struct PoolsListView: View {
                             Label("Scan Pool Sheet", systemImage: "camera.viewfinder")
                         }
                     } label: {
-                        Image(systemName: "plus.circle.fill")
+                        Image(systemName: "plus.app.fill")
                             .font(.system(size: 24))
                             .foregroundColor(DesignSystem.Colors.accent)
                             .symbolRenderingMode(.hierarchical)
@@ -153,7 +153,7 @@ struct PoolCardView: View {
 
                 HStack(spacing: 12) {
                     HStack(spacing: 4) {
-                        Image(systemName: "square.grid.3x3")
+                        Image(systemName: "tablecells")
                             .font(.system(size: 10))
                         Text("\(pool.filledCount)/100")
                     }
@@ -162,7 +162,7 @@ struct PoolCardView: View {
 
                     if let winner = winner {
                         HStack(spacing: 4) {
-                            Image(systemName: "trophy.fill")
+                            Image(systemName: "crown.fill")
                                 .font(.system(size: 10))
                             Text(winner.displayName)
                         }
@@ -257,7 +257,7 @@ struct EmptyPoolsView: View {
                     .frame(width: 120, height: 120)
                     .scaleEffect(iconPulse ? 1.1 : 1.0)
 
-                Image(systemName: "square.grid.3x3.topleft.filled")
+                Image(systemName: "rectangle.split.3x3")
                     .font(.system(size: 50))
                     .foregroundStyle(
                         LinearGradient(
@@ -314,7 +314,7 @@ struct EmptyPoolsView: View {
                     onScan()
                 } label: {
                     HStack(spacing: 12) {
-                        Image(systemName: "camera.viewfinder")
+                        Image(systemName: "text.viewfinder")
                             .font(.system(size: 18))
                         Text("Scan Pool Sheet")
                             .font(DesignSystem.Typography.bodyMedium)

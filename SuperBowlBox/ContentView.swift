@@ -46,10 +46,10 @@ struct FloatingTabBar: View {
     var namespace: Namespace.ID
 
     let tabs = [
-        ("play.fill", "Live"),
-        ("square.grid.3x3.topleft.filled", "Pools"),
-        ("star.fill", "Mine"),
-        ("gearshape.fill", "Settings")
+        ("dot.radiowaves.left.and.right", "Live"),
+        ("rectangle.split.3x3", "Pools"),
+        ("person.text.rectangle", "Mine"),
+        ("slider.horizontal.3", "Settings")
     ]
 
     var body: some View {
@@ -444,7 +444,7 @@ struct WinnerCard: View {
     var body: some View {
         VStack(spacing: 16) {
             HStack {
-                Image(systemName: "trophy.fill")
+                Image(systemName: "crown.fill")
                     .font(.title3)
                     .foregroundColor(DesignSystem.Colors.gold)
                     .scaleEffect(celebrateAnimation ? 1.1 : 1.0)
@@ -554,10 +554,10 @@ struct OnTheHuntCard: View {
                         .frame(width: 40, height: 40)
                         .scaleEffect(targetPulse ? 1.15 : 1.0)
 
-                    Image(systemName: "scope")
-                        .font(.title3)
+                    Image(systemName: "viewfinder.circle.fill")
+                        .font(.system(size: 22, weight: .semibold))
                         .foregroundColor(DesignSystem.Colors.danger)
-                        .symbolEffect(.pulse)
+                        .symbolEffect(.variableColor.iterative)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -672,11 +672,11 @@ struct HuntSquareRow: View {
 
     var scoringIcon: String {
         if huntInfo.pointsAway <= 3 {
-            return "flame.fill"
+            return "bolt.horizontal.fill"
         } else if huntInfo.pointsAway <= 6 {
-            return "bolt.fill"
+            return "arrow.up.right.circle.fill"
         }
-        return "circle.fill"
+        return "circle.dotted"
     }
 
     var scoringColor: Color {

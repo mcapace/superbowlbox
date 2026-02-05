@@ -261,7 +261,7 @@ struct NotificationsSection: View {
 
             VStack(spacing: 0) {
                 SettingsToggleRow(
-                    icon: "bell.badge.fill",
+                    icon: "bell.and.waves.left.and.right",
                     iconColor: DesignSystem.Colors.danger,
                     title: "Push Notifications",
                     subtitle: "Get notified when you win",
@@ -273,7 +273,7 @@ struct NotificationsSection: View {
                     .padding(.leading, 56)
 
                 SettingsToggleRow(
-                    icon: "scope",
+                    icon: "viewfinder.circle.fill",
                     iconColor: DesignSystem.Colors.gold,
                     title: "On the Hunt Alerts",
                     subtitle: "When your squares are close to winning",
@@ -299,7 +299,7 @@ struct LiveScoresSection: View {
 
             VStack(spacing: 0) {
                 SettingsToggleRow(
-                    icon: "arrow.clockwise",
+                    icon: "arrow.triangle.2.circlepath",
                     iconColor: DesignSystem.Colors.live,
                     title: "Auto-refresh Scores",
                     subtitle: "Updates every 30 seconds during games",
@@ -317,7 +317,7 @@ struct LiveScoresSection: View {
                                 .fill(DesignSystem.Colors.surfaceElevated)
                                 .frame(width: 40, height: 40)
 
-                            Image(systemName: "clock.fill")
+                            Image(systemName: "clock.badge.checkmark.fill")
                                 .font(.system(size: 16))
                                 .foregroundColor(DesignSystem.Colors.textMuted)
                         }
@@ -360,7 +360,7 @@ struct DataSection: View {
                     onBackup()
                 } label: {
                     SettingsRowContent(
-                        icon: "icloud.and.arrow.up.fill",
+                        icon: "externaldrive.fill.badge.icloud",
                         iconColor: DesignSystem.Colors.accent,
                         title: "Backup Data",
                         showChevron: false
@@ -414,7 +414,7 @@ struct AboutSection: View {
                     onShowAbout()
                 } label: {
                     SettingsRowContent(
-                        icon: "info.circle.fill",
+                        icon: "apps.iphone",
                         iconColor: DesignSystem.Colors.accent,
                         title: "About SquareUp",
                         showChevron: true
@@ -431,7 +431,7 @@ struct AboutSection: View {
                             .fill(DesignSystem.Colors.surfaceElevated)
                             .frame(width: 40, height: 40)
 
-                        Image(systemName: "sparkles")
+                        Image(systemName: "checkmark.seal.fill")
                             .font(.system(size: 16))
                             .foregroundColor(DesignSystem.Colors.gold)
                     }
@@ -995,35 +995,35 @@ struct AboutView: View {
                         // Features
                         VStack(spacing: 16) {
                             FeatureRow(
-                                icon: "camera.viewfinder",
+                                icon: "text.viewfinder",
                                 iconColor: DesignSystem.Colors.accent,
                                 title: "Smart Scanning",
                                 description: "Scan your pool sheet with OCR technology"
                             )
 
                             FeatureRow(
-                                icon: "play.circle.fill",
+                                icon: "dot.radiowaves.left.and.right",
                                 iconColor: DesignSystem.Colors.live,
                                 title: "Live Scores",
                                 description: "Real-time score updates during the game"
                             )
 
                             FeatureRow(
-                                icon: "scope",
+                                icon: "viewfinder.circle.fill",
                                 iconColor: DesignSystem.Colors.danger,
                                 title: "On the Hunt",
                                 description: "Know when your squares are close to winning"
                             )
 
                             FeatureRow(
-                                icon: "bell.badge.fill",
+                                icon: "bell.and.waves.left.and.right",
                                 iconColor: DesignSystem.Colors.gold,
                                 title: "Notifications",
                                 description: "Get alerts when you win a quarter"
                             )
 
                             FeatureRow(
-                                icon: "square.and.arrow.up",
+                                icon: "paperplane.fill",
                                 iconColor: DesignSystem.Colors.textSecondary,
                                 title: "Easy Sharing",
                                 description: "Share pools with friends via invite codes"
