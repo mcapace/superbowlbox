@@ -6,6 +6,7 @@ struct PoolsListView: View {
     @State private var showingCreateFromGame = false
     @State private var newPoolPrefill: NewPoolPrefill?
     @State private var showingScanner = false
+    @State private var showingJoinPool = false
     @State private var poolToDelete: BoxGrid?
     @State private var showingDeleteConfirmation = false
 
@@ -15,19 +16,24 @@ struct PoolsListView: View {
                 SportsbookBackgroundView()
                 ScrollView {
                     VStack(alignment: .leading, spacing: DesignSystem.Layout.sectionSpacing) {
-                        // Import / add boxes — always first (Apple Sports–style)
-                        SectionHeaderView(title: "Add Pool")
-                        ImportPoolCard(
-                            onScan: { showingScanner = true },
-                            onCreateNew: { newPoolPrefill = nil; showingNewPoolSheet = true },
-                            onCreateFromGame: { showingCreateFromGame = true }
-                        )
-                        .padding(.horizontal, DesignSystem.Layout.screenInset)
-
                         if appState.pools.isEmpty {
-                            EmptyPoolsPromptCard()
-                                .padding(.horizontal, DesignSystem.Layout.screenInset)
+                            // No fake pool: only options to upload, create, or join
+                            NoPoolsEmptyState(
+                                onScan: { showingScanner = true },
+                                onCreateNew: { newPoolPrefill = nil; showingNewPoolSheet = true },
+                                onCreateFromGame: { showingCreateFromGame = true },
+                                onJoinWithCode: { showingJoinPool = true }
+                            )
+                            .padding(.horizontal, DesignSystem.Layout.screenInset)
                         } else {
+                            SectionHeaderView(title: "Add Pool")
+                            ImportPoolCard(
+                                onScan: { showingScanner = true },
+                                onCreateNew: { newPoolPrefill = nil; showingNewPoolSheet = true },
+                                onCreateFromGame: { showingCreateFromGame = true }
+                            )
+                            .padding(.horizontal, DesignSystem.Layout.screenInset)
+
                             SectionHeaderView(title: "My Pools")
                             LazyVStack(spacing: 12) {
                                 ForEach(Array(appState.pools.enumerated()), id: \.element.id) { index, pool in
@@ -53,6 +59,10 @@ struct PoolsListView: View {
                     }
                     .padding(.top, 20)
                 }
+            }
+            .sheet(isPresented: $showingJoinPool) {
+                JoinPoolSheet()
+                    .environmentObject(appState)
             }
             .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
             .navigationTitle("Pools")
@@ -190,27 +200,143 @@ private struct ImportPoolButton: View {
     }
 }
 
-// MARK: - Empty state (when no pools yet)
-struct EmptyPoolsPromptCard: View {
+// MARK: - No pools: only real options — upload, create, or join with code (no fake pool)
+struct NoPoolsEmptyState: View {
+    let onScan: () -> Void
+    let onCreateNew: () -> Void
+    let onCreateFromGame: () -> Void
+    let onJoinWithCode: () -> Void
+
     var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "rectangle.split.3x3")
-                .font(.system(size: 40))
-                .foregroundColor(DesignSystem.Colors.textTertiary)
-            Text("Your pools will appear here")
+        VStack(spacing: 24) {
+            Text("No pools yet")
+                .font(DesignSystem.Typography.title)
+                .foregroundColor(DesignSystem.Colors.textPrimary)
+            Text("Upload a sheet, create a pool, or join one with a code.")
                 .font(DesignSystem.Typography.callout)
                 .foregroundColor(DesignSystem.Colors.textSecondary)
+                .multilineTextAlignment(.center)
+
+            VStack(spacing: 12) {
+                Button(action: onScan) {
+                    HStack {
+                        Image(systemName: "text.viewfinder")
+                            .font(.title2)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Scan pool sheet")
+                                .font(DesignSystem.Typography.headline)
+                            Text("Upload a photo of your pool")
+                                .font(DesignSystem.Typography.caption)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                    }
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                    .padding(DesignSystem.Layout.cardPadding)
+                    .background(
+                        RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                            .fill(DesignSystem.Colors.cardSurface)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                                    .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
+                            )
+                    )
+                }
+                .buttonStyle(ScaleButtonStyle())
+
+                Button(action: onCreateNew) {
+                    HStack {
+                        Image(systemName: "plus.square.fill")
+                            .font(.title2)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Create new pool")
+                                .font(DesignSystem.Typography.headline)
+                            Text("Build a pool from scratch")
+                                .font(DesignSystem.Typography.caption)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                    }
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                    .padding(DesignSystem.Layout.cardPadding)
+                    .background(
+                        RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                            .fill(DesignSystem.Colors.cardSurface)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                                    .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
+                            )
+                    )
+                }
+                .buttonStyle(ScaleButtonStyle())
+
+                Button(action: onCreateFromGame) {
+                    HStack {
+                        Image(systemName: "sportscourt.fill")
+                            .font(.title2)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Create from game")
+                                .font(DesignSystem.Typography.headline)
+                            Text("Start from a scheduled game")
+                                .font(DesignSystem.Typography.caption)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                    }
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                    .padding(DesignSystem.Layout.cardPadding)
+                    .background(
+                        RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                            .fill(DesignSystem.Colors.cardSurface)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                                    .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
+                            )
+                    )
+                }
+                .buttonStyle(ScaleButtonStyle())
+
+                Button(action: onJoinWithCode) {
+                    HStack {
+                        Image(systemName: "link.badge.plus")
+                            .font(.title2)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Join with code")
+                                .font(DesignSystem.Typography.headline)
+                            Text("Enter an invite code from a host")
+                                .font(DesignSystem.Typography.caption)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                    }
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                    .padding(DesignSystem.Layout.cardPadding)
+                    .background(
+                        RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                            .fill(DesignSystem.Colors.cardSurface)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                                    .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
+                            )
+                    )
+                }
+                .buttonStyle(ScaleButtonStyle())
+            }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
-        .background(
-            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                .fill(DesignSystem.Colors.cardSurface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                        .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
-                )
-        )
+        .padding(DesignSystem.Layout.cardPadding * 2)
     }
 }
 

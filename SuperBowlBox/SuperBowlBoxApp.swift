@@ -49,18 +49,7 @@ class AppState: ObservableObject {
     init() {
         hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
         loadPools()
-        if pools.isEmpty {
-            // Create a default pool with some sample data
-            var samplePool = BoxGrid(name: "My Pool")
-            // Add some sample names for demo
-            let sampleNames = ["Mike", "Sarah", "John", "Emma", "Chris", "Lisa", "Dave", "Amy", "Tom", "Kate"]
-            for row in 0..<10 {
-                for col in 0..<10 {
-                    samplePool.updateSquare(row: row, column: col, playerName: sampleNames.randomElement() ?? "")
-                }
-            }
-            pools.append(samplePool)
-        }
+        // No sample/fake pool: when empty, user can upload, create, or join with code
     }
 
     func addPool(_ pool: BoxGrid) {

@@ -71,11 +71,17 @@ struct ContentView: View {
     }
 }
 
+// MARK: - Sport option for dashboard toggle (NFL only for now)
+enum DashboardSport: String, CaseIterable {
+    case nfl = "NFL"
+}
+
 // MARK: - Dashboard View
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
     @State private var selectedPoolIndex = 0
     @State private var showingRefreshAnimation = false
+    @State private var selectedSport: DashboardSport = .nfl
     var onAddPoolTapped: (() -> Void)?
 
     var body: some View {
@@ -85,7 +91,21 @@ struct DashboardView: View {
                     .ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: DesignSystem.Layout.sectionSpacing) {
-                    SectionHeaderView(title: "Featured Game")
+                    // Sport toggle (NFL only for now — shows next game for that league)
+                    HStack {
+                        Picker("League", selection: $selectedSport) {
+                            ForEach(DashboardSport.allCases, id: \.self) { sport in
+                                Text(sport.rawValue).tag(sport)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(maxWidth: 200)
+                        Spacer()
+                    }
+                    .padding(.horizontal, DesignSystem.Layout.screenInset)
+                    .padding(.bottom, 4)
+
+                    SectionHeaderView(title: selectedSport == .nfl ? "NFL · Next game" : "Featured Game")
                     Group {
                         if let score = appState.scoreService.currentScore {
                             LiveScoreCard(
