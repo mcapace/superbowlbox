@@ -86,10 +86,20 @@ struct DashboardView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: DesignSystem.Layout.sectionSpacing) {
                     SectionHeaderView(title: "Featured Game")
-                    LiveScoreCard(
-                        score: appState.scoreService.currentScore ?? GameScore.mock,
-                        isLoading: appState.scoreService.isLoading
-                    )
+                    Group {
+                        if let score = appState.scoreService.currentScore {
+                            LiveScoreCard(
+                                score: score,
+                                isLoading: appState.scoreService.isLoading
+                            )
+                        } else {
+                            UpNextPlaceholderCard(
+                                isLoading: appState.scoreService.isLoading,
+                                error: appState.scoreService.error?.localizedDescription,
+                                onRefresh: { Task { await appState.scoreService.fetchCurrentScore() } }
+                            )
+                        }
+                    }
                     .padding(.horizontal, DesignSystem.Layout.screenInset)
 
                     SectionHeaderView(title: "Your Pools")
@@ -255,30 +265,91 @@ struct ScaleButtonStyle: ButtonStyle {
     }
 }
 
-// MARK: - Live Score Card (Apple Sports style: league + status top, team gradient, simple winning strip)
+// MARK: - Up next / loading placeholder (no fictitious game)
+struct UpNextPlaceholderCard: View {
+    let isLoading: Bool
+    let error: String?
+    let onRefresh: () -> Void
+
+    var body: some View {
+        VStack(spacing: 20) {
+            if isLoading {
+                ProgressView()
+                    .scaleEffect(1.2)
+                    .tint(DesignSystem.Colors.textSecondary)
+                Text("Loading game…")
+                    .font(DesignSystem.Typography.callout)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
+            } else {
+                Image(systemName: "calendar.badge.clock")
+                    .font(.system(size: 44))
+                    .foregroundColor(DesignSystem.Colors.accentBlue)
+                Text("Up next")
+                    .font(DesignSystem.Typography.headline)
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                if let error = error {
+                    Text(error)
+                        .font(DesignSystem.Typography.caption)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                        .multilineTextAlignment(.center)
+                } else {
+                    Text("No game data right now. Pull to refresh.")
+                        .font(DesignSystem.Typography.caption)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                Button("Refresh") {
+                    onRefresh()
+                }
+                .font(DesignSystem.Typography.callout)
+                .foregroundColor(DesignSystem.Colors.accentBlue)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(DesignSystem.Layout.cardPadding * 2)
+        .background(
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                .fill(DesignSystem.Colors.cardSurface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                        .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
+                )
+        )
+    }
+}
+
+// MARK: - Live Score Card (Apple Sports style: league + status top, team gradient, kickoff when scheduled)
 struct LiveScoreCard: View {
     let score: GameScore
     let isLoading: Bool
 
+    private var isUpcoming: Bool { !score.isGameActive && !score.isGameOver }
+
     var body: some View {
         VStack(spacing: 0) {
-            // Top: League + status (like Apple Sports "MLB" "▲ 8th")
+            // Top: League + status or kickoff timeline
             HStack {
                 Text("NFL")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(DesignSystem.Colors.textTertiary)
                 Spacer()
-                HStack(spacing: 4) {
-                    if score.isGameActive {
-                        Circle()
-                            .fill(DesignSystem.Colors.liveGreen)
-                            .frame(width: 5, height: 5)
-                            .pulse(isActive: true)
-                    }
-                    Text(score.isGameActive ? "LIVE" : score.gameStatusText.uppercased())
+                if isUpcoming, let kickoff = score.kickoffDisplayString {
+                    Text("Kickoff \(kickoff)")
                         .font(.system(size: 11, weight: .semibold))
-                        .tracking(0.6)
-                        .foregroundColor(score.isGameActive ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.textTertiary)
+                        .foregroundColor(DesignSystem.Colors.accentBlue)
+                } else {
+                    HStack(spacing: 4) {
+                        if score.isGameActive {
+                            Circle()
+                                .fill(DesignSystem.Colors.liveGreen)
+                                .frame(width: 5, height: 5)
+                                .pulse(isActive: true)
+                        }
+                        Text(score.isGameActive ? "LIVE" : score.gameStatusText.uppercased())
+                            .font(.system(size: 11, weight: .semibold))
+                            .tracking(0.6)
+                            .foregroundColor(score.isGameActive ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.textTertiary)
+                    }
                 }
             }
             .padding(.bottom, 14)
@@ -303,35 +374,44 @@ struct LiveScoreCard: View {
                 )
             }
 
-            // Winning numbers — informative strip
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Winning numbers")
+            // Winning numbers (or "upcoming" message)
+            if isUpcoming {
+                Text("Scores and winning numbers update at kickoff.")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
-                Text("Last digit of each score → row × column")
-                    .font(.system(size: 10, weight: .regular))
                     .foregroundColor(DesignSystem.Colors.textMuted)
-                HStack {
-                    Text("\(score.awayTeam.abbreviation)")
-                        .font(.system(size: 10, weight: .medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 14)
+                    .padding(.vertical, 12)
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Winning numbers")
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(DesignSystem.Colors.textTertiary)
-                    Text("\(score.awayLastDigit) – \(score.homeLastDigit)")
-                        .font(.system(size: 18, weight: .bold))
-                        .monospacedDigit()
-                        .foregroundColor(DesignSystem.Colors.textPrimary)
-                    Text("\(score.homeTeam.abbreviation)")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                    Text("Last digit of each score → row × column")
+                        .font(.system(size: 10, weight: .regular))
+                        .foregroundColor(DesignSystem.Colors.textMuted)
+                    HStack {
+                        Text("\(score.awayTeam.abbreviation)")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                        Text("\(score.awayLastDigit) – \(score.homeLastDigit)")
+                            .font(.system(size: 18, weight: .bold))
+                            .monospacedDigit()
+                            .foregroundColor(DesignSystem.Colors.textPrimary)
+                        Text("\(score.homeTeam.abbreviation)")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                    }
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 14)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                        .fill(DesignSystem.Colors.backgroundTertiary.opacity(0.6))
+                )
             }
-            .frame(maxWidth: .infinity)
-            .padding(.top, 14)
-            .padding(.vertical, 12)
-            .padding(.horizontal, 4)
-            .background(
-                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
-                    .fill(DesignSystem.Colors.backgroundTertiary.opacity(0.6))
-            )
         }
         .padding(DesignSystem.Layout.cardPadding)
         .frame(maxWidth: .infinity)

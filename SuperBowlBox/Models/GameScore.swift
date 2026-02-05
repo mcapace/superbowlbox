@@ -10,6 +10,8 @@ struct GameScore: Codable, Equatable {
     var isGameActive: Bool
     var isGameOver: Bool
     var quarterScores: QuarterScores
+    /// When the game is scheduled to start (from API). Nil for mock/legacy.
+    var scheduledStart: Date?
 
     init(
         homeTeam: Team = .chiefs,
@@ -20,7 +22,8 @@ struct GameScore: Codable, Equatable {
         timeRemaining: String = "15:00",
         isGameActive: Bool = false,
         isGameOver: Bool = false,
-        quarterScores: QuarterScores = QuarterScores()
+        quarterScores: QuarterScores = QuarterScores(),
+        scheduledStart: Date? = nil
     ) {
         self.homeTeam = homeTeam
         self.awayTeam = awayTeam
@@ -31,6 +34,7 @@ struct GameScore: Codable, Equatable {
         self.isGameActive = isGameActive
         self.isGameOver = isGameOver
         self.quarterScores = quarterScores
+        self.scheduledStart = scheduledStart
     }
 
     var homeLastDigit: Int {
@@ -51,6 +55,16 @@ struct GameScore: Codable, Equatable {
         } else {
             return "OT - \(timeRemaining)"
         }
+    }
+
+    /// e.g. "Sun, Feb 8 • 6:30 PM ET" for scheduled games
+    var kickoffDisplayString: String? {
+        guard let start = scheduledStart else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE, MMM d • h:mm a"
+        formatter.timeZone = TimeZone(identifier: "America/New_York")
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter.string(from: start) + " ET"
     }
 
     var scoreDisplay: String {

@@ -31,8 +31,8 @@ class NFLScoreService: ObservableObject {
     }
 
     init() {
-        // Start with a mock score for demo purposes
-        currentScore = GameScore.mock
+        // No mock: show loading/up-next until real API data loads
+        currentScore = nil
     }
 
     func startLiveUpdates(interval: TimeInterval = 30) {
@@ -117,22 +117,31 @@ class NFLScoreService: ObservableObject {
             let isPlayoff = (event["season"] as? [String: Any])?["type"] as? Int == 3
 
             if isSuperBowl || isPlayoff || events.count == 1 {
-                return try parseCompetition(competition, competitors: competitors)
+                return try parseCompetition(competition, competitors: competitors, scheduledStart: parseEventDate(event))
             }
         }
 
-        // If no featured game found, return the first game or mock
+        // If no featured game found, return the first game
         if let event = events.first,
            let competitions = event["competitions"] as? [[String: Any]],
            let competition = competitions.first,
            let competitors = competition["competitors"] as? [[String: Any]] {
-            return try parseCompetition(competition, competitors: competitors)
+            return try parseCompetition(competition, competitors: competitors, scheduledStart: parseEventDate(event))
         }
 
         throw ScoreError.noGameFound
     }
 
-    private func parseCompetition(_ competition: [String: Any], competitors: [[String: Any]]) throws -> GameScore {
+    private func parseEventDate(_ event: [String: Any]) -> Date? {
+        guard let dateString = event["date"] as? String else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: dateString) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: dateString)
+    }
+
+    private func parseCompetition(_ competition: [String: Any], competitors: [[String: Any]], scheduledStart: Date? = nil) throws -> GameScore {
         var homeTeam: Team = .chiefs
         var awayTeam: Team = .eagles
         var homeScore = 0
@@ -199,7 +208,8 @@ class NFLScoreService: ObservableObject {
             timeRemaining: clock,
             isGameActive: isActive,
             isGameOver: isOver,
-            quarterScores: quarterScores
+            quarterScores: quarterScores,
+            scheduledStart: scheduledStart
         )
     }
 

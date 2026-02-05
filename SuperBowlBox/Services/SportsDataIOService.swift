@@ -60,6 +60,8 @@ enum SportsDataIOService {
         let isActive = status.lowercased().contains("inprogress") || status.lowercased().contains("in progress")
         let isOver = status.lowercased().contains("final") || status.lowercased().contains("closed")
 
+        let scheduledStart = parseScheduledStart(from: game)
+
         var quarterScores = QuarterScores()
         quarterScores.q1Home = int(from: game, keys: ["HomeScoreQuarter1", "homeScoreQuarter1"])
         quarterScores.q1Away = int(from: game, keys: ["AwayScoreQuarter1", "awayScoreQuarter1"])
@@ -79,8 +81,25 @@ enum SportsDataIOService {
             timeRemaining: timeRemaining,
             isGameActive: isActive,
             isGameOver: isOver,
-            quarterScores: quarterScores
+            quarterScores: quarterScores,
+            scheduledStart: scheduledStart
         )
+    }
+
+    private static func parseScheduledStart(from game: [String: Any]) -> Date? {
+        if let dateTime = string(from: game, keys: ["DateTime", "dateTime"]), !dateTime.isEmpty {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let d = formatter.date(from: dateTime) { return d }
+            formatter.formatOptions = [.withInternetDateTime]
+            return formatter.date(from: dateTime)
+        }
+        if let dateStr = string(from: game, keys: ["Date", "date"]), !dateStr.isEmpty {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withFullDate]
+            return formatter.date(from: String(dateStr.prefix(10)))
+        }
+        return nil
     }
 
     private static func int(from dict: [String: Any], keys: [String]) -> Int? {
