@@ -287,7 +287,18 @@ class VisionService: ObservableObject {
                 candidates.append((rowIndex, digitBlocks, row.count))
             }
         }
+        // Prefer header row that is in the top of the sheet (column numbers are usually at top)
+        let topYThreshold: CGFloat = 0.65
+        func rowCenterY(_ candidate: HeaderCandidate) -> CGFloat {
+            let blocks = candidate.digitBlocks
+            guard !blocks.isEmpty else { return 0 }
+            let sum = blocks.reduce(0 as CGFloat) { acc, b in acc + (1 - b.boundingBox.midY) }
+            return sum / CGFloat(blocks.count)
+        }
         if let best = candidates.min(by: { a, b in
+            let aTop = rowCenterY(a) > topYThreshold
+            let bTop = rowCenterY(b) > topYThreshold
+            if aTop != bTop { return aTop }
             if a.totalBlocks != b.totalBlocks { return a.totalBlocks < b.totalBlocks }
             return a.rowIndex < b.rowIndex
         }) {

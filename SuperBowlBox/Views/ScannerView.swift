@@ -203,6 +203,28 @@ struct ScannerView: View {
                     var poolToReview = pool
                     poolToReview.ownerLabels = names.isEmpty ? nil : names
                     poolToReview.name = poolName.isEmpty ? "Scanned Pool" : poolName
+                    // Use selected game for team identities; confirm column/row order from the scan
+                    if let game = selectedGameForScan {
+                        let ocrColumnTeam = pool.homeTeam   // OCR: team on columns (header row)
+                        let ocrRowTeam = pool.awayTeam     // OCR: team on rows (left strip)
+                        if ocrColumnTeam.id == game.homeTeam.id {
+                            poolToReview.homeTeam = game.homeTeam
+                            poolToReview.awayTeam = game.awayTeam
+                        } else if ocrColumnTeam.id == game.awayTeam.id {
+                            poolToReview.homeTeam = game.awayTeam
+                            poolToReview.awayTeam = game.homeTeam
+                        } else if ocrRowTeam.id == game.awayTeam.id {
+                            poolToReview.homeTeam = game.homeTeam
+                            poolToReview.awayTeam = game.awayTeam
+                        } else if ocrRowTeam.id == game.homeTeam.id {
+                            poolToReview.homeTeam = game.awayTeam
+                            poolToReview.awayTeam = game.homeTeam
+                        } else {
+                            // OCR didn’t match (e.g. unknown); default to game order
+                            poolToReview.homeTeam = game.homeTeam
+                            poolToReview.awayTeam = game.awayTeam
+                        }
+                    }
                     scannedPool = poolToReview
                     withAnimation(.appEntrance) {
                         scanProgress = .reviewing
@@ -795,6 +817,14 @@ struct ReviewScanView: View {
                     )
                 }
 
+                Button {
+                    swapColumnsAndRows()
+                } label: {
+                    Label("Swap columns & rows", systemImage: "arrow.left.arrow.right")
+                        .font(.subheadline)
+                        .foregroundColor(AppColors.fieldGreen)
+                }
+
                 // Payout rules (optional)
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Payout rules (optional)")
@@ -889,6 +919,37 @@ struct ReviewScanView: View {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         pool.ownerLabels = labels.isEmpty ? nil : labels
+    }
+
+    /// Swap columns and rows (teams, number sequences, and transpose grid) so user can fix wrong orientation.
+    private func swapColumnsAndRows() {
+        swap(&columnNumbersText, &rowNumbersText)
+        let hTeam = pool.homeTeam
+        let aTeam = pool.awayTeam
+        pool.homeTeam = aTeam
+        pool.awayTeam = hTeam
+        let hNum = pool.homeNumbers
+        let aNum = pool.awayNumbers
+        pool.homeNumbers = aNum
+        pool.awayNumbers = hNum
+        var transposed: [[BoxSquare]] = []
+        for r in 0..<10 {
+            var newRow: [BoxSquare] = []
+            for c in 0..<10 {
+                let old = pool.squares[c][r]
+                newRow.append(BoxSquare(
+                    playerName: old.playerName,
+                    row: r,
+                    column: c,
+                    isWinner: old.isWinner,
+                    quarterWins: old.quarterWins,
+                    winningPeriodIds: old.winningPeriodIds
+                ))
+            }
+            transposed.append(newRow)
+        }
+        pool.squares = transposed
+        HapticService.selection()
     }
 
     /// Parse edited column/row strings (10 space-separated digits 0–9) and assign to pool if valid.
