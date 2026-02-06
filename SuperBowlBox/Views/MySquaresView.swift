@@ -80,7 +80,7 @@ struct MySquaresView: View {
             }
             }
             .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
-            .navigationTitle("My Squares")
+            .navigationTitle("My Boxes")
         }
     }
 }
@@ -96,7 +96,7 @@ struct EmptyNameView: View {
                 .font(DesignSystem.Typography.title)
                 .foregroundColor(DesignSystem.Colors.textPrimary)
 
-            Text("Search for your name to see all your squares across pools")
+            Text("Search for your name to see all your boxes across pools")
                 .font(DesignSystem.Typography.body)
                 .foregroundColor(DesignSystem.Colors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -142,14 +142,14 @@ struct MySquaresSummaryCard: View {
     }
 
     var displayLabel: String {
-        isOwnerMode ? "My squares" : searchName
+        isOwnerMode ? "My boxes" : searchName
     }
 
     var body: some View {
         VStack(spacing: 16) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(isOwnerMode ? "Your squares" : "Searching for")
+                    Text(isOwnerMode ? "Your boxes" : "Searching for")
                         .font(DesignSystem.Typography.caption)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
                     Text(displayLabel)
@@ -164,7 +164,7 @@ struct MySquaresSummaryCard: View {
                     Text("\(totalSquares)")
                         .font(DesignSystem.Typography.scoreMedium)
                         .foregroundColor(DesignSystem.Colors.accentBlue)
-                    Text("Total Squares")
+                    Text("Total Boxes")
                         .font(DesignSystem.Typography.caption)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
@@ -217,7 +217,7 @@ struct PoolSquaresCard: View {
 
                 Spacer()
 
-                Text("\(squares.count) squares")
+                Text("\(squares.count) boxes")
                     .font(DesignSystem.Typography.caption)
                     .foregroundColor(DesignSystem.Colors.textSecondary)
             }

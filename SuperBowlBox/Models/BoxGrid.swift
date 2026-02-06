@@ -13,7 +13,7 @@ struct BoxGrid: Codable, Identifiable {
     var currentScore: GameScore?
     /// How this pool pays out (by quarter, halftime, final, first score, etc.). Nil = legacy, treated as .standardQuarterly.
     var poolStructure: PoolStructure?
-    /// Names as they appear on this sheet that identify the current user's squares (e.g. "Mike" or "Mike", "Mike 2" for multiple boxes).
+    /// Names as they appear on this sheet that identify the current user's boxes (e.g. "Mike" or "Mike", "Mike 2" for multiple boxes).
     var ownerLabels: [String]?
     /// After sharing via SharedPoolsService, the generated invite code is stored so we can show it again without re-uploading.
     var sharedCode: String?
@@ -260,8 +260,8 @@ struct BoxGrid: Codable, Identifiable {
         squaresForOwner(ownerLabels: [playerName])
     }
 
-    /// Labels that identify "my" squares on this sheet (set when scanning/creating). Used with effectiveOwnerLabels(globalName:).
-    /// Names as they appear on the sheet so we can find your squares; supports multiple entries for multiple boxes.
+    /// Labels that identify "my" boxes on this sheet (set when scanning/creating). Used with effectiveOwnerLabels(globalName:).
+    /// Names as they appear on the sheet so we can find your boxes; supports multiple entries for multiple boxes.
     func effectiveOwnerLabels(globalName: String) -> [String] {
         let global = globalName.trimmingCharacters(in: .whitespacesAndNewlines)
         if let labels = ownerLabels, !labels.isEmpty {
@@ -283,15 +283,50 @@ struct BoxGrid: Codable, Identifiable {
             .replacingOccurrences(of: "5", with: "s")
     }
 
-    /// All squares that belong to the owner (match any of the given labels, case-insensitive, whitespace-tolerant).
+    /// Edit distance between two strings (Levenshtein). Used for fuzzy name match so OCR variants like "Mike o Copec" match "Mike Capace".
+    private static func editDistance(_ a: String, _ b: String) -> Int {
+        let a = Array(a)
+        let b = Array(b)
+        let m = a.count
+        let n = b.count
+        if m == 0 { return n }
+        if n == 0 { return m }
+        var row = Array(0...n)
+        for i in 1...m {
+            var prev = row[0]
+            row[0] = i
+            for j in 1...n {
+                let cost = a[i - 1] == b[j - 1] ? 0 : 1
+                let next = min(row[j] + 1, row[j - 1] + 1, prev + cost)
+                prev = row[j]
+                row[j] = next
+            }
+        }
+        return row[n]
+    }
+
+    /// True if normalized cell name matches an owner label: exact match, or fuzzy (similarity >= 0.75) so handwriting/OCR variants still match.
+    private static func normalizedNamesMatch(cellName: String, ownerKey: String) -> Bool {
+        if cellName.isEmpty || ownerKey.isEmpty { return false }
+        if cellName == ownerKey { return true }
+        let dist = editDistance(cellName, ownerKey)
+        let maxLen = max(cellName.count, ownerKey.count)
+        let similarity = maxLen > 0 ? 1.0 - (Double(dist) / Double(maxLen)) : 1.0
+        return similarity >= 0.75
+    }
+
+    /// All boxes that belong to the owner. Match is exact normalized first; if none, fuzzy match (OCR/handwriting variants like "Mike o Copec" → "Mike Capace"). One box = one cell.
     func squaresForOwner(ownerLabels: [String]) -> [BoxSquare] {
-        let keys = Set(ownerLabels.map { Self.normalizeForNameMatch($0) }.filter { !$0.isEmpty })
+        let keys = ownerLabels.map { Self.normalizeForNameMatch($0) }.filter { !$0.isEmpty }
         guard !keys.isEmpty else { return [] }
         var result: [BoxSquare] = []
         for row in squares {
             for square in row {
                 let name = Self.normalizeForNameMatch(square.playerName)
-                if !name.isEmpty && keys.contains(name) {
+                guard !name.isEmpty else { continue }
+                let exactMatch = keys.contains(name)
+                let fuzzyMatch = !exactMatch && keys.contains { Self.normalizedNamesMatch(cellName: name, ownerKey: $0) }
+                if exactMatch || fuzzyMatch {
                     result.append(square)
                 }
             }
@@ -299,12 +334,14 @@ struct BoxGrid: Codable, Identifiable {
         return result
     }
 
-    /// Whether a square is one of the owner's (by playerName matching any effective owner label).
+    /// Whether a square is one of the owner's (exact or fuzzy normalized match).
     func isOwnerSquare(_ square: BoxSquare, ownerLabels: [String]) -> Bool {
         let name = Self.normalizeForNameMatch(square.playerName)
         guard !name.isEmpty else { return false }
-        let keys = Set(ownerLabels.map { Self.normalizeForNameMatch($0) }.filter { !$0.isEmpty })
-        return keys.contains(name)
+        let keys = ownerLabels.map { Self.normalizeForNameMatch($0) }.filter { !$0.isEmpty }
+        guard !keys.isEmpty else { return false }
+        if keys.contains(name) { return true }
+        return keys.contains { Self.normalizedNamesMatch(cellName: name, ownerKey: $0) }
     }
 
     // Randomize the numbers (typically done after all names are entered)

@@ -20,7 +20,7 @@ struct ContentView: View {
 
             MySquaresView()
                 .tabItem {
-                    Label("My Squares", systemImage: "person.text.rectangle")
+                    Label("My Boxes", systemImage: "person.text.rectangle")
                 }
                 .tag(2)
 

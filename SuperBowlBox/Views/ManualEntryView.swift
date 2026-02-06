@@ -16,7 +16,7 @@ struct ManualEntryView: View {
     @State private var quickNames: [String] = []
     @State private var showingNameInput = false
     @State private var newQuickName = ""
-    /// Names as they appear on this sheet (so we can find your squares). Add more if you have multiple boxes.
+    /// Names as they appear on this sheet (so we can find your boxes). Add more if you have multiple boxes.
     @State private var ownerNameFields: [String] = [""]
 
     var body: some View {
@@ -334,7 +334,7 @@ struct NumbersStep: View {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "info.circle")
                         .foregroundColor(.blue)
-                    Text("In traditional pools, numbers are randomized after all squares are sold to keep it fair.")
+                    Text("In traditional pools, numbers are randomized after all boxes are sold to keep it fair.")
                         .font(.caption)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
@@ -632,7 +632,7 @@ struct ReviewStep: View {
                     Divider()
 
                     HStack {
-                        Text("Squares Filled")
+                        Text("Boxes Filled")
                             .foregroundColor(DesignSystem.Colors.textSecondary)
                         Spacer()
                         Text("\(filledCount) / 100")
@@ -666,7 +666,7 @@ struct ReviewStep: View {
                     HStack(alignment: .top, spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(.orange)
-                        Text("Your pool has \(100 - filledCount) empty squares. You can still create it and fill them later.")
+                        Text("Your pool has \(100 - filledCount) empty boxes. You can still create it and fill them later.")
                             .font(.caption)
                             .foregroundColor(DesignSystem.Colors.textSecondary)
                     }

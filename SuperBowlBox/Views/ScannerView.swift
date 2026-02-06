@@ -6,19 +6,23 @@ struct ScannerView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
     @StateObject private var visionService = VisionService()
+    @StateObject private var gamesService = GamesService()
 
     @State private var showingImagePicker = false
     @State private var showingCamera = false
     @State private var selectedImage: UIImage?
     @State private var scannedPool: BoxGrid?
     @State private var showingManualEntry = false
-    @State private var scanProgress: ScanProgress = .idle
+    @State private var scanProgress: ScanProgress = .selectingGame
     @State private var selectedItem: PhotosPickerItem?
+    @State private var selectedSport: Sport = .nfl
+    @State private var selectedGameForScan: ListableGame?
     /// Name(s) and pool name entered before OCR, so we match and pre-fill the review step.
     @State private var ownerNameFieldsBeforeScan: [String] = [""]
     @State private var poolNameBeforeScan: String = ""
 
     enum ScanProgress {
+        case selectingGame
         case idle
         case enteringName
         case processing
@@ -30,6 +34,22 @@ struct ScannerView: View {
         NavigationStack {
             VStack(spacing: 24) {
                 switch scanProgress {
+                case .selectingGame:
+                    SelectGameForScanView(
+                        gamesService: gamesService,
+                        selectedSport: $selectedSport,
+                        selectedGame: $selectedGameForScan,
+                        onContinue: {
+                            HapticService.selection()
+                            scanProgress = .idle
+                        },
+                        onSkip: {
+                            selectedGameForScan = nil
+                            scanProgress = .idle
+                        }
+                    )
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
+
                 case .idle:
                     IdleScanView(
                         onCameraSelected: { showingCamera = true },
@@ -63,7 +83,11 @@ struct ScannerView: View {
                             image: selectedImage,
                             onConfirm: { poolToSave in
                                 HapticService.success()
-                                onPoolScanned(poolToSave)
+                                var pool = poolToSave
+                                if pool.name == "Scanned Pool" || pool.name.isEmpty, let game = selectedGameForScan {
+                                    pool.name = "\(game.awayTeam.abbreviation) @ \(game.homeTeam.abbreviation)"
+                                }
+                                onPoolScanned(pool)
                                 dismiss()
                             },
                             onRetry: {
@@ -86,7 +110,7 @@ struct ScannerView: View {
                         message: message,
                         onRetry: {
                             HapticService.impactMedium()
-                            scanProgress = .idle
+                            scanProgress = .selectingGame
                             selectedImage = nil
                             ownerNameFieldsBeforeScan = [""]
                             poolNameBeforeScan = ""
@@ -198,6 +222,113 @@ struct ScannerView: View {
 }
 
 // MARK: - Idle View
+// MARK: - Select game then scan (sport → game → scan flow)
+struct SelectGameForScanView: View {
+    @ObservedObject var gamesService: GamesService
+    @Binding var selectedSport: Sport
+    @Binding var selectedGame: ListableGame?
+    let onContinue: () -> Void
+    let onSkip: () -> Void
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Choose sport & game for this pool")
+                .font(.headline)
+                .multilineTextAlignment(.center)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(Sport.allCases) { sport in
+                        Button {
+                            HapticService.selection()
+                            selectedSport = sport
+                        } label: {
+                            Text(sport.displayName)
+                                .font(.callout)
+                                .fontWeight(selectedSport == sport ? .semibold : .regular)
+                                .foregroundColor(selectedSport == sport ? .white : .primary)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(Capsule().fill(selectedSport == sport ? AppColors.fieldGreen : DesignSystem.Colors.surfaceElevated))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal)
+            }
+
+            if gamesService.isLoading {
+                ProgressView("Loading games…")
+                    .padding()
+            } else if let err = gamesService.error, gamesService.games.isEmpty {
+                Text(err)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        ForEach(gamesService.games) { game in
+                            Button {
+                                HapticService.selection()
+                                selectedGame = game
+                            } label: {
+                                HStack(spacing: 12) {
+                                    TeamLogoView(team: game.awayTeam, size: 32)
+                                    Text("\(game.awayTeam.abbreviation) @ \(game.homeTeam.abbreviation)")
+                                        .font(.subheadline)
+                                        .fontWeight(selectedGame?.id == game.id ? .semibold : .regular)
+                                    Spacer()
+                                    TeamLogoView(team: game.homeTeam, size: 32)
+                                    if selectedGame?.id == game.id {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(AppColors.fieldGreen)
+                                    }
+                                }
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 12)
+                                .background(RoundedRectangle(cornerRadius: 8).fill(selectedGame?.id == game.id ? AppColors.fieldGreen.opacity(0.2) : DesignSystem.Colors.surfaceElevated))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                .frame(maxHeight: 220)
+            }
+
+            HStack(spacing: 12) {
+                Button {
+                    onSkip()
+                } label: {
+                    Text("Skip")
+                        .fontWeight(.medium)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(DesignSystem.Colors.surfaceElevated)
+                        .foregroundColor(.primary)
+                        .cornerRadius(12)
+                }
+                Button {
+                    onContinue()
+                } label: {
+                    Text("Continue to scan")
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(AppColors.fieldGreen)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                }
+            }
+        }
+        .padding()
+        .task(id: selectedSport) {
+            await gamesService.fetchGames(sport: selectedSport)
+        }
+    }
+}
+
 struct IdleScanView: View {
     let onCameraSelected: () -> Void
     let onPhotoSelected: () -> Void
@@ -358,7 +489,7 @@ struct EnterNameForScanView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                Text("We’ll use your name to find and highlight your squares on the sheet.")
+                Text("We’ll use your name to find and highlight your boxes on the sheet.")
                     .font(.subheadline)
                     .foregroundColor(DesignSystem.Colors.textSecondary)
 
@@ -520,8 +651,13 @@ struct ReviewScanView: View {
 
     @State private var poolName: String = ""
     @State private var showingImagePreview = false
-    /// Names as they appear on this sheet (so we can find your squares). First = primary; add more if you have multiple boxes.
+    /// Names as they appear on this sheet (so we can find your boxes). First = primary; add more if you have multiple boxes.
     @State private var ownerNameFields: [String] = [""]
+    /// Editable detected numbers (e.g. "9 6 4 1 5 7 8 2 3 0"). Applied on confirm if valid.
+    @State private var columnNumbersText: String = ""
+    @State private var rowNumbersText: String = ""
+    /// Free-text payout rules (e.g. "$25 per quarter, halftime pays double").
+    @State private var payoutRulesText: String = ""
 
     var body: some View {
         ScrollView {
@@ -564,7 +700,7 @@ struct ReviewScanView: View {
                     Text("How does your name appear on this sheet?")
                         .font(.subheadline)
                         .fontWeight(.medium)
-                    Text("We use this to find and highlight your squares. Add another row if you have more than one box.")
+                    Text("We use this to find and highlight your boxes. Add another row if you have more than one box.")
                         .font(.caption)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
                     ForEach(ownerNameFields.indices, id: \.self) { index in
@@ -600,25 +736,14 @@ struct ReviewScanView: View {
                 let effectiveLabels = ownerNameFields.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
                 let mySquaresCount = effectiveLabels.isEmpty ? 0 : pool.squaresForOwner(ownerLabels: effectiveLabels).count
 
-                HStack(spacing: 20) {
-                    StatBox(
-                        title: "Names on Sheet",
-                        value: "\(pool.filledCount)",
-                        icon: "person.fill"
-                    )
-                    StatBox(
-                        title: "Your Squares",
-                        value: "\(mySquaresCount)",
-                        icon: "star.fill"
-                    )
-                    StatBox(
-                        title: "Empty",
-                        value: "\(100 - pool.filledCount)",
-                        icon: "square.dashed"
-                    )
+                HStack(spacing: 12) {
+                    StatBox(title: "Names on Sheet", value: "\(pool.filledCount)", icon: "person.fill")
+                    StatBox(title: "Your Boxes", value: "\(mySquaresCount)", icon: "star.fill")
+                    StatBox(title: "Empty", value: "\(100 - pool.filledCount)", icon: "square.dashed")
                 }
+                .frame(maxWidth: .infinity)
                 if !effectiveLabels.isEmpty && mySquaresCount == 0 {
-                    Text("No squares matched \"\(effectiveLabels.joined(separator: "\", \""))\". Try the exact spelling as on the sheet (we ignore extra spaces and case).")
+                    Text("No boxes matched \"\(effectiveLabels.joined(separator: "\", \""))\". Use the spelling as on the sheet (we match small OCR/handwriting differences too).")
                         .font(.caption)
                         .foregroundColor(.orange)
                         .padding(.horizontal)
@@ -634,29 +759,33 @@ struct ReviewScanView: View {
                         .frame(height: 150)
                 }
 
-                // Detected numbers
+                // Detected numbers — editable if wrong
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Detected Numbers")
                         .font(.caption)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
+                    Text("10 digits 0–9, space-separated. Edit if the scan read them wrong.")
+                        .font(.caption2)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
 
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Columns (\(pool.homeTeam.abbreviation))")
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .top) {
+                            Text(pool.homeTeam.id == Team.unknown.id ? "Columns" : "Columns (\(pool.homeTeam.abbreviation))")
                                 .font(.caption2)
-                            Text(pool.homeNumbers.map { String($0) }.joined(separator: " "))
+                                .frame(width: 80, alignment: .leading)
+                            TextField("e.g. 9 6 4 1 5 7 8 2 3 0", text: $columnNumbersText)
                                 .font(.system(.caption, design: .monospaced))
-                                .fontWeight(.bold)
+                                .textFieldStyle(.roundedBorder)
+                                .keyboardType(.numbersAndPunctuation)
                         }
-
-                        Spacer()
-
-                        VStack(alignment: .trailing) {
-                            Text("Rows (\(pool.awayTeam.abbreviation))")
+                        HStack(alignment: .top) {
+                            Text(pool.awayTeam.id == Team.unknown.id ? "Rows" : "Rows (\(pool.awayTeam.abbreviation))")
                                 .font(.caption2)
-                            Text(pool.awayNumbers.map { String($0) }.joined(separator: " "))
+                                .frame(width: 80, alignment: .leading)
+                            TextField("e.g. 2 6 3 0 5 4 7 1 8 9", text: $rowNumbersText)
                                 .font(.system(.caption, design: .monospaced))
-                                .fontWeight(.bold)
+                                .textFieldStyle(.roundedBorder)
+                                .keyboardType(.numbersAndPunctuation)
                         }
                     }
                     .padding()
@@ -666,11 +795,42 @@ struct ReviewScanView: View {
                     )
                 }
 
+                // Payout rules (optional)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Payout rules (optional)")
+                        .font(.caption)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                    TextEditor(text: $payoutRulesText)
+                        .frame(minHeight: 60)
+                        .padding(8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(DesignSystem.Colors.surfaceElevated)
+                        )
+                        .overlay(
+                            Group {
+                                if payoutRulesText.isEmpty {
+                                    Text("e.g. $25 per quarter, halftime pays double")
+                                        .font(.body)
+                                        .foregroundColor(DesignSystem.Colors.textSecondary.opacity(0.6))
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 16)
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                                        .allowsHitTesting(false)
+                                }
+                            }
+                        )
+                }
+
                 // Action buttons
                 VStack(spacing: 12) {
                     Button {
                         pool.name = poolName.isEmpty ? "Scanned Pool" : poolName
                         applyOwnerLabels()
+                        applyEditedNumbersIfValid()
+                        var ps = pool.poolStructure ?? PoolStructure.standardQuarterly
+                        ps.customPayoutDescription = payoutRulesText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : payoutRulesText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        pool.poolStructure = ps
                         onConfirm(pool)
                     } label: {
                         Text("Confirm & Save")
@@ -704,6 +864,15 @@ struct ReviewScanView: View {
             if let existing = pool.ownerLabels, !existing.isEmpty {
                 ownerNameFields = existing
             }
+            if columnNumbersText.isEmpty {
+                columnNumbersText = pool.homeNumbers.map { String($0) }.joined(separator: " ")
+            }
+            if rowNumbersText.isEmpty {
+                rowNumbersText = pool.awayNumbers.map { String($0) }.joined(separator: " ")
+            }
+            if payoutRulesText.isEmpty, let desc = pool.poolStructure?.customPayoutDescription {
+                payoutRulesText = desc
+            }
         }
         .onDisappear {
             applyOwnerLabels()
@@ -720,6 +889,26 @@ struct ReviewScanView: View {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         pool.ownerLabels = labels.isEmpty ? nil : labels
+    }
+
+    /// Parse edited column/row strings (10 space-separated digits 0–9) and assign to pool if valid.
+    private func applyEditedNumbersIfValid() {
+        func parseTenDigits(_ s: String) -> [Int]? {
+            let parts = s.split(whereSeparator: { $0.isWhitespace }).map { String($0) }
+            guard parts.count == 10 else { return nil }
+            var out: [Int] = []
+            for p in parts {
+                guard let n = Int(p), (0...9).contains(n) else { return nil }
+                out.append(n)
+            }
+            return out
+        }
+        if let cols = parseTenDigits(columnNumbersText) {
+            pool.homeNumbers = cols
+        }
+        if let rows = parseTenDigits(rowNumbersText) {
+            pool.awayNumbers = rows
+        }
     }
 }
 
@@ -739,9 +928,12 @@ struct StatBox: View {
             Text(title)
                 .font(.caption)
                 .foregroundColor(DesignSystem.Colors.textSecondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding()
+        .padding(.vertical, 12)
+        .padding(.horizontal, 8)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(DesignSystem.Colors.surfaceElevated)

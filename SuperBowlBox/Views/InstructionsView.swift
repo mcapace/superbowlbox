@@ -26,7 +26,7 @@ private let steps: [InstructionStep] = [
     InstructionStep(
         icon: "person.crop.circle.badge.checkmark",
         title: "Set your name",
-        subtitle: "Add your name in Settings. Your squares will be highlighted across every pool so you can spot them at a glance.",
+        subtitle: "Add your name in Settings. Your boxes will be highlighted across every pool so you can spot them at a glance.",
         accent: AppColors.fieldGreenLight
     ),
     InstructionStep(

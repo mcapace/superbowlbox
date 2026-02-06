@@ -52,7 +52,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Profile")
                 } footer: {
-                    Text("Your name is used to highlight your squares. When you scan or create a pool, you can set how your name appears on that sheet (and add multiple names if you have more than one box).")
+                    Text("Your name is used to highlight your boxes. When you scan or create a pool, you can set how your name appears on that sheet (and add multiple names if you have more than one box).")
                 }
 
                 // Account (Sign in with Apple / Google)
@@ -593,7 +593,7 @@ struct JoinPoolSheet: View {
                     joinCodeContent
                 }
             }
-            .navigationTitle(joinedPool != nil ? "Claim your squares" : "Join Pool")
+            .navigationTitle(joinedPool != nil ? "Claim your boxes" : "Join Pool")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -677,7 +677,6 @@ struct JoinPoolSheet: View {
                 }
             }
             .padding()
-        }
     }
 
     private func joinPool() {
@@ -704,7 +703,7 @@ struct JoinPoolSheet: View {
     }
 }
 
-// MARK: - Claim your squares (after join: enter name or manual box numbers; rules already in pool)
+// MARK: - Claim your boxes (after join: enter name or manual box numbers; rules already in pool)
 struct ClaimYourSquaresView: View {
     let pool: BoxGrid
     let onConfirm: (BoxGrid) -> Void
@@ -718,13 +717,42 @@ struct ClaimYourSquaresView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                Text("Rules and payout were set by the host. Enter your name so we can find your squares on the grid.")
+                Text("Rules and payout were set by the host. Confirm your name so we can find your boxes on the grid.")
                     .font(.subheadline)
                     .foregroundColor(DesignSystem.Colors.textSecondary)
 
                 if !useManualEntry {
+                    if !pool.allPlayers.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Select your name from the sheet")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 120))], spacing: 8) {
+                                ForEach(pool.allPlayers.sorted(), id: \.self) { name in
+                                    Button {
+                                        HapticService.selection()
+                                        ownerName = name
+                                    } label: {
+                                        Text(name)
+                                            .font(.caption)
+                                            .lineLimit(1)
+                                            .truncationMode(.tail)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 8)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .fill(ownerName == name ? AppColors.fieldGreen.opacity(0.3) : DesignSystem.Colors.surfaceElevated)
+                                            )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Your name as it appears on the sheet")
+                        Text("Or type your name as it appears on the sheet")
                             .font(.subheadline)
                             .fontWeight(.medium)
                         TextField("e.g. Mike Capace", text: $ownerName)
@@ -736,7 +764,7 @@ struct ClaimYourSquaresView: View {
                     Button {
                         claimWithName()
                     } label: {
-                        Text("Find my squares")
+                        Text("Find my boxes")
                             .fontWeight(.semibold)
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -749,7 +777,7 @@ struct ClaimYourSquaresView: View {
                     Button {
                         useManualEntry = true
                     } label: {
-                        Text("Scan didn't find me / Enter my numbers manually")
+                        Text("My name isn't listed / Enter my numbers manually")
                             .font(.subheadline)
                             .foregroundColor(AppColors.fieldGreen)
                     }
@@ -768,7 +796,7 @@ struct ClaimYourSquaresView: View {
 
     private var manualEntrySection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Enter the column and row number for each of your squares.")
+            Text("Enter the column and row number for each of your boxes.")
                 .font(.subheadline)
                 .foregroundColor(DesignSystem.Colors.textSecondary)
 

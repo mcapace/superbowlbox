@@ -88,16 +88,7 @@ private struct GameRowView: View {
 
     var body: some View {
         HStack(spacing: 16) {
-            // Away team
-            Circle()
-                .fill(Color(hex: game.awayTeam.primaryColor) ?? .gray)
-                .frame(width: 40, height: 40)
-                .overlay(
-                    Text(game.awayTeam.abbreviation)
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                )
+            TeamLogoView(team: game.awayTeam, size: 40)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(game.awayTeam.abbreviation) @ \(game.homeTeam.abbreviation)")
@@ -109,21 +100,55 @@ private struct GameRowView: View {
 
             Spacer()
 
-            Circle()
-                .fill(Color(hex: game.homeTeam.primaryColor) ?? .gray)
-                .frame(width: 40, height: 40)
-                .overlay(
-                    Text(game.homeTeam.abbreviation)
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                )
+            TeamLogoView(team: game.homeTeam, size: 40)
 
             Image(systemName: "chevron.right")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
         .padding(.vertical, 4)
+    }
+}
+
+struct TeamLogoView: View {
+    let team: Team
+    let size: CGFloat
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color(hex: team.primaryColor) ?? .gray)
+                .frame(width: size, height: size)
+            if let urlString = team.logoURL, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: size * 0.8, height: size * 0.8)
+                            .clipShape(Circle())
+                    case .failure:
+                        Text(team.abbreviation)
+                            .font(.system(size: size * 0.3, weight: .bold))
+                            .foregroundColor(.white)
+                    case .empty:
+                        ProgressView()
+                            .tint(.white)
+                            .scaleEffect(0.7)
+                    @unknown default:
+                        Text(team.abbreviation)
+                            .font(.system(size: size * 0.3, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                }
+            } else {
+                Text(team.abbreviation)
+                    .font(.system(size: size * 0.3, weight: .bold))
+                    .foregroundColor(.white)
+            }
+        }
+        .frame(width: size, height: size)
     }
 }
 

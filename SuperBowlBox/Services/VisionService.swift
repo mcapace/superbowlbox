@@ -59,21 +59,117 @@ class VisionService: ObservableObject {
             throw VisionError.imageProcessingFailed
         }
 
-        // Perform text recognition on the whole sheet (numbers, names, team labels, titles)
-        let textBlocks = try await recognizeText(in: cgImage)
+        // Work in upright space so crop coordinates match: normalize orientation if needed
+        let uprightImage = image.imageOrientation == .up ? cgImage : (renderUprightCGImage(from: image) ?? cgImage)
 
+        // Try crop first; if we get no names or very little text, retry with full image
+        let croppedImage = cropToLargestPoolLikeRectangle(uprightImage, orientation: .up)
+
+        func runPipeline(image: CGImage) async throws -> (BoxGrid, [RecognizedTextBlock]) {
+            let size = CGSize(width: image.width, height: image.height)
+            let blocks: [RecognizedTextBlock]
+            if let url = TextractConfig.backendURL {
+                let imageForBackend = UIImage(cgImage: image)
+                guard let jpeg = imageForBackend.jpegData(compressionQuality: 0.85) else {
+                    throw VisionError.imageProcessingFailed
+                }
+                blocks = try await TextractBackendService.recognize(imageData: jpeg, url: url)
+            } else {
+                blocks = try await recognizeText(in: image)
+            }
+            if blocks.isEmpty { throw VisionError.noTextFound }
+            let grid = try await parseGridFromText(blocks, imageSize: size)
+            return (grid, blocks)
+        }
+
+        var textBlocks: [RecognizedTextBlock]
+        var grid: BoxGrid
+
+        if let cropped = croppedImage {
+            do {
+                (grid, textBlocks) = try await runPipeline(image: cropped)
+                // If crop gave almost no text or no names, retry with full image
+                if textBlocks.count < 20 || grid.filledCount == 0 {
+                    let (fullGrid, fullBlocks) = try await runPipeline(image: uprightImage)
+                    if fullGrid.filledCount > grid.filledCount {
+                        grid = fullGrid
+                        textBlocks = fullBlocks
+                    }
+                }
+            } catch {
+                (grid, textBlocks) = try await runPipeline(image: uprightImage)
+            }
+        } else {
+            (grid, textBlocks) = try await runPipeline(image: uprightImage)
+        }
+
+        let blocksToPublish = textBlocks
         await MainActor.run {
-            recognizedText = textBlocks
+            recognizedText = blocksToPublish
         }
-
-        if textBlocks.isEmpty {
-            throw VisionError.noTextFound
-        }
-
-        // Parse the full sheet into grid structure: numbers, names, and optional team detection
-        let grid = try await parseGridFromText(textBlocks, imageSize: CGSize(width: cgImage.width, height: cgImage.height))
 
         return grid
+    }
+
+    /// Renders the image so its orientation is .up (correct for Vision and crop math).
+    private func renderUprightCGImage(from image: UIImage) -> CGImage? {
+        let size = image.size
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let drawn = renderer.image { _ in
+            image.draw(at: .zero)
+        }
+        return drawn.cgImage
+    }
+
+    /// Detects document-like rectangles and crops to the largest one (pool sheet) so we analyze only that region.
+    private func cropToLargestPoolLikeRectangle(_ cgImage: CGImage, orientation: CGImagePropertyOrientation = .up) -> CGImage? {
+        let request = VNDetectRectanglesRequest()
+        request.maximumObservations = 8
+        request.minimumConfidence = 0.5
+        request.minimumAspectRatio = 0.25
+        request.maximumAspectRatio = 1.8
+        request.minimumSize = 0.10
+
+        let handler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation, options: [:])
+        do {
+            try handler.perform([request])
+        } catch {
+            return nil
+        }
+
+        guard let results = request.results, !results.isEmpty else {
+            return nil
+        }
+
+        let w = CGFloat(cgImage.width)
+        let h = CGFloat(cgImage.height)
+
+        // Pick the largest rectangle by area (likely the pool sheet)
+        let best = results
+            .filter { obs in
+                let ar = obs.boundingBox.width / max(obs.boundingBox.height, 0.01)
+                return ar >= 0.4 && ar <= 1.2
+            }
+            .max(by: { $0.boundingBox.width * $0.boundingBox.height < $1.boundingBox.width * $1.boundingBox.height })
+
+        guard let observation = best else { return nil }
+
+        // Vision: normalized (0–1), origin bottom-left. Crop rect: top-left origin pixels.
+        // Expand top by 15% so header/title (team names) above the grid are included
+        let n = observation.boundingBox
+        let expandTop = n.height * h * 0.15
+        let x = n.minX * w
+        let y = (1 - n.maxY) * h - expandTop
+        let cropW = n.width * w
+        let cropH = n.height * h + expandTop
+
+        let xi = max(0, min(Int(x), cgImage.width - 1))
+        let yi = max(0, min(Int(y), cgImage.height - 1))
+        let wi = max(1, min(Int(cropW), cgImage.width - xi))
+        let hi = max(1, min(Int(cropH), cgImage.height - yi))
+
+        let cropRect = CGRect(x: xi, y: yi, width: wi, height: hi)
+        return cgImage.cropping(to: cropRect)
     }
 
     private func recognizeText(in image: CGImage) async throws -> [RecognizedTextBlock] {
@@ -104,7 +200,7 @@ class VisionService: ObservableObject {
             request.recognitionLevel = .accurate
             request.usesLanguageCorrection = false
             request.recognitionLanguages = ["en-US"]
-            request.minimumTextHeight = 0.008
+            request.minimumTextHeight = 0.004
 
             let handler = VNImageRequestHandler(cgImage: image, options: [:])
             do {
@@ -124,9 +220,12 @@ class VisionService: ObservableObject {
             return y1 < y2
         }
 
-        // Detect teams from any text on the sheet (titles, labels, headers)
+        // Detect teams from text in the top of the sheet (titles/headers), not from player names in the grid
+        let topYThreshold: CGFloat = 0.35
         var detectedTeams: [Team] = []
         for block in sortedBlocks {
+            let y = 1 - block.boundingBox.midY
+            if y > topYThreshold { continue }
             let text = block.text.trimmingCharacters(in: .whitespacesAndNewlines)
             if let team = Team.firstMatching(in: text), !detectedTeams.contains(where: { $0.id == team.id }) {
                 detectedTeams.append(team)
@@ -137,20 +236,20 @@ class VisionService: ObservableObject {
                 return (detectedTeams[1], detectedTeams[0])
             }
             if detectedTeams.count == 1 {
-                return (detectedTeams[0], Team.eagles)
+                return (detectedTeams[0], Team.unknown)
             }
-            return (Team.chiefs, Team.eagles)
+            return (Team.unknown, Team.unknown)
         }()
 
         var homeNumbers: [Int] = []
         var awayNumbers: [Int] = []
         var nameGrid: [[String]] = Array(repeating: Array(repeating: "", count: 10), count: 10)
 
-        // Group blocks by row — use tolerance so two lines in one cell (e.g. "Mike" / "Capace") stay in same row
+        // Group blocks by row — use tolerance so two lines in one cell (e.g. "Mike" / "Capace") stay in same row (need 11 rows: 1 header + 10 data)
         var rows: [[RecognizedTextBlock]] = []
         var currentRow: [RecognizedTextBlock] = []
         var lastY: CGFloat = -1
-        let rowTolerance: CGFloat = 0.08
+        let rowTolerance: CGFloat = 0.14
 
         for block in sortedBlocks {
             let y = 1 - block.boundingBox.midY
@@ -168,30 +267,44 @@ class VisionService: ObservableObject {
             rows.append(currentRow.sorted { $0.boundingBox.minX < $1.boundingBox.minX })
         }
 
-        // Header row = row that has exactly 10 single digits (0-9) — the column numbers. Ignore "Patriots" / team row.
+        // Header row = row with 10 single digits (0-9) for column numbers. Reject rows that contain cell IDs (1-100).
         var headerRowIndex: Int?
         var headerBlocksByX: [RecognizedTextBlock] = []
+        func isCellId(_ t: String) -> Bool {
+            let s = t.trimmingCharacters(in: .whitespaces)
+            return s.count >= 1 && s.count <= 3 && (Int(s).map { (1...100).contains($0) } ?? false)
+        }
+        typealias HeaderCandidate = (rowIndex: Int, digitBlocks: [RecognizedTextBlock], totalBlocks: Int)
+        var candidates: [HeaderCandidate] = []
         for (rowIndex, row) in rows.enumerated() {
+            let hasCellId = row.contains { b in isCellId(b.text) }
+            if hasCellId { continue }
             let digitBlocks = row.filter { b in
                 let t = b.text.trimmingCharacters(in: .whitespaces)
                 return t.count == 1 && (Int(t).map { (0...9).contains($0) } ?? false)
             }
             if digitBlocks.count == 10 {
-                headerRowIndex = rowIndex
-                headerBlocksByX = digitBlocks.sorted { $0.boundingBox.minX < $1.boundingBox.minX }
-                homeNumbers = headerBlocksByX.compactMap { b in Int(b.text.trimmingCharacters(in: .whitespaces)) }
-                break
+                candidates.append((rowIndex, digitBlocks, row.count))
             }
+        }
+        if let best = candidates.min(by: { a, b in
+            if a.totalBlocks != b.totalBlocks { return a.totalBlocks < b.totalBlocks }
+            return a.rowIndex < b.rowIndex
+        }) {
+            headerRowIndex = best.rowIndex
+            headerBlocksByX = best.digitBlocks.sorted { $0.boundingBox.midX < $1.boundingBox.midX }
+            homeNumbers = headerBlocksByX.compactMap { b in Int(b.text.trimmingCharacters(in: .whitespaces)) }
         }
         if headerRowIndex == nil {
             for (rowIndex, row) in rows.enumerated() {
+                if row.contains(where: { b in isCellId(b.text) }) { continue }
                 let digitBlocks = row.filter { b in
                     let t = b.text.trimmingCharacters(in: .whitespaces)
                     return t.count == 1 && (Int(t).map { (0...9).contains($0) } ?? false)
                 }
                 if digitBlocks.count >= 6 && digitBlocks.count <= 12 {
                     headerRowIndex = rowIndex
-                    headerBlocksByX = digitBlocks.sorted { $0.boundingBox.minX < $1.boundingBox.minX }
+                    headerBlocksByX = digitBlocks.sorted { $0.boundingBox.midX < $1.boundingBox.midX }
                     if headerBlocksByX.count > 10 { headerBlocksByX = Array(headerBlocksByX.prefix(10)) }
                     homeNumbers = headerBlocksByX.compactMap { b in Int(b.text.trimmingCharacters(in: .whitespaces)) }
                     break
@@ -206,9 +319,9 @@ class VisionService: ObservableObject {
             var bounds: [CGFloat] = []
             for i in 0...10 {
                 if i == 0 {
-                    bounds.append(max(0, midX[0] - 0.05))
+                    bounds.append(max(0, midX[0] - 0.08))
                 } else if i == 10 {
-                    bounds.append(min(1, midX[9] + 0.05))
+                    bounds.append(min(1, midX[9] + 0.08))
                 } else {
                     bounds.append((midX[i - 1] + midX[i]) / 2)
                 }
@@ -217,7 +330,9 @@ class VisionService: ObservableObject {
         } else {
             columnBounds = (0...10).map { CGFloat($0) / 10.0 }
         }
-        let awayColumnMaxX = (headerBlocksByX.first?.boundingBox.minX ?? 0.12) - 0.03
+        // Only treat leftmost strip as "away" (row numbers). Cap at 0.06 so we don't drop name columns.
+        let rawAwayMaxX = (headerBlocksByX.first?.boundingBox.minX ?? 0.12) - 0.03
+        let awayColumnMaxX = min(0.06, rawAwayMaxX)
 
         func columnForBlock(_ block: RecognizedTextBlock) -> Int? {
             let x = block.boundingBox.midX
@@ -229,7 +344,7 @@ class VisionService: ObservableObject {
         }
 
         // Data rows: one row index per grid row; away number = leftmost single digit in that row
-        if let headerIdx = headerRowIndex, homeNumbers.count == 10 {
+        if let headerIdx = headerRowIndex {
             for dataRowOffset in 0..<10 {
                 let rowIndex = headerIdx + 1 + dataRowOffset
                 guard rowIndex < rows.count else { break }
@@ -261,24 +376,120 @@ class VisionService: ObservableObject {
             }
         }
 
-        // Fallback: if no names captured (e.g. no header blocks), use one-block-per-column order
+        // Fallback: if no names captured (e.g. wrong column bounds), group each row's blocks by X into 10 columns and merge text per cell
         if nameGrid.flatMap({ $0 }).filter({ !$0.isEmpty }).isEmpty, let headerIdx = headerRowIndex {
             for dataRowOffset in 0..<10 {
                 let rowIndex = headerIdx + 1 + dataRowOffset
                 guard rowIndex < rows.count else { break }
                 let row = rows[rowIndex]
-                var colOffset = 0
-                for (colIndex, block) in row.enumerated() {
-                    let text = block.text.trimmingCharacters(in: .whitespaces)
-                    if colIndex == 0, let num = Int(text), num >= 0 && num <= 9 {
-                        if awayNumbers.count < 10 { awayNumbers.append(num) }
-                        colOffset = 1
-                        continue
-                    }
-                    let gridColIndex = colIndex - colOffset
-                    if gridColIndex >= 0 && gridColIndex < 10, !text.isEmpty {
-                        nameGrid[dataRowOffset][gridColIndex] = text
-                    }
+                // Away digit = leftmost single digit
+                let awayDigitBlock = row.first { b in
+                    let t = b.text.trimmingCharacters(in: .whitespaces)
+                    return t.count == 1 && (Int(t).map { (0...9).contains($0) } ?? false)
+                }
+                if let b = awayDigitBlock, let n = Int(b.text.trimmingCharacters(in: .whitespaces)), awayNumbers.count < 10 {
+                    awayNumbers.append(n)
+                }
+                let nameLike = row.filter { b in
+                    let t = b.text.trimmingCharacters(in: .whitespaces)
+                    if t.isEmpty { return false }
+                    if t.count == 1 && (Int(t).map { (0...9).contains($0) } ?? false) { return false }
+                    if t.count <= 3 && (Int(t).map { (1...100).contains($0) } ?? false) { return false }
+                    return true
+                }
+                guard !nameLike.isEmpty else { continue }
+                let xs = nameLike.map { $0.boundingBox.midX }
+                let xMin = xs.min() ?? 0
+                let xSpan = (xs.max() ?? 1) - xMin
+                var columns: [[String]] = Array(repeating: [], count: 10)
+                for b in nameLike {
+                    let x = b.boundingBox.midX
+                    let col = xSpan > 0.001 ? min(9, max(0, Int(10 * (x - xMin) / xSpan))) : 0
+                    let t = b.text.trimmingCharacters(in: .whitespaces)
+                    if !t.isEmpty { columns[col].append(t) }
+                }
+                for (col, parts) in columns.enumerated() where !parts.isEmpty {
+                    nameGrid[dataRowOffset][col] = parts.joined(separator: " ")
+                }
+            }
+        }
+
+        // Second fallback: no header found or still no names — use first 10 data-like rows, group by X into 10 columns
+        if nameGrid.flatMap({ $0 }).filter({ !$0.isEmpty }).isEmpty && rows.count >= 10 {
+            let startRow: Int
+            if let headerIdx = headerRowIndex, headerIdx + 10 < rows.count {
+                startRow = headerIdx + 1
+            } else {
+                startRow = 1
+            }
+            for dataRowOffset in 0..<10 {
+                let rowIndex = startRow + dataRowOffset
+                guard rowIndex < rows.count else { break }
+                let row = rows[rowIndex]
+                let nameLike = row.filter { b in
+                    let t = b.text.trimmingCharacters(in: .whitespaces)
+                    if t.isEmpty { return false }
+                    if t.count == 1 && (Int(t).map { (0...9).contains($0) } ?? false) { return false }
+                    if t.count <= 3 && (Int(t).map { (1...100).contains($0) } ?? false) { return false }
+                    return true
+                }
+                guard !nameLike.isEmpty else { continue }
+                let xs = nameLike.map { $0.boundingBox.midX }
+                let xMin = xs.min() ?? 0
+                let xSpan = (xs.max() ?? 1) - xMin
+                var columns: [[String]] = Array(repeating: [], count: 10)
+                for b in nameLike {
+                    let x = b.boundingBox.midX
+                    let col = xSpan > 0.001 ? min(9, max(0, Int(10 * (x - xMin) / xSpan))) : 0
+                    let t = b.text.trimmingCharacters(in: .whitespaces)
+                    if !t.isEmpty { columns[col].append(t) }
+                }
+                for (col, parts) in columns.enumerated() where !parts.isEmpty {
+                    nameGrid[dataRowOffset][col] = parts.joined(separator: " ")
+                }
+            }
+        }
+
+        // Last resort: fill grid from all name-like blocks by position (Y then X), ignoring structure
+        if nameGrid.flatMap({ $0 }).filter({ !$0.isEmpty }).isEmpty {
+            let nameLike = sortedBlocks.filter { block in
+                let t = block.text.trimmingCharacters(in: .whitespaces)
+                if t.isEmpty { return false }
+                if t.count == 1, let n = Int(t), (0...9).contains(n) { return false }
+                if t.count <= 3, let n = Int(t), (1...100).contains(n) { return false }
+                return true
+            }
+            let byPosition = nameLike.sorted { b1, b2 in
+                let y1 = 1 - b1.boundingBox.midY
+                let y2 = 1 - b2.boundingBox.midY
+                if abs(y1 - y2) > 0.06 { return y1 < y2 }
+                return b1.boundingBox.minX < b2.boundingBox.minX
+            }
+            // Merge blocks that are in same cell (close in Y and X)
+            var cells: [String] = []
+            var i = 0
+            while i < byPosition.count {
+                let b = byPosition[i]
+                var cellText = b.text.trimmingCharacters(in: .whitespaces)
+                let midY = 1 - b.boundingBox.midY
+                let midX = b.boundingBox.midX
+                i += 1
+                while i < byPosition.count {
+                    let next = byPosition[i]
+                    let ny = 1 - next.boundingBox.midY
+                    let nx = next.boundingBox.minX
+                    if abs(ny - midY) < 0.04 && abs(nx - midX) < 0.12 {
+                        cellText += " " + next.text.trimmingCharacters(in: .whitespaces)
+                        i += 1
+                    } else { break }
+                }
+                cells.append(cellText)
+            }
+            for (idx, cell) in cells.prefix(100).enumerated() {
+                let r = idx / 10
+                let c = idx % 10
+                if r < 10, c < 10, !cell.isEmpty {
+                    nameGrid[r][c] = cell
                 }
             }
         }

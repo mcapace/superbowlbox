@@ -56,7 +56,7 @@ struct EnterMyNumbersView: View {
                 } header: {
                     Text("Your Name")
                 } footer: {
-                    Text("Used to find and highlight your squares in this pool.")
+                    Text("Used to find and highlight your boxes in this pool.")
                 }
 
                 Section {
@@ -96,7 +96,7 @@ struct EnterMyNumbersView: View {
                 } header: {
                     Text("Your numbers")
                 } footer: {
-                    Text("Enter the column number (home team) and row number (away team) for each of your squares.")
+                    Text("Enter the column number (home team) and row number (away team) for each of your boxes.")
                 }
 
                 Section {

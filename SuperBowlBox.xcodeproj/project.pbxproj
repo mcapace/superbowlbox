@@ -35,7 +35,6 @@
 		A1111111000000000000001A /* ListableGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001B /* ListableGame.swift */; };
 		A1111111000000000000001B /* GamesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001C /* GamesService.swift */; };
 		A1111111000000000000001C /* CreateFromGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001D /* CreateFromGameView.swift */; };
-		A1111111000000000000002A /* EnterMyNumbersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000002A /* EnterMyNumbersView.swift */; };
 		A1111111000000000000001D /* SportsDataIOConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001E /* SportsDataIOConfig.swift */; };
 		A1111111000000000000001E /* SportsDataIOService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001F /* SportsDataIOService.swift */; };
 		A11111110000000000000020 /* GameContextService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000020 /* GameContextService.swift */; };
@@ -47,8 +46,12 @@
 		A11111110000000000000026 /* OnTheHuntItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000027 /* OnTheHuntItem.swift */; };
 		A11111110000000000000027 /* SharedPoolsConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000028 /* SharedPoolsConfig.swift */; };
 		A11111110000000000000028 /* SharedPoolsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000029 /* SharedPoolsService.swift */; };
+		A1111111000000000000002A /* EnterMyNumbersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000002A /* EnterMyNumbersView.swift */; };
+		A1111111000000000000002B /* TextractConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000002B /* TextractConfig.swift */; };
+		A1111111000000000000002C /* TextractBackendService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000002C /* TextractBackendService.swift */; };
 		CECC4FC82F33D68F004AAD0D /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = CECC4FC72F33D68F004AAD0D /* GoogleSignIn */; };
 		CECC4FCA2F33D68F004AAD0D /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = CECC4FC92F33D68F004AAD0D /* GoogleSignInSwift */; };
+		CEF1BF382F362B0D00DCB420 /* AWSTextract in Frameworks */ = {isa = PBXBuildFile; productRef = CEF1BF372F362B0D00DCB420 /* AWSTextract */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -82,7 +85,6 @@
 		A0000000000000000000001B /* ListableGame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListableGame.swift; sourceTree = "<group>"; };
 		A0000000000000000000001C /* GamesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamesService.swift; sourceTree = "<group>"; };
 		A0000000000000000000001D /* CreateFromGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateFromGameView.swift; sourceTree = "<group>"; };
-		A0000000000000000000002A /* EnterMyNumbersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnterMyNumbersView.swift; sourceTree = "<group>"; };
 		A0000000000000000000001E /* SportsDataIOConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SportsDataIOConfig.swift; sourceTree = "<group>"; };
 		A0000000000000000000001F /* SportsDataIOService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SportsDataIOService.swift; sourceTree = "<group>"; };
 		A00000000000000000000020 /* GameContextService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameContextService.swift; sourceTree = "<group>"; };
@@ -95,6 +97,9 @@
 		A00000000000000000000027 /* OnTheHuntItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnTheHuntItem.swift; sourceTree = "<group>"; };
 		A00000000000000000000028 /* SharedPoolsConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPoolsConfig.swift; sourceTree = "<group>"; };
 		A00000000000000000000029 /* SharedPoolsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPoolsService.swift; sourceTree = "<group>"; };
+		A0000000000000000000002A /* EnterMyNumbersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnterMyNumbersView.swift; sourceTree = "<group>"; };
+		A0000000000000000000002B /* TextractConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextractConfig.swift; sourceTree = "<group>"; };
+		A0000000000000000000002C /* TextractBackendService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextractBackendService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -104,32 +109,11 @@
 			files = (
 				CECC4FC82F33D68F004AAD0D /* GoogleSignIn in Frameworks */,
 				CECC4FCA2F33D68F004AAD0D /* GoogleSignInSwift in Frameworks */,
+				CEF1BF382F362B0D00DCB420 /* AWSTextract in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		A40000000000000000000004 /* Patch AppAuth main thread */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Patch AppAuth main thread";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "set -e\nCHECKOUTS_ROOT=\"$(dirname \"$(dirname \"$(dirname \"$BUILD_DIR\")\")\")/SourcePackages/checkouts\"\nAPPAUTH_FILE=\"${CHECKOUTS_ROOT}/AppAuth-iOS/Sources/AppAuth/iOS/OIDExternalUserAgentIOS.m\"\nif [ -z \"$BUILD_DIR\" ]; then exit 0; fi\nif [ ! -f \"$APPAUTH_FILE\" ]; then exit 0; fi\nif grep -q \"NSThread isMainThread\" \"$APPAUTH_FILE\"; then exit 0; fi\nperl -i -0pe 's/return _presentingViewController\\.view\\.window;/__block ASPresentationAnchor anchor = nil;\\n  if ([NSThread isMainThread]) {\\n    anchor = _presentingViewController.view.window;\\n  } else {\\n    dispatch_sync(dispatch_get_main_queue(), ^{\\n      anchor = _presentingViewController.view.window;\\n    });\\n  }\\n  return anchor;/s' \"$APPAUTH_FILE\"\n";
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXGroup section */
 		A30000000000000000000000 = {
@@ -223,6 +207,8 @@
 				A00000000000000000000024 /* LoginDatabaseService.swift */,
 				A00000000000000000000028 /* SharedPoolsConfig.swift */,
 				A00000000000000000000029 /* SharedPoolsService.swift */,
+				A0000000000000000000002B /* TextractConfig.swift */,
+				A0000000000000000000002C /* TextractBackendService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -284,6 +270,7 @@
 			mainGroup = A30000000000000000000000;
 			packageReferences = (
 				CECC4FC62F33D68F004AAD0D /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				CEF1BF362F362B0D00DCB420 /* XCRemoteSwiftPackageReference "aws-sdk-swift" */,
 			);
 			productRefGroup = A30000000000000000000002 /* Products */;
 			projectDirPath = "";
@@ -305,6 +292,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A40000000000000000000004 /* Patch AppAuth main thread */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Patch AppAuth main thread";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\nCHECKOUTS_ROOT=\"$(dirname \"$(dirname \"$(dirname \"$BUILD_DIR\")\")\")/SourcePackages/checkouts\"\nAPPAUTH_FILE=\"${CHECKOUTS_ROOT}/AppAuth-iOS/Sources/AppAuth/iOS/OIDExternalUserAgentIOS.m\"\nif [ -z \"$BUILD_DIR\" ]; then exit 0; fi\nif [ ! -f \"$APPAUTH_FILE\" ]; then exit 0; fi\nif grep -q \"NSThread isMainThread\" \"$APPAUTH_FILE\"; then exit 0; fi\nperl -i -0pe 's/return _presentingViewController\\.view\\.window;/__block ASPresentationAnchor anchor = nil;\\n  if ([NSThread isMainThread]) {\\n    anchor = _presentingViewController.view.window;\\n  } else {\\n    dispatch_sync(dispatch_get_main_queue(), ^{\\n      anchor = _presentingViewController.view.window;\\n    });\\n  }\\n  return anchor;/s' \"$APPAUTH_FILE\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		A40000000000000000000002 /* Sources */ = {
@@ -349,6 +358,8 @@
 				A11111110000000000000026 /* OnTheHuntItem.swift in Sources */,
 				A11111110000000000000027 /* SharedPoolsConfig.swift in Sources */,
 				A11111110000000000000028 /* SharedPoolsService.swift in Sources */,
+				A1111111000000000000002B /* TextractConfig.swift in Sources */,
+				A1111111000000000000002C /* TextractBackendService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -572,6 +583,14 @@
 				minimumVersion = 9.1.0;
 			};
 		};
+		CEF1BF362F362B0D00DCB420 /* XCRemoteSwiftPackageReference "aws-sdk-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/awslabs/aws-sdk-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.6.49;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -584,6 +603,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = CECC4FC62F33D68F004AAD0D /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignInSwift;
+		};
+		CEF1BF372F362B0D00DCB420 /* AWSTextract */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CEF1BF362F362B0D00DCB420 /* XCRemoteSwiftPackageReference "aws-sdk-swift" */;
+			productName = AWSTextract;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

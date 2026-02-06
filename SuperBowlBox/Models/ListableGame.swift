@@ -58,6 +58,21 @@ enum Sport: String, CaseIterable, Identifiable {
         }
     }
 
+    /// League slug for ESPN CDN team logos: https://a.espncdn.com/i/teamlogos/{slug}/500/scoreboard/{abbrev}.png
+    var espnLogoLeagueSlug: String? {
+        switch self {
+        case .nfl: return "nfl"
+        case .nba: return "nba"
+        case .nhl: return "nhl"
+        case .mlb: return "mlb"
+        case .ncaaf: return "ncaaf"
+        case .ncaab: return "ncaab"
+        case .wnba: return "wnba"
+        case .cfl: return "cfl"
+        case .mls: return "mls"
+        }
+    }
+
     /// Sports Data IO league path (v3): e.g. "nfl", "nba", "ncaaf"
     var sportsDataIOLeague: String {
         switch self {

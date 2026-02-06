@@ -61,10 +61,15 @@ class GamesService: ObservableObject {
                 let displayName = teamInfo["displayName"] as? String ?? "Team"
                 let abbrev = teamInfo["abbreviation"] as? String ?? "??"
                 let color = (teamInfo["color"] as? String) ?? "000000"
+                var logoURL = teamInfo["logo"] as? String
+                if logoURL == nil, let slug = sport.espnLogoLeagueSlug {
+                    logoURL = "https://a.espncdn.com/i/teamlogos/\(slug)/500/scoreboard/\(abbrev.lowercased()).png"
+                }
                 let team = Team(
                     name: displayName,
                     abbreviation: abbrev,
-                    primaryColor: "#\(color)"
+                    primaryColor: "#\(color)",
+                    logoURL: logoURL
                 )
                 if (comp["homeAway"] as? String) == "home" {
                     homeTeam = team

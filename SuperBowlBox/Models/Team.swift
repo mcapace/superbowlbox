@@ -98,23 +98,52 @@ struct Team: Codable, Identifiable, Equatable, Hashable {
         logoURL: espnLogoURL(abbreviation: "gb")
     )
 
+    static let patriots = Team(
+        name: "New England Patriots",
+        abbreviation: "NE",
+        primaryColor: "#002244",
+        secondaryColor: "#C60C30",
+        logoURL: espnLogoURL(abbreviation: "ne")
+    )
+
+    static let seahawks = Team(
+        name: "Seattle Seahawks",
+        abbreviation: "SEA",
+        primaryColor: "#002244",
+        secondaryColor: "#69BE28",
+        logoURL: espnLogoURL(abbreviation: "sea")
+    )
+
+    /// Used when scan doesn't detect team names (so we don't show KC/PHI as if we did).
+    static let unknown = Team(
+        name: "Unknown",
+        abbreviation: "—",
+        primaryColor: "#6B7280",
+        secondaryColor: "#9CA3AF"
+    )
+
     static let allTeams: [Team] = [
         .chiefs, .eagles, .fortyNiners, .ravens,
         .bills, .lions, .cowboys, .packers
     ]
 
     /// Match sheet text to a team (abbreviation or distinctive name part). Used by OCR to set grid teams.
+    /// Prefer abbreviation as whole word (e.g. "KC" or " KC ") to avoid matching "Packer" in a name.
     static func firstMatching(in text: String) -> Team? {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !t.isEmpty else { return nil }
-        for team in allTeams {
-            if t == team.abbreviation.lowercased() { return team }
+        let matchableTeams: [Team] = allTeams + [.patriots, .seahawks]
+        for team in matchableTeams {
+            let abbr = team.abbreviation.lowercased()
+            if t == abbr { return team }
+            if t.hasPrefix(abbr + " ") || t.hasSuffix(" " + abbr) || t.contains(" " + abbr + " ") { return team }
             let nameLower = team.name.lowercased()
             if nameLower.contains(t) || t.contains(nameLower) { return team }
         }
         let keywords: [(String, Team)] = [
             ("chief", .chiefs), ("eagle", .eagles), ("49er", .fortyNiners), ("niner", .fortyNiners),
-            ("raven", .ravens), ("bill", .bills), ("lion", .lions), ("cowboy", .cowboys), ("packer", .packers)
+            ("raven", .ravens), ("bill", .bills), ("lion", .lions), ("cowboy", .cowboys), ("packer", .packers),
+            ("patriot", .patriots), ("seahawk", .seahawks)
         ]
         for (keyword, team) in keywords where t.contains(keyword) {
             return team
