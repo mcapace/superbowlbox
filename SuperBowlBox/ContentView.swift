@@ -127,10 +127,17 @@ struct DashboardView: View {
                         AddPoolChipView(onTap: { onAddPoolTapped?() })
                             .padding(.horizontal, DesignSystem.Layout.screenInset)
                     } else {
-                        PoolSelectorView(
-                            selectedIndex: $selectedPoolIndex,
-                            pools: appState.pools
-                        )
+                        VStack(alignment: .leading, spacing: 6) {
+                            PoolSelectorView(
+                                selectedIndex: $selectedPoolIndex,
+                                pools: appState.pools
+                            )
+                            if appState.pools.count > 1 {
+                                Text("Tap a pool to see its leader and winnings")
+                                    .font(.caption)
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                            }
+                        }
                         .padding(.horizontal, DesignSystem.Layout.screenInset)
                     }
 
@@ -146,7 +153,7 @@ struct DashboardView: View {
 
                     if let pool = currentPool,
                        let score = appState.scoreService.currentScore {
-                        SectionHeaderView(title: "Current Leader")
+                        SectionHeaderView(title: appState.pools.count > 1 ? "Current Leader · \(pool.name)" : "Current Leader")
                         WinnerSpotlightCard(pool: pool, score: score)
                             .padding(.horizontal, DesignSystem.Layout.screenInset)
                     }
@@ -154,7 +161,7 @@ struct DashboardView: View {
                     if let pool = currentPool,
                        let score = appState.scoreService.currentScore,
                        !pool.finalizedWinnings(score: score).isEmpty {
-                        SectionHeaderView(title: "Current winnings (finalized)")
+                        SectionHeaderView(title: appState.pools.count > 1 ? "Current winnings · \(pool.name)" : "Current winnings (finalized)")
                         FinalizedWinningsCard(
                             pool: pool,
                             score: score,

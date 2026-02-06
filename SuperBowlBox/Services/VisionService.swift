@@ -220,6 +220,13 @@ class VisionService: ObservableObject {
         }
     }
 
+    /// Recognizes all text in an image and returns it as a single string (e.g. for payout rules from a photo).
+    func recognizeTextInImage(_ image: UIImage) async throws -> String {
+        guard let cgImage = image.cgImage else { throw VisionError.imageProcessingFailed }
+        let blocks = try await recognizeText(in: cgImage)
+        return blocks.map(\.text).joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private func parseGridFromText(_ blocks: [RecognizedTextBlock], imageSize: CGSize) async throws -> BoxGrid {
         // Use the whole sheet: sort all text by position (top to bottom, left to right)
         let sortedBlocks = blocks.sorted { block1, block2 in

@@ -1,66 +1,105 @@
-# Supabase: Login Data & Shared Pool Codes
+# Use Supabase for Share Codes (CLI)
 
-The app supports **storing user (login) data** and **generating invite codes** to share pools. Both use the same Supabase project when configured.
-
----
-
-## 1. Login data (store user sign-ins)
-
-To collect Apple/Google login events:
-
-1. Create a Supabase project at [supabase.com](https://supabase.com).
-2. **Table**: Table Editor → New table → name: `logins`.
-   - Columns: `id` (uuid, primary key, default `gen_random_uuid()`), `provider` (text), `provider_uid` (text), `email` (text, nullable), `display_name` (text, nullable), `client_timestamp` (timestamptz, nullable), `created_at` (timestamptz, default `now()`).
-   - Enable RLS; add a policy that allows **INSERT** for anon (or your role) so the app can POST sign-in events.
-3. In **Secrets.plist** (copy from `Resources/Secrets.example.plist` if needed):
-   - **LoginDatabaseURL** = `https://YOUR_PROJECT_REF.supabase.co/rest/v1`
-   - **LoginDatabaseApiKey** = your Supabase anon key (Project Settings → API)
-
-Full payload and sign-out details: [LOGIN_DATABASE.md](LOGIN_DATABASE.md).
+SquareUp uses **Supabase** so you can generate invite codes and let others join a pool without scanning. This repo is set up to use the **Supabase CLI** only (no dashboard SQL). One project gives you **shared_pools** (invite codes) and **logins** (optional Apple/Google sign-in events).
 
 ---
 
-## 2. Shared pools (generate codes, join with code)
+## One-time: create the database (run from repo root)
 
-The app **uploads a pool** when you share it (or when you first open the share sheet for that pool), gets an **8-character code**, and saves that code on the pool. Others can **join with that code** to download the pool.
+If you already have a Supabase project and have set **LoginDatabaseURL** and **LoginDatabaseApiKey** in `SuperBowlBox/Resources/Secrets.plist`, run this to create the tables:
 
-### Supabase setup for shared pools
+```bash
+# Project ref = the ID in your URL (e.g. from https://abcdefgh.supabase.co/rest/v1 the ref is abcdefgh)
+./scripts/supabase-setup.sh YOUR_PROJECT_REF
+```
 
-1. **Table**: Table Editor → New table → name: `shared_pools`.
+You’ll be prompted for your database password once (or set `SUPABASE_DB_PASSWORD` to avoid the prompt). The script runs `supabase link` then `supabase db push` to apply the migration (creates `shared_pools` and `logins` with RLS). No other code changes are required; the app already uses your URL and key from Secrets.plist.
 
-   | Column       | Type          | Default / Notes                    |
-   |--------------|---------------|-------------------------------------|
-   | `id`         | `uuid`        | `gen_random_uuid()` (primary key)  |
-   | `code`       | `text`        | NOT NULL                            |
-   | `pool_json`  | `jsonb`       | NOT NULL                            |
-   | `created_at` | `timestamptz` | `now()`                             |
+---
 
-   - Add a **unique index** on `code`: SQL Editor → `CREATE UNIQUE INDEX idx_shared_pools_code ON shared_pools (code);`
-   - **RLS**: Enable Row Level Security. Add policies:
-     - **Insert**: allow anon (or your role) to INSERT.
-     - **Select**: allow anon to SELECT (so anyone with the code can fetch that row). Optionally restrict with `code = current_setting('request.code')` if you use a different pattern.
+## Prerequisites (if you haven’t set up Supabase yet)
 
-2. **App config** (same Supabase project as logins):
+- [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started) installed (e.g. `brew install supabase/tap/supabase`).
+- A Supabase account (for `supabase login`).
+
+---
+
+## 1. Log in and create a project (CLI)
+
+```bash
+cd /path/to/superbowlbox
+
+# Log in (browser or token)
+supabase login
+
+# Create a new hosted project (set a DB password when prompted)
+supabase projects create superbowlbox --db-password YOUR_DB_PASSWORD
+```
+
+If you prefer an **existing** project, skip `projects create` and use its **project ref** (from the dashboard URL: `https://supabase.com/dashboard/project/<project-ref>`).
+
+---
+
+## 2. Link and push migrations
+
+```bash
+# Link this repo to your hosted project (use the project ref from create or dashboard)
+supabase link --project-ref YOUR_PROJECT_REF
+
+# Apply migrations: creates shared_pools and logins with RLS
+supabase db push
+```
+
+When prompted for the database password, use the one you set for the project.
+
+This applies `supabase/migrations/20250204120000_create_logins_and_shared_pools.sql`, which creates:
+
+- **shared_pools** — `code`, `pool_json`, RLS so anon can INSERT and SELECT.
+- **logins** — optional table for sign-in events; anon can INSERT.
+
+---
+
+## 3. Get API URL and anon key
+
+**Option A – CLI**
+
+```bash
+supabase projects api-keys --project-ref YOUR_PROJECT_REF
+```
+
+Use the **anon public** key from the output.
+
+**Option B – Dashboard**
+
+Project Settings → API → **Project URL** and **anon public** key.
+
+Your REST base URL is: `https://YOUR_PROJECT_REF.supabase.co/rest/v1`.
+
+---
+
+## 4. Configure the app
+
+1. Ensure **SuperBowlBox/Resources/Secrets.plist** exists (copy from `Secrets.example.plist` if needed).
+2. Set:
    - **LoginDatabaseURL** = `https://YOUR_PROJECT_REF.supabase.co/rest/v1`
-   - **LoginDatabaseApiKey** = your anon key  
+   - **LoginDatabaseApiKey** = your **anon public** key
 
-   The app uses this URL and key for shared pools when **SharedPoolsURL** / **SharedPoolsApiKey** are not set. To use a different backend for shared pools only, set **SharedPoolsURL** and optionally **SharedPoolsApiKey** in Secrets.plist.
+The app uses these for both shared pools and (if configured) logins. No extra keys needed for invite codes.
 
-### App behavior
+---
 
-- **Share (Settings → Share My Pools → tap a pool)**  
-  Opens the share sheet. If the pool has no saved code, the app uploads the pool (including rules/payout/structure) to `shared_pools` and shows the new 8-character code. The creator’s “your name” (ownerLabels) is not uploaded so the shared template is neutral. The code is saved on the pool so reopening the sheet shows the same code without re-uploading.
+## 5. Use it in the app
 
-- **Join (Pools or Settings → Join Pool with Code)**  
-  User enters an 8-character code. The app fetches the pool from `shared_pools`. **Rules and payout are already in the pool** (set by the host). The joiner then sees **Claim your squares**: they only enter **their name as it appears on the sheet** so the app can find their squares, or choose **Enter my numbers manually** if OCR didn’t find them (column + row for each box, add more boxes if needed). No re-entering of rules.
+- **Generate a code**: Settings → Share My Pools → tap a pool. The app uploads to Supabase and shows an 8-character code. Copy or share it.
+- **Join with a code**: Settings → Join Pool with Code (or Pools → Join with code) → enter the code → Join Pool. The joiner claims their name/boxes (no scan).
 
 ---
 
 ## Summary
 
-| Feature              | Need Supabase? | Config |
-|----------------------|----------------|--------|
-| Store login data     | Optional       | `LoginDatabaseURL` + `LoginDatabaseApiKey` |
-| Generate share codes | Yes (or other backend) | Same as above, or `SharedPoolsURL` + `SharedPoolsApiKey` |
+| What you want        | Tables (from migration)   | Secrets.plist                          |
+|----------------------|---------------------------|----------------------------------------|
+| Share codes only     | `shared_pools`            | `LoginDatabaseURL` + `LoginDatabaseApiKey` |
+| Share codes + logins | `shared_pools` + `logins` | Same                                   |
 
-One Supabase project can serve both: create the `logins` and `shared_pools` tables, set `LoginDatabaseURL` and `LoginDatabaseApiKey` in Secrets.plist, and the app will store logins and use the same project for share/join.
+To use a **different** backend only for shared pools, set **SharedPoolsURL** (and optionally **SharedPoolsApiKey**) in Secrets.plist; the app will use that for share/join instead of the LoginDatabase URL.

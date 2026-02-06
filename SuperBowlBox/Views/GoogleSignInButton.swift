@@ -16,15 +16,15 @@ struct GoogleSignInButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                GoogleLogoView(size: 24)
+                GoogleLogoView(size: 22)
                 Text("Continue with Google")
                     .font(AppTypography.headline)
                     .foregroundColor(.primary)
                 Spacer()
             }
-            .padding(.vertical, 14)
             .padding(.horizontal, 16)
             .frame(maxWidth: .infinity)
+            .frame(height: 52)
             .background(Color(.systemBackground))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)

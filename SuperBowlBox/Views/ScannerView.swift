@@ -81,6 +81,7 @@ struct ScannerView: View {
                         ReviewScanView(
                             pool: $scannedPool.unwrap(default: BoxGrid.empty),
                             image: selectedImage,
+                            visionService: visionService,
                             onConfirm: { poolToSave in
                                 HapticService.success()
                                 var pool = poolToSave
@@ -666,6 +667,8 @@ struct ProcessingScanView: View {
 struct ReviewScanView: View {
     @Binding var pool: BoxGrid
     let image: UIImage?
+    /// Used for OCR when user adds a photo of payout rules.
+    var visionService: VisionService?
     /// Called with the pool to save (including name + ownerLabels). Use this so the saved pool always has the latest fields.
     let onConfirm: (BoxGrid) -> Void
     let onRetry: () -> Void
@@ -684,6 +687,9 @@ struct ReviewScanView: View {
     @State private var payoutParsedSummary: String? = nil
     @State private var payoutParseError: String? = nil
     @State private var showingGridEditor: Bool = false
+    @StateObject private var payoutVoiceService = PayoutVoiceService()
+    @State private var payoutPhotoItem: PhotosPickerItem?
+    @State private var isExtractingPayoutFromPhoto: Bool = false
 
     var body: some View {
         ScrollView {
@@ -844,28 +850,88 @@ struct ReviewScanView: View {
                         .foregroundColor(AppColors.fieldGreen)
                 }
 
-                // Payout rules (optional)
+                // Payout rules (optional) — type, speak, or take a photo
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("Payout rules (optional)")
                             .font(.caption)
                             .foregroundColor(DesignSystem.Colors.textSecondary)
                         Spacer()
-                        if PayoutParseConfig.usePayoutParse && !payoutRulesText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            Button {
-                                parsePayoutRulesWithAI()
-                            } label: {
-                                if payoutParseInProgress {
-                                    ProgressView()
-                                        .scaleEffect(0.8)
-                                } else {
-                                    Text("Parse with AI")
+                        HStack(spacing: 12) {
+                            // Speak: record then transcribe into field
+                            if payoutVoiceService.isRecording {
+                                Button {
+                                    Task {
+                                        do {
+                                            let text = try await payoutVoiceService.stopRecordingAndTranscribe()
+                                            if !text.isEmpty {
+                                                payoutRulesText = payoutRulesText.isEmpty ? text : payoutRulesText + " " + text
+                                            }
+                                        } catch {
+                                            payoutParseError = error.localizedDescription
+                                        }
+                                    }
+                                } label: {
+                                    Label("Stop", systemImage: "stop.circle.fill")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.red)
+                                }
+                            } else {
+                                Button {
+                                    Task {
+                                        guard await payoutVoiceService.requestAuthorization() else {
+                                            if let msg = payoutVoiceService.errorMessage { payoutParseError = msg }
+                                            return
+                                        }
+                                        do {
+                                            try payoutVoiceService.startRecording()
+                                            payoutParseError = nil
+                                        } catch {
+                                            payoutParseError = error.localizedDescription
+                                        }
+                                    }
+                                } label: {
+                                    Label("Speak", systemImage: "mic.fill")
                                         .font(.caption)
                                         .fontWeight(.medium)
                                         .foregroundColor(AppColors.fieldGreen)
                                 }
                             }
-                            .disabled(payoutParseInProgress)
+                            // Photo: pick image, OCR into field
+                            if let vs = visionService {
+                                PhotosPicker(
+                                    selection: $payoutPhotoItem,
+                                    matching: .images
+                                ) {
+                                    if isExtractingPayoutFromPhoto {
+                                        ProgressView()
+                                            .scaleEffect(0.7)
+                                    } else {
+                                        Label("Photo", systemImage: "camera.fill")
+                                            .font(.caption)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(AppColors.fieldGreen)
+                                    }
+                                }
+                                .disabled(isExtractingPayoutFromPhoto)
+                            }
+                            if PayoutParseConfig.usePayoutParse && !payoutRulesText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                Button {
+                                    parsePayoutRulesWithAI()
+                                } label: {
+                                    if payoutParseInProgress {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                    } else {
+                                        Text("Parse with AI")
+                                            .font(.caption)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(AppColors.fieldGreen)
+                                    }
+                                }
+                                .disabled(payoutParseInProgress)
+                            }
                         }
                     }
                     TextEditor(text: $payoutRulesText)
@@ -962,6 +1028,27 @@ struct ReviewScanView: View {
         }
         .sheet(isPresented: $showingGridEditor) {
             EditableGridSheet(pool: $pool)
+        }
+        .onChange(of: payoutPhotoItem) { _, newItem in
+            guard let item = newItem, let vs = visionService else { return }
+            Task {
+                await MainActor.run { isExtractingPayoutFromPhoto = true; payoutParseError = nil }
+                defer { Task { @MainActor in isExtractingPayoutFromPhoto = false } }
+                do {
+                    guard let data = try await item.loadTransferable(type: Data.self),
+                          let uiImage = UIImage(data: data) else {
+                        await MainActor.run { payoutParseError = "Could not load image" }
+                        return
+                    }
+                    let text = try await vs.recognizeTextInImage(uiImage)
+                    await MainActor.run {
+                        payoutRulesText = payoutRulesText.isEmpty ? text : payoutRulesText + " " + text
+                        payoutPhotoItem = nil
+                    }
+                } catch {
+                    await MainActor.run { payoutParseError = error.localizedDescription }
+                }
+            }
         }
     }
 

@@ -7,6 +7,8 @@ struct SettingsView: View {
     @State private var showingAbout = false
     @State private var showingInstructions = false
     @State private var showingOnboardingAgain = false
+    @State private var showingSignIn = false
+    @State private var showingEraseConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -55,7 +57,7 @@ struct SettingsView: View {
                     Text("Your name is used to highlight your boxes. When you scan or create a pool, you can set how your name appears on that sheet (and add multiple names if you have more than one box).")
                 }
 
-                // Account (Sign in with Apple / Google)
+                // Account — sign in is in onboarding; here: status, Sign out, or single Sign in link
                 Section {
                     if let user = appState.authService.currentUser {
                         HStack(spacing: 12) {
@@ -84,19 +86,20 @@ struct SettingsView: View {
                             }
                         }
                     } else {
-                        SignInWithAppleButton {
-                            appState.authService.signInWithApple()
+                        Button {
+                            showingSignIn = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "person.crop.circle.badge.plus")
+                                    .foregroundColor(DesignSystem.Colors.accentBlue)
+                                Text("Sign in to sync")
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                            }
+                            .foregroundColor(DesignSystem.Colors.textPrimary)
                         }
-
-                        GoogleSignInButton(
-                            action: {
-                                Task { @MainActor in
-                                    guard let vc = topViewController() else { return }
-                                    await appState.authService.signInWithGoogle(presenting: vc)
-                                }
-                            },
-                            isDisabled: appState.authService.isSigningIn
-                        )
                     }
 
                     if let error = appState.authService.errorMessage {
@@ -108,7 +111,7 @@ struct SettingsView: View {
                     Text("Account")
                 } footer: {
                     if appState.authService.currentUser == nil {
-                        Text("Sign in to sync your account across devices (optional)")
+                        Text("Sign in during onboarding or here to sync across devices (optional)")
                     }
                 }
 
@@ -145,43 +148,6 @@ struct SettingsView: View {
                     Text("Generate invite codes to share your pools with others")
                 }
 
-                // Live Scores Section
-                Section {
-                    HStack {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .foregroundColor(DesignSystem.Colors.accentBlue)
-                            .frame(width: 28, alignment: .center)
-                        Text("Auto-refresh Scores")
-                        Spacer()
-                        Toggle("", isOn: .constant(true))
-                            .tint(DesignSystem.Colors.accentBlue)
-                    }
-
-                    HStack {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .foregroundColor(DesignSystem.Colors.textTertiary)
-                            .frame(width: 28, alignment: .center)
-                        Text("Refresh Interval")
-                        Spacer()
-                        Text("30 seconds")
-                            .foregroundColor(DesignSystem.Colors.textSecondary)
-                    }
-
-                    if let lastUpdated = appState.scoreService.lastUpdated {
-                        HStack {
-                            Image(systemName: "clock.badge.checkmark.fill")
-                                .foregroundColor(DesignSystem.Colors.accentBlue)
-                                .frame(width: 28, alignment: .center)
-                            Text("Last Updated")
-                            Spacer()
-                            Text(lastUpdated, style: .relative)
-                                .foregroundColor(DesignSystem.Colors.textSecondary)
-                        }
-                    }
-                } header: {
-                    Text("Live Scores")
-                }
-
                 // Data Section
                 Section {
                     Button {
@@ -189,20 +155,22 @@ struct SettingsView: View {
                     } label: {
                         HStack {
                             Image(systemName: "externaldrive.fill.badge.icloud")
-                            Text("Backup Data")
+                            Text("Backup data")
                         }
                     }
 
                     Button(role: .destructive) {
-                        // Clear all data
+                        showingEraseConfirmation = true
                     } label: {
                         HStack {
                             Image(systemName: "trash")
-                            Text("Clear All Data")
+                            Text("Erase all data")
                         }
                     }
                 } header: {
                     Text("Data")
+                } footer: {
+                    Text("Erase removes all pools and your name from this device. You can sign in again and create or join pools.")
                 }
 
                 // About Section
@@ -286,6 +254,21 @@ struct SettingsView: View {
                     appState.completeOnboarding()
                 }
                 .environmentObject(appState)
+            }
+            .sheet(isPresented: $showingSignIn) {
+                OnboardingSignInView(authService: appState.authService, onSkip: { showingSignIn = false })
+                    .onChange(of: appState.authService.currentUser) { _, new in
+                        if new != nil { showingSignIn = false }
+                    }
+            }
+            .alert("Erase all data?", isPresented: $showingEraseConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Erase", role: .destructive) {
+                    appState.eraseAllData()
+                    showingEraseConfirmation = false
+                }
+            } message: {
+                Text("This will remove all pools and your name from this device. You can sign in again later.")
             }
         }
     }

@@ -26,6 +26,10 @@
 	<string>Camera access is needed to scan pool sheets and box grids</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Photo library access is needed to import pool or bracket sheet images</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Microphone access is used to speak payout rules so the app can understand how your pool is paid out</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Speech recognition is used to turn your spoken payout rules into text (e.g. $25 per quarter, halftime pays double)</string>
 	<key>SportsDataIOApiKey</key>
 	<string></string>
 	<key>GIDClientID</key>

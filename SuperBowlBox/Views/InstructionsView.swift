@@ -36,6 +36,12 @@ private let steps: [InstructionStep] = [
         accent: AppColors.gold
     ),
     InstructionStep(
+        icon: "bell.badge.fill",
+        title: "Stay in the loop",
+        subtitle: "Turn on notifications to get alerted when you're leading, when a quarter winner is decided, or when you're one score away from winning. No need to stare at the screen.",
+        accent: AppColors.gold
+    ),
+    InstructionStep(
         icon: "crown.fill",
         title: "See who wins",
         subtitle: "The app highlights the current winning square and tracks winners by quarter, halftime, or final—depending on your pool’s rules.",
@@ -182,8 +188,8 @@ struct InstructionsView: View {
     }
 }
 
-// MARK: - Onboarding sign-in step (Apple + Google)
-private struct OnboardingSignInView: View {
+// MARK: - Onboarding sign-in step (Apple + Google); also used from Settings sign-in sheet
+struct OnboardingSignInView: View {
     @ObservedObject var authService: AuthService
     let onSkip: () -> Void
 

@@ -127,6 +127,16 @@ class AppState: ObservableObject {
         }
         myName = UserDefaults.standard.string(forKey: "myName") ?? ""
     }
+
+    /// Erase all pools and local data; signs out. Use from Settings.
+    func eraseAllData() {
+        authService.signOut()
+        pools = []
+        selectedPoolIndex = 0
+        myName = ""
+        UserDefaults.standard.removeObject(forKey: "savedPools")
+        UserDefaults.standard.removeObject(forKey: "myName")
+    }
 }
 
 // MARK: - Design System (squareup — clean, minimal, Jules-inspired)
