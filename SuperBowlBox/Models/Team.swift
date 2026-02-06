@@ -127,6 +127,14 @@ struct Team: Codable, Identifiable, Equatable, Hashable {
         .bills, .lions, .cowboys, .packers
     ]
 
+    /// Look up team by abbreviation (e.g. "KC", "SF"). Used when parsing AI/API responses.
+    static func from(abbreviation: String) -> Team? {
+        let abbr = abbreviation.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !abbr.isEmpty else { return nil }
+        let matchable: [Team] = allTeams + [.patriots, .seahawks]
+        return matchable.first { $0.abbreviation.lowercased() == abbr }
+    }
+
     /// Match sheet text to a team (abbreviation or distinctive name part). Used by OCR to set grid teams.
     /// Requires abbreviation as whole word or keyword in longer text so "K"/"C" or initials don't match KC.
     static func firstMatching(in text: String) -> Team? {

@@ -62,6 +62,15 @@ class VisionService: ObservableObject {
         // Work in upright space so crop coordinates match: normalize orientation if needed
         let uprightImage = image.imageOrientation == .up ? cgImage : (renderUprightCGImage(from: image) ?? cgImage)
 
+        // If AI grid backend is configured, use it instead of OCR (Claude etc. often read handwritten grids better)
+        if let aiURL = AIGridConfig.backendURL {
+            let imageForAI = UIImage(cgImage: uprightImage)
+            guard let jpeg = imageForAI.jpegData(compressionQuality: 0.85) else {
+                throw VisionError.imageProcessingFailed
+            }
+            return try await AIGridBackendService.parseGrid(imageData: jpeg, url: aiURL)
+        }
+
         // Try crop first; if we get no names or very little text, retry with full image
         let croppedImage = cropToLargestPoolLikeRectangle(uprightImage, orientation: .up)
 
@@ -288,7 +297,7 @@ class VisionService: ObservableObject {
             }
         }
         // Prefer header row that is in the top of the sheet (column numbers are usually at top)
-        let topYThreshold: CGFloat = 0.65
+        let headerRowTopYThreshold: CGFloat = 0.65
         func rowCenterY(_ candidate: HeaderCandidate) -> CGFloat {
             let blocks = candidate.digitBlocks
             guard !blocks.isEmpty else { return 0 }
@@ -296,8 +305,8 @@ class VisionService: ObservableObject {
             return sum / CGFloat(blocks.count)
         }
         if let best = candidates.min(by: { a, b in
-            let aTop = rowCenterY(a) > topYThreshold
-            let bTop = rowCenterY(b) > topYThreshold
+            let aTop = rowCenterY(a) > headerRowTopYThreshold
+            let bTop = rowCenterY(b) > headerRowTopYThreshold
             if aTop != bTop { return aTop }
             if a.totalBlocks != b.totalBlocks { return a.totalBlocks < b.totalBlocks }
             return a.rowIndex < b.rowIndex

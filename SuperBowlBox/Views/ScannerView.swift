@@ -680,6 +680,10 @@ struct ReviewScanView: View {
     @State private var rowNumbersText: String = ""
     /// Free-text payout rules (e.g. "$25 per quarter, halftime pays double").
     @State private var payoutRulesText: String = ""
+    @State private var payoutParseInProgress: Bool = false
+    @State private var payoutParsedSummary: String? = nil
+    @State private var payoutParseError: String? = nil
+    @State private var showingGridEditor: Bool = false
 
     var body: some View {
         ScrollView {
@@ -717,17 +721,17 @@ struct ReviewScanView: View {
                         }
                 }
 
-                // How does your name appear on this sheet?
+                // Your name(s) on the sheet — we find every box that matches (supports multiple boxes)
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("How does your name appear on this sheet?")
+                    Text("Your name(s) on this sheet")
                         .font(.subheadline)
                         .fontWeight(.medium)
-                    Text("We use this to find and highlight your boxes. Add another row if you have more than one box.")
+                    Text("Enter exactly how your name is written. We’ll find every box that matches. Add a row for each different name if you have multiple boxes.")
                         .font(.caption)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
                     ForEach(ownerNameFields.indices, id: \.self) { index in
                         HStack {
-                            TextField("Name as written on sheet", text: $ownerNameFields[index])
+                            TextField("Name as on sheet", text: $ownerNameFields[index])
                                 .textFieldStyle(.roundedBorder)
                                 .autocorrectionDisabled()
                             if ownerNameFields.count > 1 {
@@ -765,18 +769,33 @@ struct ReviewScanView: View {
                 }
                 .frame(maxWidth: .infinity)
                 if !effectiveLabels.isEmpty && mySquaresCount == 0 {
-                    Text("No boxes matched \"\(effectiveLabels.joined(separator: "\", \""))\". Use the spelling as on the sheet (we match small OCR/handwriting differences too).")
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                        .padding(.horizontal)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("No boxes matched \"\(effectiveLabels.joined(separator: "\", \""))\". Check spelling above or tap Edit full grid to fix any misread names.")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    }
+                    .padding(.horizontal)
                 }
 
-                // Grid preview
+                // Grid preview + backup edit
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Grid Preview")
-                        .font(.caption)
+                    HStack {
+                        Text("Grid preview")
+                            .font(.caption)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
+                        Spacer()
+                        Button {
+                            showingGridEditor = true
+                        } label: {
+                            Label("Edit full grid", systemImage: "square.grid.3x3.fill")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(AppColors.fieldGreen)
+                        }
+                    }
+                    Text("If the scan got a name wrong, tap Edit full grid to fix any cell.")
+                        .font(.caption2)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
-
                     MiniGridPreview(pool: pool, score: nil)
                         .frame(height: 150)
                 }
@@ -827,9 +846,28 @@ struct ReviewScanView: View {
 
                 // Payout rules (optional)
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Payout rules (optional)")
-                        .font(.caption)
-                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                    HStack {
+                        Text("Payout rules (optional)")
+                            .font(.caption)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
+                        Spacer()
+                        if PayoutParseConfig.usePayoutParse && !payoutRulesText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            Button {
+                                parsePayoutRulesWithAI()
+                            } label: {
+                                if payoutParseInProgress {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Text("Parse with AI")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(AppColors.fieldGreen)
+                                }
+                            }
+                            .disabled(payoutParseInProgress)
+                        }
+                    }
                     TextEditor(text: $payoutRulesText)
                         .frame(minHeight: 60)
                         .padding(8)
@@ -850,6 +888,16 @@ struct ReviewScanView: View {
                                 }
                             }
                         )
+                    if let parsedSummary = payoutParsedSummary {
+                        Text(parsedSummary)
+                            .font(.caption)
+                            .foregroundColor(AppColors.fieldGreen)
+                    }
+                    if let parseError = payoutParseError {
+                        Text(parseError)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
                 }
 
                 // Action buttons
@@ -912,6 +960,9 @@ struct ReviewScanView: View {
                 ImagePreviewView(image: image)
             }
         }
+        .sheet(isPresented: $showingGridEditor) {
+            EditableGridSheet(pool: $pool)
+        }
     }
 
     private func applyOwnerLabels() {
@@ -919,6 +970,33 @@ struct ReviewScanView: View {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         pool.ownerLabels = labels.isEmpty ? nil : labels
+    }
+
+    /// Call payout-parse backend to interpret payout rules and set pool structure (so current leader, winners, in the hunt, current winnings are correct).
+    private func parsePayoutRulesWithAI() {
+        let text = payoutRulesText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        payoutParseError = nil
+        payoutParsedSummary = nil
+        payoutParseInProgress = true
+        Task {
+            do {
+                let parsed = try await PayoutParseService.parse(payoutDescription: text)
+                await MainActor.run {
+                    var merged = parsed
+                    merged.customPayoutDescription = text
+                    pool.poolStructure = merged
+                    payoutParsedSummary = "Parsed: \(merged.periodLabels.joined(separator: ", "))" + (merged.payoutDescriptions.isEmpty ? "" : " · \(merged.payoutDescriptions.joined(separator: ", "))")
+                    payoutParseInProgress = false
+                }
+            } catch {
+                await MainActor.run {
+                    payoutParseError = error.localizedDescription
+                    payoutParsedSummary = nil
+                    payoutParseInProgress = false
+                }
+            }
+        }
     }
 
     /// Swap columns and rows (teams, number sequences, and transpose grid) so user can fix wrong orientation.
@@ -999,6 +1077,174 @@ struct StatBox: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(DesignSystem.Colors.surfaceElevated)
         )
+    }
+}
+
+// MARK: - Editable full grid (backup when scan gets a name wrong)
+private struct GridCellID: Identifiable, Equatable {
+    let row: Int
+    let col: Int
+    var id: String { "\(row)-\(col)" }
+}
+
+struct EditableGridSheet: View {
+    @Binding var pool: BoxGrid
+    @Environment(\.dismiss) var dismiss
+    @State private var editingCell: GridCellID? = nil
+    @State private var editingName: String = ""
+    @State private var showListView: Bool = false
+
+    private let cellSize: CGFloat = 30
+    private let labelWidth: CGFloat = 22
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                Picker("View", selection: $showListView) {
+                    Text("Grid").tag(false)
+                    Text("List").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+
+                if showListView {
+                    listView
+                } else {
+                    gridView
+                }
+            }
+            .navigationTitle("Edit full grid")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+            .sheet(item: $editingCell) { cell in
+                EditGridCellSheet(
+                    name: $editingName,
+                    row: cell.row,
+                    col: cell.col,
+                    pool: pool,
+                    onSave: {
+                        pool.updateSquare(row: cell.row, column: cell.col, playerName: editingName.trimmingCharacters(in: .whitespacesAndNewlines))
+                        editingCell = nil
+                    },
+                    onDismiss: {
+                        editingCell = nil
+                    }
+                )
+            }
+        }
+    }
+
+    private var gridView: some View {
+        ScrollView([.horizontal, .vertical], showsIndicators: true) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 2) {
+                    Color.clear.frame(width: labelWidth, height: cellSize)
+                    ForEach(0..<10, id: \.self) { col in
+                        Text("\(pool.homeNumbers[col])")
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .frame(width: cellSize, height: cellSize)
+                            .background(DesignSystem.Colors.surfaceElevated)
+                    }
+                }
+                ForEach(0..<10, id: \.self) { row in
+                    HStack(spacing: 2) {
+                        Text("\(pool.awayNumbers[row])")
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .frame(width: labelWidth, height: cellSize)
+                            .background(DesignSystem.Colors.surfaceElevated)
+                        ForEach(0..<10, id: \.self) { col in
+                            let name = pool.squares[row][col].playerName
+                            let cellId = GridCellID(row: row, col: col)
+                            let isEditing = editingCell == cellId
+                            Button {
+                                editingCell = cellId
+                                editingName = name
+                            } label: {
+                                Text(name.isEmpty ? "—" : name)
+                                    .font(.system(size: 9, weight: .regular))
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                    .frame(width: cellSize, height: cellSize)
+                                    .padding(2)
+                                    .background(isEditing ? AppColors.fieldGreen.opacity(0.3) : DesignSystem.Colors.surfaceElevated)
+                                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .padding(8)
+        }
+    }
+
+    private var listView: some View {
+        List {
+            ForEach(0..<10, id: \.self) { row in
+                Section(header: Text("Row \(pool.awayNumbers[row])")) {
+                    ForEach(0..<10, id: \.self) { col in
+                        let name = pool.squares[row][col].playerName
+                        let cellId = GridCellID(row: row, col: col)
+                        Button {
+                            editingCell = cellId
+                            editingName = name
+                        } label: {
+                            HStack {
+                                Text("Col \(pool.homeNumbers[col])")
+                                    .font(.caption)
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                                    .frame(width: 44, alignment: .leading)
+                                Text(name.isEmpty ? "—" : name)
+                                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                                Spacer()
+                                Image(systemName: "pencil")
+                                    .font(.caption)
+                                    .foregroundColor(AppColors.fieldGreen)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct EditGridCellSheet: View {
+    @Binding var name: String
+    let row: Int
+    let col: Int
+    let pool: BoxGrid
+    let onSave: () -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Name in this square", text: $name)
+                        .autocorrectionDisabled()
+                } header: {
+                    Text("Row \(pool.awayNumbers[row]), Col \(pool.homeNumbers[col])")
+                }
+            }
+            .navigationTitle("Edit cell")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { onDismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { onSave() }
+                }
+            }
+        }
     }
 }
 
