@@ -76,48 +76,82 @@ struct GridDetailView: View {
                     .buttonStyle(.plain)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
-                    .background(DesignSystem.Colors.backgroundTertiary.opacity(0.8))
-                    .cornerRadius(DesignSystem.Layout.cornerRadiusSmall)
+                    .background(
+                        ZStack {
+                            RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                                .fill(.ultraThinMaterial)
+                            RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                                .fill(DesignSystem.Colors.backgroundTertiary.opacity(0.6))
+                            RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                                .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
+                        }
+                    )
+                    .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.35), radius: 2, x: 0, y: 1)
+                    .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.2), radius: 8, x: 0, y: 3)
                     .padding(.horizontal)
                     .padding(.bottom, 10)
 
-                    // Grid: corner = team logos with labels (Rows = away, Cols = home); numbers from pool; winner from live score
+                    // Grid: corner = matchup (Away = rows, Home = cols) with logos; numbers and cells have depth
                     HStack(spacing: 0) {
-                        // Corner: top = Rows (away), bottom = Cols (home) so it's clear which axis is which
-                        VStack(spacing: 2) {
-                            VStack(spacing: 1) {
+                        // Corner: Away team (rows) | Home team (cols) — clear labels + logos
+                        VStack(spacing: 0) {
+                            VStack(spacing: 2) {
+                                Text(pool.awayTeam.abbreviation)
+                                    .font(.system(size: max(7, cellSize * 0.16), weight: .bold))
+                                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                                TeamLogoView(team: pool.awayTeam, size: max(18, cellSize * 0.44))
                                 Text("Rows")
-                                    .font(.system(size: max(8, cellSize * 0.18), weight: .semibold))
-                                    .foregroundColor(DesignSystem.Colors.textSecondary)
-                                TeamLogoView(team: pool.awayTeam, size: max(20, cellSize * 0.52))
+                                    .font(.system(size: max(6, cellSize * 0.14), weight: .medium))
+                                    .foregroundColor(DesignSystem.Colors.textTertiary)
                             }
                             .frame(maxWidth: .infinity)
                             Rectangle()
-                                .fill(DesignSystem.Colors.cardBorder)
-                                .frame(height: 1)
-                            VStack(spacing: 1) {
+                                .fill(DesignSystem.Colors.glassBorder)
+                                .frame(height: 0.8)
+                            VStack(spacing: 2) {
+                                Text(pool.homeTeam.abbreviation)
+                                    .font(.system(size: max(7, cellSize * 0.16), weight: .bold))
+                                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                                TeamLogoView(team: pool.homeTeam, size: max(18, cellSize * 0.44))
                                 Text("Cols")
-                                    .font(.system(size: max(8, cellSize * 0.18), weight: .semibold))
-                                    .foregroundColor(DesignSystem.Colors.textSecondary)
-                                TeamLogoView(team: pool.homeTeam, size: max(20, cellSize * 0.52))
+                                    .font(.system(size: max(6, cellSize * 0.14), weight: .medium))
+                                    .foregroundColor(DesignSystem.Colors.textTertiary)
                             }
                             .frame(maxWidth: .infinity)
                         }
                         .frame(width: cellSize, height: cellSize)
-                        .background(DesignSystem.Colors.backgroundTertiary)
-                        .cornerRadius(4)
+                        .background(
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(.ultraThinMaterial)
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(DesignSystem.Colors.backgroundTertiary.opacity(0.7))
+                                RoundedRectangle(cornerRadius: 6)
+                                    .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
+                            }
+                        )
+                        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.4), radius: 2, x: 0, y: 1)
+                        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.25), radius: 6, x: 0, y: 2)
 
                         ForEach(0..<10, id: \.self) { col in
                             let isWinningCol = winningPosition?.column == col
                             Text("\(pool.homeNumbers[col])")
                                 .font(.system(size: cellSize * 0.38, weight: .bold, design: .rounded))
                                 .monospacedDigit()
+                                .foregroundColor(.white)
                                 .frame(width: cellSize, height: cellSize)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(isWinningCol ? DesignSystem.Colors.liveGreen : (Color(hex: pool.homeTeam.primaryColor) ?? .blue).opacity(0.9))
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(isWinningCol ? DesignSystem.Colors.liveGreen : (Color(hex: pool.homeTeam.primaryColor) ?? .blue).opacity(0.9))
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(.ultraThinMaterial.opacity(0.25))
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .strokeBorder(Color.white.opacity(0.2), lineWidth: 0.5)
+                                    }
                                 )
-                                .foregroundColor(.white)
+                                .shadow(color: Color.black.opacity(0.35), radius: 1, x: 0, y: 1)
+                                .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 2)
                         }
                     }
 
@@ -127,12 +161,20 @@ struct GridDetailView: View {
                             Text("\(pool.awayNumbers[row])")
                                 .font(.system(size: cellSize * 0.38, weight: .bold, design: .rounded))
                                 .monospacedDigit()
+                                .foregroundColor(.white)
                                 .frame(width: cellSize, height: cellSize)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(isWinningRow ? DesignSystem.Colors.liveGreen : (Color(hex: pool.awayTeam.primaryColor) ?? .red).opacity(0.9))
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(isWinningRow ? DesignSystem.Colors.liveGreen : (Color(hex: pool.awayTeam.primaryColor) ?? .red).opacity(0.9))
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(.ultraThinMaterial.opacity(0.25))
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .strokeBorder(Color.white.opacity(0.2), lineWidth: 0.5)
+                                    }
                                 )
-                                .foregroundColor(.white)
+                                .shadow(color: Color.black.opacity(0.35), radius: 1, x: 0, y: 1)
+                                .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 2)
 
                             ForEach(0..<10, id: \.self) { col in
                                 let square = pool.squares[row][col]
@@ -447,8 +489,23 @@ struct FullGridCellView: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 4)
+            // Base color + liquid glass layer + top highlight for 3D bevel
+            RoundedRectangle(cornerRadius: 6)
                 .fill(cellColor)
+                .frame(width: size, height: size)
+            RoundedRectangle(cornerRadius: 6)
+                .fill(.ultraThinMaterial.opacity(glassOpacity))
+                .frame(width: size, height: size)
+            // Top-edge highlight for depth
+            RoundedRectangle(cornerRadius: 6)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.35), Color.white.opacity(0.05), Color.clear],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 0.8
+                )
                 .frame(width: size, height: size)
 
             VStack(spacing: 2) {
@@ -456,16 +513,17 @@ struct FullGridCellView: View {
                     Text(square.initials)
                         .font(.system(size: size * 0.32, weight: .semibold))
                         .foregroundColor(textColor)
+                        .shadow(color: Color.black.opacity(0.25), radius: 0.5, x: 0, y: 0.5)
 
                     Text(square.playerName.prefix(6))
                         .font(.system(size: size * 0.18))
-                        .foregroundColor(textColor.opacity(0.8))
+                        .foregroundColor(textColor.opacity(0.9))
                         .lineLimit(1)
                 }
             }
 
             if isWinning {
-                RoundedRectangle(cornerRadius: 4)
+                RoundedRectangle(cornerRadius: 6)
                     .strokeBorder(Color.white, lineWidth: 2)
                     .frame(width: size, height: size)
             }
@@ -490,9 +548,17 @@ struct FullGridCellView: View {
             }
         }
         .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 6)
+                .strokeBorder(isWinning ? Color.white.opacity(0.6) : DesignSystem.Colors.glassBorder, lineWidth: isWinning ? 1 : 0.6)
         )
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.45), radius: 1.5, x: 0, y: 1)
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.25), radius: 4, x: 0, y: 2)
+    }
+
+    private var glassOpacity: Double {
+        if isWinning { return 0.15 }
+        if isHighlighted { return 0.2 }
+        return 0.3
     }
 
     var cellColor: Color {
@@ -501,11 +567,11 @@ struct FullGridCellView: View {
         } else if isHighlighted {
             return DesignSystem.Colors.winnerGold.opacity(0.7)
         } else if square.isWinner {
-            return DesignSystem.Colors.winnerGold.opacity(0.4)
+            return DesignSystem.Colors.winnerGold.opacity(0.45)
         } else if !square.isEmpty {
-            return DesignSystem.Colors.accentBlue.opacity(0.35)
+            return DesignSystem.Colors.accentBlue.opacity(0.4)
         } else {
-            return DesignSystem.Colors.backgroundTertiary
+            return DesignSystem.Colors.backgroundTertiary.opacity(0.9)
         }
     }
 
