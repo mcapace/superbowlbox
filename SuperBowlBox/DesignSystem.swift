@@ -197,13 +197,28 @@ extension View {
             .padding(DesignSystem.Layout.cardPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(DesignSystem.Colors.glassFill)
+                ZStack {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(DesignSystem.Colors.glassFill)
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.04),
+                                    Color.clear
+                                ],
+                                startPoint: .top,
+                                endPoint: .center
+                            )
+                        )
+                }
             )
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 1)
             )
+            .glassBevelHighlight(cornerRadius: cornerRadius)
+            .glassDepthShadows()
     }
 
     /// Neon card: dark fill + glowing border (legacy / optional)
@@ -225,7 +240,7 @@ extension View {
             .shadow(color: glowColor.opacity(0.25), radius: 12, x: 0, y: 4)
     }
 
-    /// Sportsbook card: solid surface, subtle border, no glow (DraftKings-style)
+    /// Sportsbook card: solid surface, gradient border, multi-layer depth (sophisticated, tech-forward)
     func sportsbookCard(
         cornerRadius: CGFloat = DesignSystem.Layout.cornerRadius,
         accentBorder: Color? = nil
@@ -234,31 +249,52 @@ extension View {
             .padding(DesignSystem.Layout.cardPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(DesignSystem.Colors.cardSurface)
+                ZStack {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(DesignSystem.Colors.cardSurface)
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.04),
+                                    Color.clear,
+                                    Color.black.opacity(0.05)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                }
             )
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .strokeBorder(accentBorder ?? DesignSystem.Colors.cardBorder, lineWidth: 1)
+                    .strokeBorder(
+                        accentBorder ?? DesignSystem.Colors.cardBorder,
+                        lineWidth: 1
+                    )
             )
-            .shadow(color: DesignSystem.Colors.cardShadow, radius: 6, x: 0, y: 2)
+            .glassBevelHighlight(cornerRadius: cornerRadius)
+            .glassDepthShadows()
     }
 
     /// Two-layer shadow for visible depth (use on any glass card or widget)
     func glassDepthShadows() -> some View {
         self
-            .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.5), radius: 3, x: 0, y: 1.5)
-            .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.35), radius: 14, x: 0, y: 5)
+            .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.55), radius: 2, x: 0, y: 1)
+            .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.4), radius: 8, x: 0, y: 3)
+            .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.28), radius: 16, x: 0, y: 6)
     }
 
-    /// Extra dimension: third softer shadow for more lift
+    /// Extra dimension: multi-layer shadow for premium lift and depth (tech-forward, sophisticated)
     func glassDepthShadowsEnhanced() -> some View {
         self
-            .glassDepthShadows()
-            .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.22), radius: 20, x: 0, y: 8)
+            .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.5), radius: 3, x: 0, y: 1.5)
+            .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.38), radius: 10, x: 0, y: 4)
+            .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.25), radius: 22, x: 0, y: 8)
+            .shadow(color: Color.black.opacity(0.18), radius: 32, x: 0, y: 12)
     }
 
-    /// 3D bevel: top-edge highlight so cards look raised (call after background + border)
+    /// 3D bevel: top-edge highlight so cards look raised and lit from above (call after background + border)
     func glassBevelHighlight(cornerRadius: CGFloat = DesignSystem.Layout.glassCornerRadius) -> some View {
         self
             .overlay(
@@ -266,15 +302,36 @@ extension View {
                     .strokeBorder(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.4),
-                                Color.white.opacity(0.08),
+                                Color.white.opacity(0.5),
+                                Color.white.opacity(0.18),
+                                Color.white.opacity(0.04),
                                 Color.clear
                             ],
                             startPoint: .top,
                             endPoint: .bottom
                         ),
-                        lineWidth: 1
+                        lineWidth: 1.2
                     )
+            )
+    }
+
+    /// Subtle inner depth: gradient overlay (lighter top, darker bottom) for a lit-from-above card feel
+    func glassInnerDepth(cornerRadius: CGFloat = DesignSystem.Layout.glassCornerRadius) -> some View {
+        self
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.06),
+                                Color.clear,
+                                Color.black.opacity(0.06)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .allowsHitTesting(false)
             )
     }
 
@@ -288,12 +345,37 @@ extension View {
             .padding(DesignSystem.Layout.cardPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(material)
+                ZStack {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(material)
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.05),
+                                    Color.clear,
+                                    Color.black.opacity(0.04)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                }
             )
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                DesignSystem.Colors.glassBorder,
+                                DesignSystem.Colors.glassBorder,
+                                DesignSystem.Colors.glassBorder.opacity(0.6)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 1
+                    )
             )
             .glassBevelHighlight(cornerRadius: cornerRadius)
             .glassDepthShadowsEnhanced()

@@ -125,6 +125,8 @@ struct ScannerView: View {
                     )
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(DesignSystem.Colors.backgroundPrimary)
             .navigationTitle("Scan Pool Sheet")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -639,7 +641,7 @@ struct EnterNameForScanView: View {
     }
 }
 
-// MARK: - Processing View (tech-style loading)
+// MARK: - Processing View (no borders, same bg as rest of scan)
 struct ProcessingScanView: View {
     @State private var rotationAngle: Double = 0
     @State private var pulseScale: CGFloat = 1.0
@@ -650,10 +652,6 @@ struct ProcessingScanView: View {
             Spacer()
 
             ZStack {
-                Circle()
-                    .stroke(DesignSystem.Colors.cardBorder, lineWidth: 4)
-                    .frame(width: 100, height: 100)
-
                 Circle()
                     .trim(from: 0, to: 0.35)
                     .stroke(
@@ -696,6 +694,8 @@ struct ProcessingScanView: View {
 
             Spacer()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(DesignSystem.Colors.backgroundPrimary)
     }
 }
 

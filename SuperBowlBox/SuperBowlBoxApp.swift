@@ -334,25 +334,24 @@ struct AppCardStyle {
     static let shadowYTight: CGFloat = 3
 }
 
-// MARK: - Small app logo + text for upper-left of each main tab (so you know what app you're in)
+// MARK: - Logo + wordmark on top left (Square Up branding in nav bar)
 struct AppNavBrandView: View {
     /// Use true on dark nav bars (e.g. Live) so text is white; logo always shows in original colors.
     var useLightText: Bool = false
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             Image("SquareUpLogo")
                 .resizable()
                 .renderingMode(.original)
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 24, height: 24)
-            Text("SquareUp")
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .frame(width: 28, height: 28)
+            Text("Square Up")
+                .font(.system(size: 17, weight: .semibold, design: .rounded))
                 .foregroundColor(useLightText ? .white : DesignSystem.Colors.textPrimary)
         }
-        .padding(.leading, 8)
-        .padding(.top, 2)
-        .padding(.bottom, 2)
+        .padding(.leading, 4)
+        .padding(.vertical, 4)
         .frame(minHeight: 44, alignment: .leading)
     }
 }
@@ -397,33 +396,50 @@ struct SquareUpLogoView: View {
     }
 }
 
-// MARK: - Cards (elevated, premium)
+// MARK: - Cards (elevated, premium, tech-forward depth)
 extension View {
-    /// Primary card style — white, two-layer shadow, subtle top highlight for raised feel.
+    /// Primary card style — surface, inner depth gradient, strong bevel, multi-layer shadow for sophisticated lift.
     func glassCard(cornerRadius: CGFloat = AppCardStyle.cornerRadius) -> some View {
         self
             .padding(AppCardStyle.cardPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(AppColors.surface)
+                ZStack {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(AppColors.surface)
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.06),
+                                    Color.clear,
+                                    Color.black.opacity(0.04)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                }
             )
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .strokeBorder(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.35),
-                                Color.black.opacity(0.06)
+                                Color.white.opacity(0.45),
+                                Color.white.opacity(0.12),
+                                Color.black.opacity(0.08)
                             ],
                             startPoint: .top,
                             endPoint: .bottom
                         ),
-                        lineWidth: 1
+                        lineWidth: 1.2
                     )
             )
+            .shadow(color: AppColors.cardShadow.opacity(0.6), radius: 4, x: 0, y: 2)
             .shadow(color: AppColors.cardShadow, radius: AppCardStyle.shadowRadius, y: AppCardStyle.shadowY)
             .shadow(color: AppColors.cardShadowStrong.opacity(0.5), radius: AppCardStyle.shadowRadiusTight, y: AppCardStyle.shadowYTight)
+            .shadow(color: Color.black.opacity(0.12), radius: 36, x: 0, y: 14)
     }
 
     func solidCard(cornerRadius: CGFloat = AppCardStyle.cornerRadius) -> some View {

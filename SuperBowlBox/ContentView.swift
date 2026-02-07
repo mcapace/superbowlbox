@@ -320,6 +320,7 @@ struct DashboardPoolCard: View {
             RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
                 .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
         )
+        .glassInnerDepth(cornerRadius: DesignSystem.Layout.glassCornerRadius)
         .glassBevelHighlight(cornerRadius: DesignSystem.Layout.glassCornerRadius)
         .glassDepthShadowsEnhanced()
     }
@@ -443,6 +444,7 @@ struct UpNextPlaceholderCard: View {
             RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
                 .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
         )
+        .glassInnerDepth(cornerRadius: DesignSystem.Layout.glassCornerRadius)
         .glassBevelHighlight(cornerRadius: DesignSystem.Layout.glassCornerRadius)
         .glassDepthShadowsEnhanced()
     }
@@ -576,6 +578,7 @@ struct LiveScoreCard: View {
             RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
                 .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
         )
+        .glassInnerDepth(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
         .glassBevelHighlight(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
         .glassDepthShadowsEnhanced()
     }
@@ -737,21 +740,24 @@ struct AddPoolFlowView: View {
                                         HapticService.selection()
                                         selectedGame = game
                                     } label: {
-                                        HStack(spacing: 12) {
+                                        HStack(spacing: 0) {
                                             TeamLogoView(team: game.awayTeam, size: 28)
-                                            Spacer(minLength: 8)
+                                                .frame(width: 28, height: 28)
+                                            Spacer(minLength: 0)
                                             Text("\(game.awayTeam.abbreviation) vs \(game.homeTeam.abbreviation)")
                                                 .font(.subheadline)
                                                 .fontWeight(selectedGame?.id == game.id ? .semibold : .regular)
                                                 .multilineTextAlignment(.center)
-                                                .frame(maxWidth: .infinity)
-                                            Spacer(minLength: 8)
+                                            Spacer(minLength: 0)
                                             TeamLogoView(team: game.homeTeam, size: 28)
+                                                .frame(width: 28, height: 28)
                                             if selectedGame?.id == game.id {
                                                 Image(systemName: "checkmark.circle.fill")
                                                     .foregroundColor(AppColors.fieldGreen)
+                                                    .padding(.leading, 8)
                                             }
                                         }
+                                        .frame(maxWidth: .infinity)
                                         .padding(.vertical, 10)
                                         .padding(.horizontal, 12)
                                         .background(RoundedRectangle(cornerRadius: 8).fill(selectedGame?.id == game.id ? AppColors.fieldGreen.opacity(0.2) : DesignSystem.Colors.surfaceElevated))
@@ -1335,6 +1341,7 @@ struct QuickStatsCard: View {
                     .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
             }
         )
+        .glassInnerDepth(cornerRadius: DesignSystem.Layout.glassCornerRadius)
         .glassBevelHighlight(cornerRadius: DesignSystem.Layout.glassCornerRadius)
         .glassDepthShadowsEnhanced()
     }

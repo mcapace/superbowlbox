@@ -88,9 +88,10 @@ private struct GameRowView: View {
     let game: ListableGame
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 0) {
             TeamLogoView(team: game.awayTeam, size: 40)
-
+                .frame(width: 40, height: 40)
+            Spacer(minLength: 0)
             VStack(alignment: .center, spacing: 2) {
                 Text("\(game.awayTeam.abbreviation) vs \(game.homeTeam.abbreviation)")
                     .font(AppTypography.headline)
@@ -98,14 +99,15 @@ private struct GameRowView: View {
                     .font(AppTypography.caption2)
                     .foregroundColor(game.statusShort == "Live" ? .red : .secondary)
             }
-            .frame(maxWidth: .infinity)
-
+            Spacer(minLength: 0)
             TeamLogoView(team: game.homeTeam, size: 40)
-
+                .frame(width: 40, height: 40)
             Image(systemName: "chevron.right")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .padding(.leading, 8)
         }
+        .frame(maxWidth: .infinity)
         .padding(.vertical, 4)
     }
 }
