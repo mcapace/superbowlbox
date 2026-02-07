@@ -13,6 +13,7 @@ struct GridDetailView: View {
     @State private var showingDeletePoolConfirmation = false
     @State private var showingPayoutRulesModal = false
     @State private var lastZoomScale: CGFloat = 1.0
+    @State private var findMySquaresEnabled = false
 
     var score: GameScore? {
         appState.scoreService.currentScore
@@ -24,11 +25,26 @@ struct GridDetailView: View {
         return pool.winningPosition(homeDigit: score.homeLastDigit, awayDigit: score.awayLastDigit)
     }
 
+    /// Hunt lookup: square id -> (pointsNeeded, teamAbbr) for "+N" badge. Uses min points when square is on hunt for both axes.
+    private var huntBySquareId: [String: (Int, String)] {
+        guard let score = score else { return [:] }
+        let labels = pool.effectiveOwnerLabels(globalName: appState.myName)
+        let items = pool.onTheHuntItems(score: score, ownerLabels: labels)
+        var out: [String: (Int, String)] = [:]
+        for item in items {
+            let key = item.square.id.uuidString
+            let pair = (item.pointsNeeded, item.teamNeedsToScore.abbreviation)
+            if let existing = out[key] { out[key] = (min(existing.0, pair.0), existing.1) }
+            else { out[key] = pair }
+        }
+        return out
+    }
+
     /// Cell size so grid fits on screen (1 corner + 10 cells); clamped for readability.
     private static let minCellSize: CGFloat = 26
     private static let maxCellSize: CGFloat = 44
     private static let minZoom: CGFloat = 0.5
-    private static let maxZoom: CGFloat = 3.0
+    private static let maxZoom: CGFloat = 2.5
 
     var body: some View {
         GeometryReader { outer in
@@ -100,6 +116,38 @@ struct GridDetailView: View {
                         .padding(.horizontal, 4)
                         .padding(.bottom, 8)
 
+                    // Compact score header: always-visible score + winning numbers badge (when score matches this pool)
+                    if let score = score {
+                        GridCompactScoreHeader(score: score, pool: pool)
+                            .padding(.bottom, 12)
+                    }
+
+                    // Find My Squares toggle
+                    HStack {
+                        Button {
+                            HapticService.impactLight()
+                            findMySquaresEnabled.toggle()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: findMySquaresEnabled ? "person.fill.checkmark" : "person.crop.square")
+                                    .font(.system(size: 14, weight: .semibold))
+                                Text("Find my squares")
+                                    .font(.system(size: 13, weight: .medium))
+                            }
+                            .foregroundColor(findMySquaresEnabled ? DesignSystem.Colors.accentBlue : DesignSystem.Colors.textSecondary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(findMySquaresEnabled ? DesignSystem.Colors.accentBlue.opacity(0.2) : DesignSystem.Colors.backgroundTertiary.opacity(0.6))
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.bottom, 8)
+
                     // Grid: one Matchup corner (Away | Home) so logos are anchored, not floating
                     HStack(spacing: 0) {
                         GridMatchupCornerView(
@@ -157,12 +205,16 @@ struct GridDetailView: View {
                                 let isWinning = winningPosition?.row == row && winningPosition?.column == col
                                 let ownerLabels = pool.effectiveOwnerLabels(globalName: appState.myName)
                                 let isHighlighted = !ownerLabels.isEmpty && pool.isOwnerSquare(square, ownerLabels: ownerLabels)
+                                let huntInfo = huntBySquareId[square.id.uuidString]
 
                                 FullGridCellView(
                                     square: square,
                                     isWinning: isWinning,
                                     isHighlighted: isHighlighted,
-                                    size: cellSize
+                                    pointsAway: huntInfo?.0,
+                                    teamAbbrAway: huntInfo.map(\.1),
+                                    size: cellSize,
+                                    pulseMine: findMySquaresEnabled && isHighlighted
                                 )
                                 .onTapGesture {
                                     HapticService.impactLight()
@@ -179,7 +231,7 @@ struct GridDetailView: View {
                     MagnificationGesture()
                         .onChanged { value in
                             let proposed = lastZoomScale * value
-                            zoomScale = min(Self.maxZoom, max(Self.minZoom, proposed))
+                            zoomScale = min(Self.maxZoom, max(Self.minZoom, proposed)) // 0.5x–2.5x
                         }
                         .onEnded { _ in
                             lastZoomScale = zoomScale
@@ -267,10 +319,28 @@ struct GridDetailView: View {
                     Button {
                         HapticService.impactLight()
                         withAnimation(.appSpring) {
-                            zoomScale = min(2.0, zoomScale + 0.25)
+                            zoomScale = min(Self.maxZoom, zoomScale + 0.25)
                         }
                     } label: {
                         Image(systemName: "plus.magnifyingglass")
+                    }
+
+                    Spacer()
+
+                    // Legend: WIN / MINE / HUNT
+                    HStack(spacing: 10) {
+                        HStack(spacing: 3) {
+                            Circle().fill(DesignSystem.Colors.liveGreen).frame(width: 6, height: 6)
+                            Text("WIN").font(.system(size: 10, weight: .semibold)).foregroundColor(DesignSystem.Colors.textTertiary)
+                        }
+                        HStack(spacing: 3) {
+                            Circle().fill(DesignSystem.Colors.winnerGold).frame(width: 6, height: 6)
+                            Text("MINE").font(.system(size: 10, weight: .semibold)).foregroundColor(DesignSystem.Colors.textTertiary)
+                        }
+                        HStack(spacing: 3) {
+                            Circle().fill(DesignSystem.Colors.accentBlue).frame(width: 6, height: 6)
+                            Text("HUNT").font(.system(size: 10, weight: .semibold)).foregroundColor(DesignSystem.Colors.textTertiary)
+                        }
                     }
 
                     Spacer()
@@ -457,25 +527,85 @@ struct EditMatchupSheet: View {
     }
 }
 
-// MARK: - Grid corner: single Matchup card (Away | Home) so logos are anchored to axes
+// MARK: - Compact score header (always-visible score + winning numbers badge)
+private struct GridCompactScoreHeader: View {
+    let score: GameScore
+    let pool: BoxGrid
+
+    private var scoreMatchesPool: Bool {
+        score.awayTeam.id == pool.awayTeam.id && score.homeTeam.id == pool.homeTeam.id
+    }
+
+    var body: some View {
+        Group {
+            if scoreMatchesPool {
+                HStack(spacing: 12) {
+                    if score.isGameActive {
+                        Circle().fill(Color.red).frame(width: 8, height: 8)
+                    }
+                    Text("\(score.awayTeam.abbreviation) \(score.awayScore)")
+                        .font(.system(size: 15, weight: .bold))
+                        .monospacedDigit()
+                    Text("–")
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                    Text("\(score.homeScore) \(score.homeTeam.abbreviation)")
+                        .font(.system(size: 15, weight: .bold))
+                        .monospacedDigit()
+                    Spacer()
+                    Text("\(score.awayLastDigit)–\(score.homeLastDigit)")
+                        .font(.system(size: 14, weight: .bold))
+                        .monospacedDigit()
+                        .foregroundColor(DesignSystem.Colors.liveGreen)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(DesignSystem.Colors.liveGreen.opacity(0.2))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .strokeBorder(DesignSystem.Colors.liveGreen.opacity(0.5), lineWidth: 1)
+                                )
+                        )
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                                .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
+                        )
+                )
+            }
+        }
+    }
+}
+
+// MARK: - Grid corner: "SEA Rows" / "NE Cols" with team color dots
 private struct GridMatchupCornerView: View {
     let awayTeam: Team
     let homeTeam: Team
     let cellSize: CGFloat
 
     private var logoSize: CGFloat { max(18, min(cellSize * 0.36, 28)) }
+    private var dotSize: CGFloat { max(5, cellSize * 0.12) }
 
     var body: some View {
         HStack(spacing: 0) {
-            // Away = Rows (left half)
+            // Away = Rows (left half): "SEA Rows" + team color dot
             VStack(spacing: 2) {
                 TeamLogoView(team: awayTeam, size: logoSize)
-                Text(awayTeam.abbreviation)
-                    .font(.system(size: max(7, cellSize * 0.2), weight: .bold))
-                    .foregroundColor(DesignSystem.Colors.textPrimary)
-                Text("Rows")
-                    .font(.system(size: max(5, cellSize * 0.14), weight: .medium))
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(Color(hex: awayTeam.primaryColor) ?? .red)
+                        .frame(width: dotSize, height: dotSize)
+                    Text("\(awayTeam.abbreviation) Rows")
+                        .font(.system(size: max(6, cellSize * 0.18), weight: .bold))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                        .lineLimit(1)
+                }
+                .minimumScaleFactor(0.7)
             }
             .frame(maxWidth: .infinity)
 
@@ -484,15 +614,19 @@ private struct GridMatchupCornerView: View {
                 .frame(width: 0.8)
                 .padding(.vertical, 4)
 
-            // Home = Cols (right half)
+            // Home = Cols (right half): "NE Cols" + team color dot
             VStack(spacing: 2) {
                 TeamLogoView(team: homeTeam, size: logoSize)
-                Text(homeTeam.abbreviation)
-                    .font(.system(size: max(7, cellSize * 0.2), weight: .bold))
-                    .foregroundColor(DesignSystem.Colors.textPrimary)
-                Text("Cols")
-                    .font(.system(size: max(5, cellSize * 0.14), weight: .medium))
-                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(Color(hex: homeTeam.primaryColor) ?? .blue)
+                        .frame(width: dotSize, height: dotSize)
+                    Text("\(homeTeam.abbreviation) Cols")
+                        .font(.system(size: max(6, cellSize * 0.18), weight: .bold))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                        .lineLimit(1)
+                }
+                .minimumScaleFactor(0.7)
             }
             .frame(maxWidth: .infinity)
         }
@@ -515,7 +649,10 @@ struct FullGridCellView: View {
     let square: BoxSquare
     let isWinning: Bool
     let isHighlighted: Bool
+    var pointsAway: Int? = nil
+    var teamAbbrAway: String? = nil
     var size: CGFloat = 44
+    var pulseMine: Bool = false
 
     var body: some View {
         ZStack {
@@ -576,6 +713,37 @@ struct FullGridCellView: View {
                 .frame(width: size, height: size)
                 .padding(2)
             }
+
+            // Hunt indicator: "+N" badge when cell is on the hunt
+            if let pts = pointsAway, !isWinning {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Text("+\(pts)")
+                            .font(.system(size: max(9, size * 0.22), weight: .bold, design: .monospaced))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 3)
+                            .background(Capsule().fill(huntBadgeColor(pts)))
+                            .overlay(Capsule().strokeBorder(Color.white.opacity(0.4), lineWidth: 0.8))
+                            .padding(4)
+                    }
+                    Spacer()
+                }
+                .frame(width: size, height: size)
+            }
+
+            // Pulsing highlight when "Find my squares" is on
+            if pulseMine {
+                TimelineView(.animation(minimumInterval: 0.08)) { context in
+                    let t = context.date.timeIntervalSinceReferenceDate
+                    let opacity = (t / 0.8).truncatingRemainder(dividingBy: 2) < 1 ? 0.35 : 0.9
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(Color.white, lineWidth: 2)
+                        .frame(width: size, height: size)
+                        .opacity(opacity)
+                }
+            }
         }
         .overlay(
             RoundedRectangle(cornerRadius: 6)
@@ -583,6 +751,14 @@ struct FullGridCellView: View {
         )
         .winningGlow(isWinning: isWinning, color: DesignSystem.Colors.liveGreen)
         .glassDepthShadows()
+    }
+
+    private func huntBadgeColor(_ points: Int) -> Color {
+        switch points {
+        case 1...3: return DesignSystem.Colors.dangerRed
+        case 4...6: return DesignSystem.Colors.winnerGold
+        default: return DesignSystem.Colors.accentBlue
+        }
     }
 
     private var glassOpacity: Double {

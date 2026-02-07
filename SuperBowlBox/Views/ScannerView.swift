@@ -319,12 +319,13 @@ struct SelectGameForScanView: View {
                                 selectedGame = game
                             } label: {
                                 HStack(spacing: 12) {
+                                    Spacer(minLength: 0)
                                     TeamLogoView(team: game.awayTeam, size: 32)
                                     Text("\(game.awayTeam.abbreviation) vs \(game.homeTeam.abbreviation)")
                                         .font(.subheadline)
                                         .fontWeight(selectedGame?.id == game.id ? .semibold : .regular)
-                                    Spacer()
                                     TeamLogoView(team: game.homeTeam, size: 32)
+                                    Spacer(minLength: 0)
                                     if selectedGame?.id == game.id {
                                         Image(systemName: "checkmark.circle.fill")
                                             .foregroundColor(AppColors.fieldGreen)

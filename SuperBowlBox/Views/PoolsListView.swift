@@ -15,10 +15,9 @@ struct PoolsListView: View {
         NavigationStack {
             ZStack {
                 SportsbookBackgroundView()
-                ScrollView {
-                    VStack(alignment: .leading, spacing: DesignSystem.Layout.sectionSpacing) {
-                        if appState.pools.isEmpty {
-                            // No fake pool: only options to upload, create, or join
+                if appState.pools.isEmpty {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: DesignSystem.Layout.sectionSpacing) {
                             NoPoolsEmptyState(
                                 onScan: { showingScanner = true },
                                 onCreateNew: { newPoolPrefill = nil; showingNewPoolSheet = true },
@@ -26,54 +25,61 @@ struct PoolsListView: View {
                                 onJoinWithCode: { showingJoinPool = true }
                             )
                             .padding(.horizontal, DesignSystem.Layout.screenInset)
-                        } else {
-                            SectionHeaderView(title: "Add Pool")
+                            Spacer(minLength: 100)
+                        }
+                        .padding(.top, 20)
+                    }
+                } else {
+                    List {
+                        Section(header: SectionHeaderView(title: "Add Pool")) {
                             ImportPoolCard(
                                 onScan: { showingScanner = true },
                                 onCreateNew: { newPoolPrefill = nil; showingNewPoolSheet = true },
                                 onCreateFromGame: { showingCreateFromGame = true }
                             )
-                            .padding(.horizontal, DesignSystem.Layout.screenInset)
-
-                            SectionHeaderView(title: "My Pools")
-                            LazyVStack(spacing: 12) {
-                                ForEach(Array(appState.pools.enumerated()), id: \.element.id) { index, pool in
-                                    HStack(spacing: 0) {
-                                        NavigationLink {
-                                            GridDetailView(pool: binding(for: pool))
-                                        } label: {
-                                            PoolGameCard(pool: pool, score: appState.scoreService.currentScore)
-                                        }
-                                        .buttonStyle(ScaleButtonStyle())
-                                        .frame(maxWidth: .infinity)
-
-                                        Button {
-                                            poolToDelete = pool
-                                            showingDeleteConfirmation = true
-                                        } label: {
-                                            Image(systemName: "trash")
-                                                .font(.system(size: 18, weight: .medium))
-                                                .foregroundColor(DesignSystem.Colors.dangerRed)
-                                                .frame(width: 44, height: 44)
-                                        }
-                                        .buttonStyle(.plain)
+                            .listRowInsets(EdgeInsets(top: 12, leading: DesignSystem.Layout.screenInset, bottom: 12, trailing: DesignSystem.Layout.screenInset))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                        }
+                        Section(header: SectionHeaderView(title: "My Pools")) {
+                            ForEach(Array(appState.pools.enumerated()), id: \.element.id) { index, pool in
+                                NavigationLink {
+                                    GridDetailView(pool: binding(for: pool))
+                                } label: {
+                                    PoolGameCard(pool: pool, score: appState.scoreService.currentScore)
+                                }
+                                .buttonStyle(ScaleButtonStyle())
+                                .listRowInsets(EdgeInsets(
+                                    top: 6,
+                                    leading: DesignSystem.Layout.screenInset,
+                                    bottom: 6,
+                                    trailing: DesignSystem.Layout.screenInset
+                                ))
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color.clear)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        HapticService.impactLight()
+                                        poolToDelete = pool
+                                        showingDeleteConfirmation = true
+                                    } label: {
+                                        Label(pool.isOwner ? "Delete pool" : "Remove from my list", systemImage: "trash")
                                     }
-                                    .contextMenu {
-                                        Button(role: .destructive) {
-                                            poolToDelete = pool
-                                            showingDeleteConfirmation = true
-                                        } label: {
-                                            Label(pool.isOwner ? "Delete pool" : "Remove from my list", systemImage: "trash")
-                                        }
+                                }
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        poolToDelete = pool
+                                        showingDeleteConfirmation = true
+                                    } label: {
+                                        Label(pool.isOwner ? "Delete pool" : "Remove from my list", systemImage: "trash")
                                     }
                                 }
                             }
-                            .animation(.easeInOut(duration: 0.3), value: appState.pools.count)
-                            .padding(.horizontal, DesignSystem.Layout.screenInset)
                         }
-                        Spacer(minLength: 100)
                     }
-                    .padding(.top, 20)
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .animation(.easeInOut(duration: 0.3), value: appState.pools.count)
                 }
             }
             .sheet(isPresented: $showingJoinPool) {
