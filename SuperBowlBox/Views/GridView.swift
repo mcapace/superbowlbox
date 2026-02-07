@@ -327,6 +327,8 @@ struct ImmersiveGridCell: View {
     let size: CGFloat
 
     @State private var isPressed = false
+    @State private var glowIntensity: Double = 0.4
+    @State private var borderPulse: CGFloat = 1.0
 
     var body: some View {
         ZStack {
@@ -334,12 +336,18 @@ struct ImmersiveGridCell: View {
             RoundedRectangle(cornerRadius: 6)
                 .fill(cellBackground)
 
-            // Glow for winners
+            // Animated glow for winners
             if isWinning {
                 RoundedRectangle(cornerRadius: 6)
                     .fill(DesignSystem.Colors.live)
-                    .blur(radius: 8)
-                    .opacity(0.5)
+                    .blur(radius: 12)
+                    .opacity(glowIntensity)
+
+                // Pulsing border
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(DesignSystem.Colors.gold, lineWidth: 2)
+                    .scaleEffect(borderPulse)
+                    .opacity(2 - Double(borderPulse))
             }
 
             // Content
@@ -381,14 +389,38 @@ struct ImmersiveGridCell: View {
                     Spacer()
                 }
             }
+
+            // Winner crown icon
+            if isWinning {
+                VStack {
+                    HStack {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 8))
+                            .foregroundColor(DesignSystem.Colors.gold)
+                            .padding(3)
+                        Spacer()
+                    }
+                    Spacer()
+                }
+            }
         }
         .frame(width: size, height: size)
         .scaleEffect(isPressed ? 0.95 : 1.0)
         .animation(DesignSystem.Animation.springSnappy, value: isPressed)
-        .shadow(
-            color: isWinning ? DesignSystem.Colors.liveGlow : .clear,
-            radius: 12
-        )
+        .shadow(color: isWinning ? DesignSystem.Colors.liveGlow : .clear, radius: 12)
+        .shadow(color: isWinning ? DesignSystem.Colors.goldGlow : .clear, radius: 20)
+        .onAppear {
+            if isWinning {
+                // Glow pulse animation
+                withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                    glowIntensity = 0.8
+                }
+                // Border expansion animation
+                withAnimation(.easeOut(duration: 1.5).repeatForever(autoreverses: false)) {
+                    borderPulse = 1.3
+                }
+            }
+        }
     }
 
     var cellBackground: Color {

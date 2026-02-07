@@ -255,112 +255,164 @@ struct FuturisticDashboard: View {
     }
 }
 
-// MARK: - Orbital Score Display
+// MARK: - Premium Score Display
 struct OrbitalScoreDisplay: View {
     let score: GameScore
     @State private var pulseScale: CGFloat = 1.0
+    @State private var showScoreChange = false
 
     var body: some View {
-        VStack(spacing: 24) {
-            // Live Status
-            if score.isGameActive {
+        VStack(spacing: 20) {
+            // Status Bar - Live indicator + Quarter + Time
+            HStack {
+                // Live Pulse Indicator
                 HStack(spacing: 8) {
-                    ZStack {
-                        PulseRings(color: DesignSystem.Colors.live)
-                            .frame(width: 20, height: 20)
+                    LivePulseIndicator(isLive: score.isGameActive, size: 10)
 
-                        Circle()
-                            .fill(DesignSystem.Colors.live)
-                            .frame(width: 10, height: 10)
+                    Text(score.isGameActive ? "LIVE" : "PRE-GAME")
+                        .font(.system(size: 12, weight: .black, design: .monospaced))
+                        .foregroundColor(score.isGameActive ? DesignSystem.Colors.live : DesignSystem.Colors.textMuted)
+                        .tracking(2)
+                }
+
+                Spacer()
+
+                // Quarter Progress
+                if score.isGameActive {
+                    HStack(spacing: 12) {
+                        QuarterProgressDots(currentQuarter: score.quarter)
+
+                        Text(score.timeRemaining)
+                            .font(.system(size: 14, weight: .bold, design: .monospaced))
+                            .foregroundColor(DesignSystem.Colors.textPrimary)
                     }
-
-                    Text("LIVE")
-                        .font(.system(size: 14, weight: .black, design: .monospaced))
-                        .foregroundColor(DesignSystem.Colors.live)
-                        .tracking(4)
-
-                    Text("Q\(score.quarter) • \(score.timeRemaining)")
-                        .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundColor(DesignSystem.Colors.textTertiary)
                 }
             }
 
-            // Orbital Score Container
-            ZStack {
-                // Outer orbital rings
-                OrbitalRing(
-                    progress: Double(score.homeScore) / 50.0,
-                    color: DesignSystem.Colors.accent,
-                    size: 280,
-                    lineWidth: 3
-                )
+            // Main Score Display with Flip Digits
+            HStack(spacing: 0) {
+                // Away Team
+                VStack(spacing: 12) {
+                    TeamBadgePremium(team: score.awayTeam, isLeading: score.awayScore > score.homeScore)
 
-                OrbitalRing(
-                    progress: Double(score.awayScore) / 50.0,
-                    color: DesignSystem.Colors.danger,
-                    size: 240,
-                    lineWidth: 3
-                )
-
-                // Center content
-                VStack(spacing: 16) {
-                    // Teams
-                    HStack(spacing: 40) {
-                        TeamScoreUnit(
-                            team: score.awayTeam,
-                            teamScore: score.awayScore,
-                            lastDigit: score.awayLastDigit,
-                            isLeading: score.awayScore > score.homeScore,
-                            color: DesignSystem.Colors.danger
-                        )
-
-                        VStack(spacing: 4) {
-                            Text("VS")
-                                .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                .foregroundColor(DesignSystem.Colors.textMuted)
-
-                            Rectangle()
-                                .fill(DesignSystem.Colors.glassBorder)
-                                .frame(width: 1, height: 30)
+                    // Score with flip animation
+                    HStack(spacing: 4) {
+                        ForEach(scoreDigits(score.awayScore), id: \.self) { digit in
+                            FlipDigit(digit: digit, color: DesignSystem.Colors.textPrimary, size: 36)
                         }
-
-                        TeamScoreUnit(
-                            team: score.homeTeam,
-                            teamScore: score.homeScore,
-                            lastDigit: score.homeLastDigit,
-                            isLeading: score.homeScore > score.awayScore,
-                            color: DesignSystem.Colors.accent
-                        )
                     }
+
+                    // Last digit badge
+                    Text("(\(score.awayLastDigit))")
+                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.danger)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(DesignSystem.Colors.danger.opacity(0.15))
+                        .clipShape(Capsule())
                 }
+                .frame(maxWidth: .infinity)
+
+                // VS Divider
+                VStack(spacing: 8) {
+                    Text("VS")
+                        .font(.system(size: 14, weight: .black, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.textMuted)
+
+                    Rectangle()
+                        .fill(DesignSystem.Colors.glassBorder)
+                        .frame(width: 1, height: 40)
+                }
+                .padding(.horizontal, 16)
+
+                // Home Team
+                VStack(spacing: 12) {
+                    TeamBadgePremium(team: score.homeTeam, isLeading: score.homeScore > score.awayScore)
+
+                    // Score with flip animation
+                    HStack(spacing: 4) {
+                        ForEach(scoreDigits(score.homeScore), id: \.self) { digit in
+                            FlipDigit(digit: digit, color: DesignSystem.Colors.textPrimary, size: 36)
+                        }
+                    }
+
+                    // Last digit badge
+                    Text("(\(score.homeLastDigit))")
+                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.accent)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(DesignSystem.Colors.accent.opacity(0.15))
+                        .clipShape(Capsule())
+                }
+                .frame(maxWidth: .infinity)
             }
-            .frame(height: 300)
 
-            // Winning Numbers Display
-            HStack(spacing: 16) {
-                Text("WINNING DIGITS")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundColor(DesignSystem.Colors.textMuted)
-                    .tracking(2)
+            // Winning Numbers Footer
+            HStack(spacing: 12) {
+                HStack(spacing: 6) {
+                    Image(systemName: "target")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(DesignSystem.Colors.gold)
 
-                HStack(spacing: 8) {
+                    Text("WINNING NUMBERS")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.textMuted)
+                        .tracking(1)
+                }
+
+                Spacer()
+
+                HStack(spacing: 6) {
                     DigitBadge(digit: score.awayLastDigit, color: DesignSystem.Colors.danger)
-                    Text("—")
+                    Text("-")
+                        .font(.system(size: 14, weight: .bold))
                         .foregroundColor(DesignSystem.Colors.textMuted)
                     DigitBadge(digit: score.homeLastDigit, color: DesignSystem.Colors.accent)
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(DesignSystem.Colors.surface.opacity(0.5))
-            .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(DesignSystem.Colors.glassBorder, lineWidth: 1)
-            )
+            .padding(.top, 8)
         }
-        .padding(24)
-        .neonCard(score.isGameActive ? DesignSystem.Colors.live : DesignSystem.Colors.accent, intensity: score.isGameActive ? 0.3 : 0.15)
+        .padding(20)
+        .neonCard(score.isGameActive ? DesignSystem.Colors.live : DesignSystem.Colors.accent, intensity: score.isGameActive ? 0.25 : 0.15)
+    }
+
+    func scoreDigits(_ score: Int) -> [Int] {
+        if score < 10 {
+            return [0, score]
+        }
+        return String(score).compactMap { Int(String($0)) }
+    }
+}
+
+// MARK: - Team Badge Premium
+struct TeamBadgePremium: View {
+    let team: Team
+    let isLeading: Bool
+
+    var teamColor: Color {
+        Color(hex: team.primaryColor) ?? DesignSystem.Colors.accent
+    }
+
+    var body: some View {
+        ZStack {
+            // Glow for leading team
+            if isLeading {
+                Circle()
+                    .fill(teamColor.opacity(0.3))
+                    .frame(width: 56, height: 56)
+                    .blur(radius: 8)
+            }
+
+            Circle()
+                .fill(teamColor.gradient)
+                .frame(width: 48, height: 48)
+                .shadow(color: isLeading ? teamColor.opacity(0.5) : .clear, radius: 8)
+
+            Text(team.abbreviation)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(.white)
+        }
     }
 }
 
@@ -465,6 +517,80 @@ struct WaitingForGameView: View {
         .frame(maxWidth: .infinity)
         .padding(40)
         .neonCard(DesignSystem.Colors.accent, intensity: 0.15)
+    }
+}
+
+// MARK: - Score Card Skeleton
+struct ScoreCardSkeleton: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            // Status bar skeleton
+            HStack {
+                SkeletonView(width: 80, height: 20, cornerRadius: 10)
+                Spacer()
+                SkeletonView(width: 100, height: 20, cornerRadius: 10)
+            }
+
+            // Score area skeleton
+            HStack {
+                VStack(spacing: 12) {
+                    SkeletonView(width: 48, height: 48, cornerRadius: 24)
+                    SkeletonView(width: 70, height: 50, cornerRadius: 8)
+                    SkeletonView(width: 40, height: 24, cornerRadius: 12)
+                }
+                .frame(maxWidth: .infinity)
+
+                VStack(spacing: 8) {
+                    SkeletonView(width: 30, height: 16, cornerRadius: 4)
+                    SkeletonView(width: 2, height: 40, cornerRadius: 1)
+                }
+                .padding(.horizontal, 16)
+
+                VStack(spacing: 12) {
+                    SkeletonView(width: 48, height: 48, cornerRadius: 24)
+                    SkeletonView(width: 70, height: 50, cornerRadius: 8)
+                    SkeletonView(width: 40, height: 24, cornerRadius: 12)
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            // Footer skeleton
+            HStack {
+                SkeletonView(width: 120, height: 16, cornerRadius: 4)
+                Spacer()
+                SkeletonView(width: 80, height: 30, cornerRadius: 8)
+            }
+        }
+        .padding(20)
+        .neonCard(DesignSystem.Colors.accent, intensity: 0.1)
+    }
+}
+
+// MARK: - Pool Card Skeleton
+struct PoolCardSkeleton: View {
+    var body: some View {
+        HStack(spacing: 16) {
+            SkeletonView(width: 80, height: 80, cornerRadius: 12)
+
+            VStack(alignment: .leading, spacing: 8) {
+                SkeletonView(width: 120, height: 18, cornerRadius: 4)
+                HStack(spacing: 8) {
+                    SkeletonView(width: 22, height: 22, cornerRadius: 11)
+                    SkeletonView(width: 30, height: 12, cornerRadius: 4)
+                    SkeletonView(width: 22, height: 22, cornerRadius: 11)
+                }
+                HStack(spacing: 16) {
+                    SkeletonView(width: 70, height: 12, cornerRadius: 4)
+                    SkeletonView(width: 60, height: 12, cornerRadius: 4)
+                }
+            }
+
+            Spacer()
+
+            SkeletonView(width: 14, height: 20, cornerRadius: 4)
+        }
+        .padding(16)
+        .neonCard(DesignSystem.Colors.accent, intensity: 0.1)
     }
 }
 

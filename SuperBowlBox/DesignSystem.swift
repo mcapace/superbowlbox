@@ -574,35 +574,438 @@ struct Haptics {
     }
 }
 
+// MARK: - Score Flip Digit (Airport Board Style)
+struct FlipDigit: View {
+    let digit: Int
+    let color: Color
+    let size: CGFloat
+
+    @State private var animateTop = false
+    @State private var animateBottom = false
+    @State private var displayDigit: Int = 0
+
+    var body: some View {
+        ZStack {
+            // Background
+            RoundedRectangle(cornerRadius: size * 0.15)
+                .fill(DesignSystem.Colors.surface)
+                .frame(width: size, height: size * 1.4)
+
+            // Digit
+            Text("\(displayDigit)")
+                .font(.system(size: size * 0.8, weight: .black, design: .rounded))
+                .foregroundColor(color)
+                .contentTransition(.numericText(value: displayDigit))
+
+            // Center line
+            Rectangle()
+                .fill(DesignSystem.Colors.background)
+                .frame(height: 2)
+
+            // Border
+            RoundedRectangle(cornerRadius: size * 0.15)
+                .stroke(color.opacity(0.3), lineWidth: 1)
+                .frame(width: size, height: size * 1.4)
+        }
+        .shadow(color: color.opacity(0.3), radius: 8, y: 2)
+        .onChange(of: digit) { _, newValue in
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                displayDigit = newValue
+            }
+        }
+        .onAppear {
+            displayDigit = digit
+        }
+    }
+}
+
+// MARK: - Live Pulse Indicator
+struct LivePulseIndicator: View {
+    let isLive: Bool
+    var size: CGFloat = 12
+
+    @State private var pulse = false
+    @State private var ringScale: CGFloat = 1
+    @State private var ringOpacity: Double = 0.8
+
+    var body: some View {
+        ZStack {
+            if isLive {
+                // Outer pulse rings
+                Circle()
+                    .stroke(DesignSystem.Colors.live, lineWidth: 2)
+                    .frame(width: size * 2.5, height: size * 2.5)
+                    .scaleEffect(ringScale)
+                    .opacity(ringOpacity)
+
+                Circle()
+                    .stroke(DesignSystem.Colors.live, lineWidth: 1)
+                    .frame(width: size * 2, height: size * 2)
+                    .scaleEffect(ringScale * 0.8)
+                    .opacity(ringOpacity * 0.6)
+            }
+
+            // Core dot
+            Circle()
+                .fill(isLive ? DesignSystem.Colors.live : DesignSystem.Colors.textMuted)
+                .frame(width: size, height: size)
+                .scaleEffect(pulse ? 1.2 : 1.0)
+                .shadow(color: isLive ? DesignSystem.Colors.liveGlow : .clear, radius: 6)
+        }
+        .onAppear {
+            guard isLive else { return }
+            withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+                pulse = true
+            }
+            withAnimation(.easeOut(duration: 1.5).repeatForever(autoreverses: false)) {
+                ringScale = 2
+                ringOpacity = 0
+            }
+        }
+    }
+}
+
+// MARK: - Quarter Progress Dots
+struct QuarterProgressDots: View {
+    let currentQuarter: Int
+    let totalQuarters: Int = 4
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(1...totalQuarters, id: \.self) { quarter in
+                Circle()
+                    .fill(quarter <= currentQuarter ? DesignSystem.Colors.live : DesignSystem.Colors.surface)
+                    .frame(width: 8, height: 8)
+                    .overlay(
+                        Circle()
+                            .stroke(
+                                quarter <= currentQuarter ? DesignSystem.Colors.live : DesignSystem.Colors.glassBorder,
+                                lineWidth: 1
+                            )
+                    )
+                    .shadow(color: quarter <= currentQuarter ? DesignSystem.Colors.liveGlow : .clear, radius: 4)
+            }
+        }
+    }
+}
+
+// MARK: - Winning Cell Glow Animation
+struct WinningGlow: ViewModifier {
+    let isWinning: Bool
+    let color: Color
+
+    @State private var glowIntensity: Double = 0.3
+    @State private var borderGlow: Double = 0.5
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(
+                        color,
+                        lineWidth: isWinning ? 2 : 0
+                    )
+                    .opacity(borderGlow)
+            )
+            .shadow(color: color.opacity(isWinning ? glowIntensity : 0), radius: 12)
+            .shadow(color: color.opacity(isWinning ? glowIntensity * 0.5 : 0), radius: 24)
+            .onAppear {
+                guard isWinning else { return }
+                withAnimation(.easeInOut(duration: 1).repeatForever(autoreverses: true)) {
+                    glowIntensity = 0.8
+                    borderGlow = 1.0
+                }
+            }
+    }
+}
+
+// MARK: - Probability Gauge
+struct ProbabilityGauge: View {
+    let probability: Double // 0-1
+    let label: String
+    let size: CGFloat
+
+    @State private var animatedProgress: Double = 0
+
+    var gaugeColor: Color {
+        if probability > 0.6 { return DesignSystem.Colors.live }
+        if probability > 0.3 { return DesignSystem.Colors.gold }
+        return DesignSystem.Colors.danger
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                // Background track
+                Circle()
+                    .trim(from: 0.15, to: 0.85)
+                    .stroke(DesignSystem.Colors.surface, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .frame(width: size, height: size)
+                    .rotationEffect(.degrees(90))
+
+                // Progress
+                Circle()
+                    .trim(from: 0.15, to: 0.15 + (animatedProgress * 0.7))
+                    .stroke(
+                        gaugeColor,
+                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                    )
+                    .frame(width: size, height: size)
+                    .rotationEffect(.degrees(90))
+                    .shadow(color: gaugeColor.opacity(0.5), radius: 6)
+
+                // Percentage text
+                VStack(spacing: 2) {
+                    Text("\(Int(animatedProgress * 100))")
+                        .font(.system(size: size * 0.25, weight: .black, design: .monospaced))
+                        .foregroundColor(gaugeColor)
+                    Text("%")
+                        .font(.system(size: size * 0.12, weight: .bold, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.textMuted)
+                }
+            }
+
+            Text(label)
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(DesignSystem.Colors.textTertiary)
+                .tracking(1)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 1, dampingFraction: 0.8)) {
+                animatedProgress = probability
+            }
+        }
+        .onChange(of: probability) { _, newValue in
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                animatedProgress = newValue
+            }
+        }
+    }
+}
+
+// MARK: - Skeleton Loading View
+struct SkeletonView: View {
+    let width: CGFloat?
+    let height: CGFloat
+    var cornerRadius: CGFloat = 8
+
+    @State private var shimmerOffset: CGFloat = -1
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius)
+            .fill(DesignSystem.Colors.surface)
+            .frame(width: width, height: height)
+            .overlay(
+                GeometryReader { geo in
+                    LinearGradient(
+                        colors: [
+                            .clear,
+                            Color.white.opacity(0.1),
+                            .clear
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: geo.size.width * 0.5)
+                    .offset(x: shimmerOffset * geo.size.width)
+                }
+                .mask(RoundedRectangle(cornerRadius: cornerRadius))
+            )
+            .onAppear {
+                withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+                    shimmerOffset = 1.5
+                }
+            }
+    }
+}
+
+// MARK: - Celebration Confetti
+struct ConfettiView: View {
+    let isActive: Bool
+    let colors: [Color]
+
+    @State private var particles: [ConfettiParticle] = []
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                ForEach(particles) { particle in
+                    Circle()
+                        .fill(particle.color)
+                        .frame(width: particle.size, height: particle.size)
+                        .position(particle.position)
+                        .opacity(particle.opacity)
+                }
+            }
+        }
+        .onChange(of: isActive) { _, newValue in
+            if newValue {
+                spawnConfetti()
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
+    func spawnConfetti() {
+        let centerX = UIScreen.main.bounds.width / 2
+        let startY = UIScreen.main.bounds.height / 3
+
+        for i in 0..<30 {
+            let particle = ConfettiParticle(
+                color: colors.randomElement() ?? DesignSystem.Colors.gold,
+                size: CGFloat.random(in: 6...12),
+                position: CGPoint(x: centerX, y: startY),
+                opacity: 1.0
+            )
+            particles.append(particle)
+
+            // Animate particle
+            let delay = Double(i) * 0.02
+            let endX = centerX + CGFloat.random(in: -150...150)
+            let endY = startY + CGFloat.random(in: 100...400)
+
+            withAnimation(.easeOut(duration: 2).delay(delay)) {
+                if let index = particles.firstIndex(where: { $0.id == particle.id }) {
+                    particles[index].position = CGPoint(x: endX, y: endY)
+                    particles[index].opacity = 0
+                }
+            }
+        }
+
+        // Clean up particles
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            particles.removeAll()
+        }
+    }
+}
+
+struct ConfettiParticle: Identifiable {
+    let id = UUID()
+    let color: Color
+    let size: CGFloat
+    var position: CGPoint
+    var opacity: Double
+}
+
+// MARK: - Points Away Indicator
+struct PointsAwayIndicator: View {
+    let pointsAway: Int
+    let teamAbbr: String
+
+    var urgencyColor: Color {
+        switch pointsAway {
+        case 1...3: return DesignSystem.Colors.danger
+        case 4...6: return DesignSystem.Colors.gold
+        default: return DesignSystem.Colors.accent
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            // Team needing to score
+            Text(teamAbbr)
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(DesignSystem.Colors.textSecondary)
+
+            // Arrow
+            Image(systemName: "arrow.right")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundColor(DesignSystem.Colors.textMuted)
+
+            // Points needed
+            HStack(spacing: 2) {
+                Text("+\(pointsAway)")
+                    .font(.system(size: 14, weight: .black, design: .monospaced))
+                    .foregroundColor(urgencyColor)
+
+                Text("PTS")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundColor(urgencyColor.opacity(0.7))
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(urgencyColor.opacity(0.15))
+        .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .stroke(urgencyColor.opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Score Change Animation
+struct ScoreChangeIndicator: View {
+    let change: Int
+    @State private var show = false
+    @State private var offset: CGFloat = 0
+
+    var body: some View {
+        if change != 0 {
+            Text(change > 0 ? "+\(change)" : "\(change)")
+                .font(.system(size: 16, weight: .black, design: .monospaced))
+                .foregroundColor(change > 0 ? DesignSystem.Colors.live : DesignSystem.Colors.danger)
+                .opacity(show ? 0 : 1)
+                .offset(y: offset)
+                .onAppear {
+                    withAnimation(.easeOut(duration: 1.5)) {
+                        show = true
+                        offset = -30
+                    }
+                }
+        }
+    }
+}
+
+// MARK: - View Extension for Winning Glow
+extension View {
+    func winningGlow(isWinning: Bool, color: Color = DesignSystem.Colors.live) -> some View {
+        modifier(WinningGlow(isWinning: isWinning, color: color))
+    }
+}
+
 // MARK: - Preview
 #Preview {
     ZStack {
         AnimatedMeshBackground()
         TechGridBackground()
 
-        VStack(spacing: 30) {
-            Text("FUTURISTIC")
-                .font(DesignSystem.Typography.title)
-                .foregroundStyle(DesignSystem.Colors.cyberGradient)
+        ScrollView {
+            VStack(spacing: 30) {
+                Text("PREMIUM ANIMATIONS")
+                    .font(DesignSystem.Typography.title)
+                    .foregroundStyle(DesignSystem.Colors.cyberGradient)
 
-            HStack(spacing: 20) {
-                OrbitalRing(progress: 0.75, color: DesignSystem.Colors.accent, size: 100, lineWidth: 4)
-                OrbitalRing(progress: 0.5, color: DesignSystem.Colors.live, size: 80, lineWidth: 3)
-            }
+                // Flip Digits
+                HStack(spacing: 8) {
+                    FlipDigit(digit: 2, color: DesignSystem.Colors.danger, size: 50)
+                    FlipDigit(digit: 1, color: DesignSystem.Colors.accent, size: 50)
+                }
 
-            DataWaveform(color: DesignSystem.Colors.accent)
-                .frame(height: 60)
-                .padding(.horizontal, 40)
+                // Live Indicator
+                HStack(spacing: 20) {
+                    LivePulseIndicator(isLive: true)
+                    Text("LIVE")
+                        .font(.system(size: 14, weight: .black, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.live)
+                }
 
-            VStack {
-                Text("LIVE SCORE")
-                    .font(DesignSystem.Typography.captionSmall)
-                    .foregroundColor(DesignSystem.Colors.textMuted)
+                // Quarter Progress
+                QuarterProgressDots(currentQuarter: 2)
 
-                AnimatedCounter(value: 42, font: DesignSystem.Typography.scoreLarge, color: DesignSystem.Colors.live)
+                // Probability Gauge
+                ProbabilityGauge(probability: 0.72, label: "WIN CHANCE", size: 100)
+
+                // Skeleton Loading
+                VStack(spacing: 8) {
+                    SkeletonView(width: 200, height: 20)
+                    SkeletonView(width: 150, height: 16)
+                }
+
+                // Points Away
+                PointsAwayIndicator(pointsAway: 3, teamAbbr: "KC")
             }
             .padding(30)
-            .neonCard(DesignSystem.Colors.live, intensity: 0.4)
         }
     }
 }

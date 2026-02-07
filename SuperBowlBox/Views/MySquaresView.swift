@@ -186,7 +186,7 @@ struct StatsCommandCenter: View {
     }
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 20) {
             // Identity header
             HStack(spacing: 16) {
                 // Avatar with orbital ring
@@ -223,39 +223,60 @@ struct StatsCommandCenter: View {
                 Spacer()
             }
 
-            // Stats grid
+            // Premium Stats Row
             HStack(spacing: 0) {
-                StatOrbital(
-                    value: totalSquares,
-                    label: "SQUARES",
-                    color: DesignSystem.Colors.accent,
-                    progress: min(Double(totalSquares) / 50.0, 1.0)
-                )
+                // Total Boxes
+                VStack(spacing: 6) {
+                    Text("\(totalSquares)")
+                        .font(.system(size: 36, weight: .black, design: .rounded))
+                        .foregroundColor(DesignSystem.Colors.live)
+                        .contentTransition(.numericText(value: totalSquares))
+
+                    Text("Total Boxes")
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                }
+                .frame(maxWidth: .infinity)
 
                 Rectangle()
                     .fill(DesignSystem.Colors.glassBorder)
-                    .frame(width: 1, height: 70)
+                    .frame(width: 1, height: 50)
 
-                StatOrbital(
-                    value: winningSquares,
-                    label: "WINS",
-                    color: DesignSystem.Colors.gold,
-                    progress: totalSquares > 0 ? Double(winningSquares) / Double(totalSquares) : 0
-                )
+                // Quarter Wins
+                VStack(spacing: 6) {
+                    Text("\(winningSquares)")
+                        .font(.system(size: 36, weight: .black, design: .rounded))
+                        .foregroundColor(DesignSystem.Colors.gold)
+                        .contentTransition(.numericText(value: winningSquares))
+
+                    Text("Quarter Wins")
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                }
+                .frame(maxWidth: .infinity)
 
                 Rectangle()
                     .fill(DesignSystem.Colors.glassBorder)
-                    .frame(width: 1, height: 70)
+                    .frame(width: 1, height: 50)
 
-                StatOrbital(
-                    value: poolsCount,
-                    label: "POOLS",
-                    color: DesignSystem.Colors.live,
-                    progress: min(Double(poolsCount) / 5.0, 1.0)
-                )
+                // Pools
+                VStack(spacing: 6) {
+                    Text("\(poolsCount)")
+                        .font(.system(size: 36, weight: .black, design: .rounded))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                        .contentTransition(.numericText(value: poolsCount))
+
+                    Text("Pools")
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                }
+                .frame(maxWidth: .infinity)
             }
+            .padding(.vertical, 16)
+            .background(DesignSystem.Colors.surface.opacity(0.5))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
-        .padding(24)
+        .padding(20)
         .neonCard(DesignSystem.Colors.accent, intensity: 0.2)
     }
 }
@@ -381,7 +402,11 @@ struct SquareMatrixCell: View {
     let pool: BoxGrid
     let square: BoxSquare
     let isCurrentWinner: Bool
+    var pointsAway: Int? = nil
+    var scoringTeam: String? = nil
+
     @State private var winnerPulse = false
+    @State private var glowOpacity: Double = 0.4
 
     var rowNumber: Int {
         pool.awayNumbers[square.row]
@@ -389,6 +414,10 @@ struct SquareMatrixCell: View {
 
     var colNumber: Int {
         pool.homeNumbers[square.column]
+    }
+
+    var isOnTheHunt: Bool {
+        pointsAway != nil && pointsAway! <= 7
     }
 
     var body: some View {
@@ -408,20 +437,27 @@ struct SquareMatrixCell: View {
             // Status badge
             if isCurrentWinner {
                 HStack(spacing: 4) {
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: 6, height: 6)
-                        .scaleEffect(winnerPulse ? 1.3 : 1.0)
+                    LivePulseIndicator(isLive: true, size: 6)
 
                     Text("LIVE")
                         .font(.system(size: 9, weight: .black, design: .monospaced))
                 }
                 .foregroundColor(.white)
-                .onAppear {
-                    withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
-                        winnerPulse = true
-                    }
+            } else if let pts = pointsAway, let team = scoringTeam, pts <= 7 {
+                // On The Hunt indicator
+                HStack(spacing: 3) {
+                    Text("\(team)")
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundColor(DesignSystem.Colors.textMuted)
+
+                    Text("+\(pts)")
+                        .font(.system(size: 10, weight: .black, design: .monospaced))
+                        .foregroundColor(huntColor(pts))
                 }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(huntColor(pts).opacity(0.15))
+                .clipShape(Capsule())
             } else if !square.quarterWins.isEmpty {
                 HStack(spacing: 3) {
                     ForEach(square.quarterWins, id: \.self) { q in
@@ -438,24 +474,45 @@ struct SquareMatrixCell: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(
-                    isCurrentWinner ? DesignSystem.Colors.live : DesignSystem.Colors.glassBorder,
-                    lineWidth: isCurrentWinner ? 2 : 1
-                )
+                .stroke(borderColor, lineWidth: isCurrentWinner || isOnTheHunt ? 2 : 1)
         )
-        .shadow(
-            color: isCurrentWinner ? DesignSystem.Colors.liveGlow : .clear,
-            radius: 12
-        )
+        .shadow(color: isCurrentWinner ? DesignSystem.Colors.liveGlow : .clear, radius: 12)
+        .shadow(color: isCurrentWinner ? DesignSystem.Colors.goldGlow : .clear, radius: 20)
+        .onAppear {
+            if isCurrentWinner {
+                withAnimation(.easeInOut(duration: 1).repeatForever(autoreverses: true)) {
+                    glowOpacity = 0.8
+                }
+            }
+        }
+    }
+
+    func huntColor(_ pts: Int) -> Color {
+        switch pts {
+        case 1...3: return DesignSystem.Colors.danger
+        case 4...5: return DesignSystem.Colors.gold
+        default: return DesignSystem.Colors.accent
+        }
     }
 
     var backgroundColor: Color {
         if isCurrentWinner {
             return DesignSystem.Colors.live
+        } else if isOnTheHunt {
+            return huntColor(pointsAway!).opacity(0.1)
         } else if !square.quarterWins.isEmpty {
             return DesignSystem.Colors.gold.opacity(0.15)
         }
         return DesignSystem.Colors.surfaceElevated
+    }
+
+    var borderColor: Color {
+        if isCurrentWinner {
+            return DesignSystem.Colors.live
+        } else if isOnTheHunt {
+            return huntColor(pointsAway!).opacity(0.5)
+        }
+        return DesignSystem.Colors.glassBorder
     }
 }
 
