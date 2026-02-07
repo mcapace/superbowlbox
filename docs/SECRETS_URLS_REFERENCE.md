@@ -66,6 +66,8 @@ These base URLs are referenced in the setup docs. If this is your API Gateway, u
 
 - **AI grid (scan):** `docs/lambda-ai-grid-index.js`
 - **Payout parse:** `docs/lambda-payout-parse-index.js`
-- **OCR (Textract):** see **docs/TEXTRACT_BACKEND_SETUP.md** and the Lambda code it references.
+- **OCR (Textract):** see **docs/TEXTRACT_BACKEND_SETUP.md** (code is inline in that doc).
+
+**Full checklist:** **docs/LAMBDAS_OVERVIEW.md** — env vars, routes, request/response contract, and deploy steps for all three Lambdas.
 
 Deploy those to your API Gateway / Lambda and point Secrets.plist at your Invoke URL + path.

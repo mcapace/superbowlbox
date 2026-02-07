@@ -42,7 +42,7 @@ class VisionService: ObservableObject {
             case .invalidGridStructure:
                 return "The detected grid doesn't match expected format"
             case .scanServerUnreachable:
-                return "Scan server not found. Use a valid AIGridBackendURL or TextractBackendURL in Secrets.plist, or remove them to use on-device scanning."
+                return "Scan server not found. Use a valid AIGridBackendURL in Secrets.plist (AI handles grid, names, and rules)."
             }
         }
     }
@@ -66,7 +66,7 @@ class VisionService: ObservableObject {
         // Work in upright space so crop coordinates match: normalize orientation if needed
         let uprightImage = image.imageOrientation == .up ? cgImage : (renderUprightCGImage(from: image) ?? cgImage)
 
-        // If AI grid backend is configured, use it instead of OCR (Claude etc. often read handwritten grids better)
+        // AI overrides OCR: when AIGrid backend is configured, we use AI only for grid/names/rules. OCR and on-device Vision are not used.
         if let aiURL = AIGridConfig.backendURL {
             let imageForAI = UIImage(cgImage: uprightImage)
             guard let jpeg = imageForAI.jpegData(compressionQuality: 0.85) else {
@@ -79,7 +79,7 @@ class VisionService: ObservableObject {
             }
         }
 
-        // Try crop first; if we get no names or very little text, retry with full image
+        // No AI backend configured: fallback to OCR (Textract backend or on-device Vision). Not used when AIGridBackendURL is set.
         let croppedImage = cropToLargestPoolLikeRectangle(uprightImage, orientation: .up)
 
         func runPipeline(image: CGImage) async throws -> (BoxGrid, [RecognizedTextBlock]) {

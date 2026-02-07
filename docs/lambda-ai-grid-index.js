@@ -1,20 +1,38 @@
+// Accepts: (1) POST application/json with body { "image": "<base64>" } — recommended so API Gateway does not corrupt binary.
+//          (2) POST raw image bytes (or base64) with image/jpeg — legacy.
+// Requires env: ANTHROPIC_API_KEY. Optional: MODEL (default claude-sonnet-4-20250514).
 exports.handler = async (event) => {
   const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
   console.log('Request: body length=', event.body?.length ?? 0, 'isBase64=', event.isBase64Encoded);
   try {
-    let body = event.body;
-    if (event.isBase64Encoded) body = Buffer.from(body, 'base64');
-    else if (typeof body === 'string') body = Buffer.from(body, 'utf8');
-    if (!body || body.length === 0) {
-      return { statusCode: 400, headers, body: JSON.stringify({ error: 'No image body' }) };
+    let base64;
+    const contentType = (event.headers && (event.headers['Content-Type'] || event.headers['content-type'])) || '';
+
+    if (contentType.includes('application/json')) {
+      const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+      base64 = body && body.image;
+      if (!base64 || typeof base64 !== 'string') {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'JSON body must contain "image" (base64 string)' }) };
+      }
+      base64 = base64.replace(/^data:image\/\w+;base64,/, '').trim();
+    } else {
+      let body = event.body;
+      if (event.isBase64Encoded) body = Buffer.from(body, 'base64');
+      else if (typeof body === 'string') body = Buffer.from(body, 'utf8');
+      if (!body || body.length === 0) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'No image body' }) };
+      }
+      base64 = body.toString('base64');
     }
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return { statusCode: 500, headers, body: JSON.stringify({ error: 'ANTHROPIC_API_KEY not set' }) };
     }
-    const base64 = body.toString('base64');
+
     const prompt = 'You are reading a football (NFL) pool sheet image. It has:\n- A 10x10 grid of squares.\n- One team name/abbreviation for the COLUMNS (header row with digits 0-9).\n- Another for the ROWS (column with digits 0-9).\n- In each cell, a player name or empty.\n\nExtract and return ONLY a single JSON object, no markdown, with this exact structure:\n{"homeTeamAbbreviation":"<NFL abbr for COLUMN team>","awayTeamAbbreviation":"<NFL abbr for ROW team>","homeNumbers":[10 digits 0-9 left to right],"awayNumbers":[10 digits 0-9 top to bottom],"names":[[10 strings row 0],...[10 rows total]]}\nUse NFL abbreviations: KC, SF, PHI, BAL, BUF, DET, DAL, GB, NE, SEA. Use "" for empty cells.';
 
+    const model = process.env.MODEL || 'claude-sonnet-4-20250514';
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -23,7 +41,7 @@ exports.handler = async (event) => {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model,
         max_tokens: 4096,
         messages: [
           {

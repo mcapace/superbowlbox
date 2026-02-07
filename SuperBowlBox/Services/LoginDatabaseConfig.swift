@@ -23,10 +23,10 @@ enum LoginDatabaseConfig {
     }
 
     /// Optional API key (e.g. Supabase anon key). If set, sent as Apikey + Authorization: Bearer.
-    /// Placeholder values (YOUR_SUPABASE_ANON_KEY) are treated as unset.
+    /// Only example placeholder keys (YOUR_...) are treated as unset.
     static var apiKey: String? {
         guard let s = apiKeyString?.trimmingCharacters(in: .whitespaces), !s.isEmpty else { return nil }
-        if s.uppercased().contains("YOUR_") { return nil }
+        if s.uppercased().hasPrefix("YOUR_") { return nil }
         return s
     }
 

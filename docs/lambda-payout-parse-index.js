@@ -1,10 +1,10 @@
 /**
- * Lambda: parse payout rules with Anthropic (same pattern as grid-analyze).
- * App sends: POST { "payoutDescription": "<user's free text>" }
- * Returns: JSON matching PayoutParseService.Response. The app supports all pool types
- * (byQuarter, halftimeOnly, finalOnly, halftimeAndFinal, firstScoreChange, custom, perScoreChange)
- * and uses the returned structure for grid header, modal, and payouts. Not all pools use the same
- * logic — parse exactly what this user described (standard, score-change, or other).
+ * Lambda: parse payout rules with Anthropic (same pattern as ai-grid).
+ * Contract:
+ *   App sends: POST application/json { "payoutDescription": "<user's free text>" }
+ *   Returns: 200 + JSON matching PayoutParseService.Response (poolType, amountsPerPeriod, readableRules, etc.)
+ * Env: ANTHROPIC_API_KEY (required). Optional: MODEL (default claude-sonnet-4-20250514).
+ * Route: e.g. POST /parse-payout on your API Gateway.
  */
 
 const PROMPT = `You parse football/sports pool payout rules into structured JSON. The app uses your response for the grid header, current winner, and payouts — so output the structure that matches THIS user's description only.
@@ -42,6 +42,7 @@ exports.handler = async (event) => {
 
     const userMessage = `Parse these pool payout rules into the JSON format:\n\n"${body.payoutDescription}"`;
 
+    const model = process.env.MODEL || 'claude-sonnet-4-20250514';
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -50,7 +51,7 @@ exports.handler = async (event) => {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model,
         max_tokens: 2048,
         messages: [{ role: 'user', content: userMessage }],
       }),

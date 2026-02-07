@@ -3,11 +3,17 @@ import Foundation
 /// Sends the pool sheet image to your AI backend (e.g. Claude). Backend returns structured pool JSON.
 enum AIGridBackendService {
     /// POST image to backend; returns a BoxGrid built from the AI response.
+    /// Sends JSON { "image": "<base64>" } so API Gateway does not corrupt binary; Lambda accepts this format.
     static func parseGrid(imageData: Data, url: URL) async throws -> BoxGrid {
+        let base64 = imageData.base64EncodedString()
+        let body = ["image": base64]
+        guard let bodyData = try? JSONEncoder().encode(body) else {
+            throw AIGridBackendError.invalidResponse
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
-        request.httpBody = imageData
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = bodyData
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {

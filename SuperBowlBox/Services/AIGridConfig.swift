@@ -6,7 +6,7 @@ enum AIGridConfig {
     private static let backendURLKey = "AIGridBackendURL"
 
     /// Backend URL that accepts an image and returns structured pool JSON (e.g. Lambda/API that calls Claude).
-    /// Placeholder hostnames (your-api.example.com, your-api-id) are treated as unset so on-device scanning is used.
+    /// Only doc-placeholder hostnames are treated as unset (your-api.example.com, your-api-id). Real and local URLs work.
     static var backendURL: URL? {
         if let s = stringFromSecrets(key: backendURLKey), !s.isEmpty, !isPlaceholderURL(s) {
             return URL(string: s.trimmingCharacters(in: .whitespaces))
@@ -17,9 +17,10 @@ enum AIGridConfig {
         return nil
     }
 
+    /// Reject only the exact placeholders from docs/example plist so staging and localhost work.
     private static func isPlaceholderURL(_ s: String) -> Bool {
         let host = (URL(string: s.trimmingCharacters(in: .whitespaces))?.host ?? "").lowercased()
-        return host.contains("example.com") || host.contains("your-api")
+        return host == "your-api.example.com" || host.contains("your-api-id")
     }
 
     static var useAIGrid: Bool { backendURL != nil }

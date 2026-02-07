@@ -24,13 +24,13 @@ Use this **before you Archive** (TestFlight, App Store, or ad‑hoc) so the live
 | **SportsDataIOApiKey** | Live NFL scores (primary) | Live scores from Sports Data IO; if missing, app uses ESPN |
 | **LoginDatabaseURL** | Supabase REST base (logins + optional shared pools) | Recording sign‑ins; share/join codes if you use Supabase for pools |
 | **LoginDatabaseApiKey** | Supabase anon key | Required if LoginDatabaseURL is set (auth for Supabase) |
-| **AIGridBackendURL** | Lambda that reads pool sheet image (AI/Claude) | **Scan** – when set, app sends image here instead of on‑device Vision |
-| **TextractBackendURL** | Lambda that runs OCR (e.g. Textract) | Optional scan path; if unset, app uses on‑device Vision or AIGrid |
-| **PayoutParseBackendURL** | Lambda that parses payout rules text (AI) | **Parse with AI** for payout rules; when set, app uses only this for grid + payouts |
+| **AIGridBackendURL** | Lambda that reads pool sheet image (AI/Claude) | **Scan** – when set, app uses **AI only** for grid, names, and structure. OCR is not used. |
+| **TextractBackendURL** | Lambda that runs OCR (e.g. Textract) | Optional; **only** used when AIGridBackendURL is not set. AI overrides OCR. |
+| **PayoutParseBackendURL** | Lambda that parses payout rules text (AI) | **Parse with AI** – rules and payout logic; when set, app uses only this for grid + payouts |
 | **SharedPoolsURL** | Optional separate backend for share/join | Only if you don’t use LoginDatabaseURL for shared pools |
 | **SharedPoolsApiKey** | Optional API key for SharedPoolsURL | If your share backend requires a key |
 
-- **Placeholder URLs** (host contains `example.com` or `your-api`) are **ignored** by the app – they are treated as “not set.” So scan works on‑device if you leave placeholders; for **live** scan/payout you must set **real** Invoke URLs.
+- **Placeholder URLs** (only exact doc placeholders: `your-api.example.com`, `your-api-id`) are **ignored** by the app – they are treated as “not set.” Real and staging URLs work. For **live** scan/payout set **real** AIGridBackendURL and PayoutParseBackendURL.
 - **URL reference:** See **docs/SECRETS_URLS_REFERENCE.md** for the Lambda base URL used in this repo (e.g. `https://0lgqfeaqxh.execute-api.us-east-1.amazonaws.com/...`). Use that or your own API Gateway Invoke URL.
 
 ---
@@ -82,7 +82,7 @@ No secrets for sign‑in are in Secrets.plist; they’re in Info.plist / capabil
 
 1. **Secrets.plist** exists at `SuperBowlBox/Resources/Secrets.plist` (copy from Secrets.example.plist if needed).
 2. **No placeholders** in Secrets.plist for features you want live:  
-   - Scan → **AIGridBackendURL** (or **TextractBackendURL**) = real Lambda URL.  
+   - Scan → **AIGridBackendURL** = real Lambda URL (AI only; OCR not used when this is set).  
    - Payout AI → **PayoutParseBackendURL** = real Lambda URL.  
    - Share/join → **LoginDatabaseURL** + **LoginDatabaseApiKey** (or **SharedPoolsURL**) = real Supabase/backend URL.
 3. **SportsDataIOApiKey** set if you want Sports Data IO live scores (otherwise ESPN is used).
@@ -94,6 +94,7 @@ No secrets for sign‑in are in Secrets.plist; they’re in Info.plist / capabil
 
 | Topic | Doc |
 |-------|-----|
+| **All Lambdas (env, routes, deploy)** | **docs/LAMBDAS_OVERVIEW.md** |
 | Lambda URLs from previous builds | **docs/SECRETS_URLS_REFERENCE.md** |
 | AI grid Lambda setup | **docs/AI_GRID_BACKEND_SETUP.md**, **docs/AI_GRID_LAMBDA_REPLACE.md** |
 | Payout parse Lambda | **docs/PAYOUT_GET_IT_WORKING.md**, **docs/PAYOUT_ANTHROPIC_LAMBDA.md**, **docs/AWS_LAMBDA_STEP_BY_STEP.md** |
@@ -103,3 +104,5 @@ No secrets for sign‑in are in Secrets.plist; they’re in Info.plist / capabil
 | General setup | **SETUP.md** |
 
 When everything above is done, APIs, Lambdas, AI integration, and Supabase will work in the distributed app.
+
+**Local vs live:** The app uses the same Secrets.plist for both. For local (simulator) you can use `http://localhost:PORT` for backends; for Archive, use production URLs in Secrets.plist. See **docs/LOCAL_AND_LIVE_APIS.md** for placeholder rules, ATS, and making APIs work in both environments.

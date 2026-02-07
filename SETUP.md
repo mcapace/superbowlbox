@@ -2,7 +2,7 @@
 
 Use this to make sure **Sign in**, **Camera**, **OCR**, **live scores**, and **notifications** all work.
 
-**Before distributing (TestFlight / App Store):** Use **docs/DISTRIBUTION_CHECKLIST.md** so APIs, Lambdas, AI, and Supabase work in the live app.
+**Before distributing (TestFlight / App Store):** Use **docs/DISTRIBUTION_CHECKLIST.md** so APIs, Lambdas, AI, and Supabase work in the live app. **Local and live APIs:** **docs/LOCAL_AND_LIVE_APIS.md** — same APIs in both environments, placeholder rules, and localhost/ATS.
 
 ## Get all features working (at a glance)
 

@@ -5,7 +5,7 @@ import Foundation
 enum PayoutParseConfig {
     private static let backendURLKey = "PayoutParseBackendURL"
 
-    /// Placeholder hostnames (e.g. your-api.example.com) are treated as unset so the app doesn't call a fake URL when distributed with example plist.
+    /// Only doc-placeholder hostnames are treated as unset. Real and local URLs work.
     static var backendURL: URL? {
         if let s = stringFromSecrets(key: backendURLKey), !s.isEmpty, !isPlaceholderURL(s) {
             return URL(string: s.trimmingCharacters(in: .whitespaces))
@@ -18,7 +18,7 @@ enum PayoutParseConfig {
 
     private static func isPlaceholderURL(_ s: String) -> Bool {
         let host = (URL(string: s.trimmingCharacters(in: .whitespaces))?.host ?? "").lowercased()
-        return host.contains("example.com") || host.contains("your-api")
+        return host == "your-api.example.com" || host.contains("your-api-id")
     }
 
     static var usePayoutParse: Bool { backendURL != nil }

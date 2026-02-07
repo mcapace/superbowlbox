@@ -589,8 +589,6 @@ struct TeamScoreColumn: View {
     /// Logo circle size for featured game (default 40).
     var logoSize: CGFloat = 40
 
-    private var imageSize: CGFloat { logoSize * 0.82 }
-
     var body: some View {
         VStack(spacing: 6) {
             ZStack {
@@ -598,28 +596,7 @@ struct TeamScoreColumn: View {
                     .fill(Color(hex: team.primaryColor) ?? DesignSystem.Colors.textTertiary)
                     .frame(width: logoSize, height: logoSize)
                 if let urlString = team.displayLogoURL, let url = URL(string: urlString) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: imageSize, height: imageSize)
-                                .clipShape(Circle())
-                        case .failure:
-                            Text(team.abbreviation)
-                                .font(.system(size: logoSize * 0.3, weight: .bold))
-                                .foregroundColor(.white)
-                        case .empty:
-                            ProgressView()
-                                .tint(.white)
-                                .scaleEffect(0.8)
-                        @unknown default:
-                            Text(team.abbreviation)
-                                .font(.system(size: logoSize * 0.3, weight: .bold))
-                                .foregroundColor(.white)
-                        }
-                    }
+                    LogoImageView(url: url, fallbackText: team.abbreviation, size: logoSize)
                 } else {
                     Text(team.abbreviation)
                         .font(.system(size: logoSize * 0.3, weight: .bold))
@@ -762,10 +739,13 @@ struct AddPoolFlowView: View {
                                     } label: {
                                         HStack(spacing: 12) {
                                             TeamLogoView(team: game.awayTeam, size: 28)
+                                            Spacer(minLength: 8)
                                             Text("\(game.awayTeam.abbreviation) vs \(game.homeTeam.abbreviation)")
                                                 .font(.subheadline)
                                                 .fontWeight(selectedGame?.id == game.id ? .semibold : .regular)
-                                            Spacer()
+                                                .multilineTextAlignment(.center)
+                                                .frame(maxWidth: .infinity)
+                                            Spacer(minLength: 8)
                                             TeamLogoView(team: game.homeTeam, size: 28)
                                             if selectedGame?.id == game.id {
                                                 Image(systemName: "checkmark.circle.fill")

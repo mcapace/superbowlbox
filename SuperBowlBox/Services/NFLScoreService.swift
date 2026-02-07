@@ -171,9 +171,8 @@ class NFLScoreService: ObservableObject {
                 let abbrev = team["abbreviation"] as? String ?? "TM"
                 let color = team["color"] as? String ?? "000000"
                 var logoURL = team["logo"] as? String
-                if logoURL == nil || logoURL?.isEmpty == true {
-                    logoURL = "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/\(abbrev.lowercased()).png"
-                }
+                if logoURL?.isEmpty == true { logoURL = nil }
+                // When API gives no logo, leave logoURL nil so Team.displayLogoURL uses espnLogoURL(abbreviation:) with slug mapping (e.g. SE -> sea)
 
                 let teamObj = Team(
                     name: name,

@@ -15,7 +15,7 @@ enum SportsDataIOConfig {
             return Bundle.main.object(forInfoDictionaryKey: apiKeyKey) as? String
         }()
         guard let key = raw?.trimmingCharacters(in: .whitespaces), !key.isEmpty else { return nil }
-        if key.uppercased().contains("YOUR_") || key == "YOUR_SPORTSDATA_IO_KEY" { return nil }
+        if key.uppercased().hasPrefix("YOUR_") || key == "YOUR_SPORTSDATA_IO_KEY" { return nil }
         return key
     }
 

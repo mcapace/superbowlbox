@@ -54,6 +54,7 @@
 		A1111111000000000000002F /* PayoutParseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000002F /* PayoutParseConfig.swift */; };
 		A11111110000000000000030 /* PayoutParseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000030 /* PayoutParseService.swift */; };
 		A11111110000000000000031 /* PayoutVoiceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000031 /* PayoutVoiceService.swift */; };
+		A11111110000000000000032 /* LogoImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000032 /* LogoImageView.swift */; };
 		CECC4FC82F33D68F004AAD0D /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = CECC4FC72F33D68F004AAD0D /* GoogleSignIn */; };
 		CECC4FCA2F33D68F004AAD0D /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = CECC4FC92F33D68F004AAD0D /* GoogleSignInSwift */; };
 		CEF1BF382F362B0D00DCB420 /* AWSTextract in Frameworks */ = {isa = PBXBuildFile; productRef = CEF1BF372F362B0D00DCB420 /* AWSTextract */; };
@@ -103,6 +104,7 @@
 		A00000000000000000000028 /* SharedPoolsConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPoolsConfig.swift; sourceTree = "<group>"; };
 		A00000000000000000000029 /* SharedPoolsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPoolsService.swift; sourceTree = "<group>"; };
 		A0000000000000000000002A /* EnterMyNumbersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnterMyNumbersView.swift; sourceTree = "<group>"; };
+		A00000000000000000000032 /* LogoImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogoImageView.swift; sourceTree = "<group>"; };
 		A0000000000000000000002B /* TextractConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextractConfig.swift; sourceTree = "<group>"; };
 		A0000000000000000000002C /* TextractBackendService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextractBackendService.swift; sourceTree = "<group>"; };
 		A0000000000000000000002D /* AIGridConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIGridConfig.swift; sourceTree = "<group>"; };
@@ -189,6 +191,7 @@
 				A00000000000000000000025 /* GoogleSignInButton.swift */,
 				A0000000000000000000001D /* CreateFromGameView.swift */,
 				A0000000000000000000002A /* EnterMyNumbersView.swift */,
+				A00000000000000000000032 /* LogoImageView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -380,6 +383,7 @@
 				A1111111000000000000002F /* PayoutParseConfig.swift in Sources */,
 				A11111110000000000000030 /* PayoutParseService.swift in Sources */,
 				A11111110000000000000031 /* PayoutVoiceService.swift in Sources */,
+				A11111110000000000000032 /* LogoImageView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
