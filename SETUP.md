@@ -106,7 +106,7 @@ No code or entitlement changes are required for camera/photo library beyond what
 2. **Add the key securely (never committed)**  
    - Copy **SuperBowlBox/Resources/Secrets.example.plist** to **Secrets.plist** (same folder).  
    - Open **Secrets.plist** and set **SportsDataIOApiKey** to your API key.  
-   - **Secrets.plist** is in **.gitignore**, so it will not be committed. The app reads from it at runtime (it’s copied into the app bundle by Xcode).
+   - **Secrets.plist** is in **.gitignore**, so it will not be committed. It is referenced in the Xcode target’s **Copy Bundle Resources**, so when you build or Archive for distribution (TestFlight/App Store), the file on your machine is included in the app bundle and the keys work in the distributed app.
 
 3. **Rebuild and run**  
    - The dashboard will fetch NFL scores from Sports Data IO. If no key is found, the app uses ESPN instead.

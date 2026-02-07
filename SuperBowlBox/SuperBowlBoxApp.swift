@@ -336,16 +336,24 @@ struct AppCardStyle {
 
 // MARK: - Small app logo + text for upper-left of each main tab (so you know what app you're in)
 struct AppNavBrandView: View {
+    /// Use true on dark nav bars (e.g. Live) so text is white; logo always shows in original colors.
+    var useLightText: Bool = false
+
     var body: some View {
         HStack(spacing: 6) {
             Image("SquareUpLogo")
                 .resizable()
+                .renderingMode(.original)
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 22, height: 22)
+                .frame(width: 24, height: 24)
             Text("SquareUp")
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundColor(DesignSystem.Colors.textPrimary)
+                .foregroundColor(useLightText ? .white : DesignSystem.Colors.textPrimary)
         }
+        .padding(.leading, 8)
+        .padding(.top, 2)
+        .padding(.bottom, 2)
+        .frame(minHeight: 44, alignment: .leading)
     }
 }
 

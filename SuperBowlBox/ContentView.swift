@@ -195,8 +195,7 @@ struct DashboardView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    AppNavBrandView()
-                        .foregroundStyle(.white)
+                    AppNavBrandView(useLightText: true)
                 }
                 ToolbarItem(placement: .principal) {
                     VStack(spacing: 0) {
