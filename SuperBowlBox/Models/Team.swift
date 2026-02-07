@@ -33,6 +33,13 @@ struct Team: Codable, Identifiable, Equatable, Hashable {
         "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/\(abbreviation.lowercased()).png"
     }
 
+    /// URL to use when displaying a logo (NFL). Uses stored logoURL or ESPN fallback so logos show even for legacy pools.
+    var displayLogoURL: String? {
+        if let url = logoURL, !url.isEmpty { return url }
+        guard !abbreviation.isEmpty, abbreviation != "—" else { return nil }
+        return Team.espnLogoURL(abbreviation: abbreviation)
+    }
+
     // Super Bowl LIX Teams (2025) — include logoURL so logos show even when using static teams
     static let chiefs = Team(
         name: "Kansas City Chiefs",

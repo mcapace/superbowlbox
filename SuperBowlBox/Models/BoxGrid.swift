@@ -17,6 +17,12 @@ struct BoxGrid: Codable, Identifiable {
     var ownerLabels: [String]?
     /// After sharing via SharedPoolsService, the generated invite code is stored so we can show it again without re-uploading.
     var sharedCode: String?
+    /// Once saved, pool is locked: no randomize numbers, edit teams, edit payout rules, or clear names.
+    var isLocked: Bool
+    /// True if this device/user created the pool; false if joined via invite (delete = remove from my list only).
+    var isOwner: Bool
+    /// Invite code used to join (participants only). Used to re-fetch and detect when host deletes or edits the pool.
+    var joinedViaCode: String?
 
     init(
         id: UUID = UUID(),
@@ -31,7 +37,10 @@ struct BoxGrid: Codable, Identifiable {
         currentScore: GameScore? = nil,
         poolStructure: PoolStructure = .standardQuarterly,
         ownerLabels: [String]? = nil,
-        sharedCode: String? = nil
+        sharedCode: String? = nil,
+        isLocked: Bool = true,
+        isOwner: Bool = true,
+        joinedViaCode: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -45,6 +54,9 @@ struct BoxGrid: Codable, Identifiable {
         self.poolStructure = poolStructure
         self.ownerLabels = ownerLabels
         self.sharedCode = sharedCode
+        self.isLocked = isLocked
+        self.isOwner = isOwner
+        self.joinedViaCode = joinedViaCode
 
         if let existingSquares = squares {
             self.squares = existingSquares
@@ -73,7 +85,7 @@ struct BoxGrid: Codable, Identifiable {
 
     private enum CodingKeys: String, CodingKey {
         case id, name, homeTeam, awayTeam, homeNumbers, awayNumbers, squares
-        case createdAt, lastModified, currentScore, poolStructure, ownerLabels, sharedCode
+        case createdAt, lastModified, currentScore, poolStructure, ownerLabels, sharedCode, isLocked, isOwner, joinedViaCode
     }
 
     init(from decoder: Decoder) throws {
@@ -91,6 +103,9 @@ struct BoxGrid: Codable, Identifiable {
         poolStructure = try c.decodeIfPresent(PoolStructure.self, forKey: .poolStructure)
         ownerLabels = try c.decodeIfPresent([String].self, forKey: .ownerLabels)
         sharedCode = try c.decodeIfPresent(String.self, forKey: .sharedCode)
+        isLocked = try c.decodeIfPresent(Bool.self, forKey: .isLocked) ?? true
+        isOwner = try c.decodeIfPresent(Bool.self, forKey: .isOwner) ?? true
+        joinedViaCode = try c.decodeIfPresent(String.self, forKey: .joinedViaCode)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -108,6 +123,9 @@ struct BoxGrid: Codable, Identifiable {
         try c.encodeIfPresent(poolStructure, forKey: .poolStructure)
         try c.encodeIfPresent(ownerLabels, forKey: .ownerLabels)
         try c.encodeIfPresent(sharedCode, forKey: .sharedCode)
+        try c.encode(isLocked, forKey: .isLocked)
+        try c.encode(isOwner, forKey: .isOwner)
+        try c.encodeIfPresent(joinedViaCode, forKey: .joinedViaCode)
     }
 
     // Get the square at a specific position

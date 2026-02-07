@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab = 0
 
     var body: some View {
@@ -39,6 +40,10 @@ struct ContentView: View {
         .onChange(of: selectedTab) { _, _ in
             HapticService.selection()
         }
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            await appState.refreshJoinedPoolsIfNeeded()
+        }
         .onChange(of: appState.scoreService.lastUpdated) { _, _ in
             appState.refreshWinnersFromCurrentScore()
         }
@@ -60,10 +65,9 @@ struct ContentView: View {
     private func configureTabBarAppearance() {
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(red: 0.09, green: 0.09, blue: 0.11, alpha: 1)
-        // Inactive tabs readable (sportsbook-style contrast)
-        appearance.stackedLayoutAppearance.normal.iconColor = UIColor(white: 0.55, alpha: 1)
-        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor(white: 0.55, alpha: 1)]
+        appearance.backgroundColor = UIColor(red: 0.09, green: 0.10, blue: 0.10, alpha: 1)
+        appearance.stackedLayoutAppearance.normal.iconColor = UIColor(white: 0.62, alpha: 1)
+        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor(white: 0.62, alpha: 1)]
         appearance.stackedLayoutAppearance.selected.iconColor = UIColor(red: 0.04, green: 0.52, blue: 1, alpha: 1)
         appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(red: 0.04, green: 0.52, blue: 1, alpha: 1)]
         UITabBar.appearance().standardAppearance = appearance
@@ -71,16 +75,10 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Sport option for dashboard toggle (NFL only for now)
-enum DashboardSport: String, CaseIterable {
-    case nfl = "NFL"
-}
-
 // MARK: - Dashboard View (live score + all pools at a glance)
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
     @State private var showingRefreshAnimation = false
-    @State private var selectedSport: DashboardSport = .nfl
     @State private var showingAddPoolFlow = false
     var onAddPoolTapped: (() -> Void)?
 
@@ -104,15 +102,8 @@ struct DashboardView: View {
                     .ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: DesignSystem.Layout.sectionSpacing) {
-                        // Sport + live label
+                        // Live label (NFL only for now; league picker removed to reduce clutter)
                         HStack {
-                            Picker("League", selection: $selectedSport) {
-                                ForEach(DashboardSport.allCases, id: \.self) { sport in
-                                    Text(sport.rawValue).tag(sport)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .frame(maxWidth: 180)
                             Spacer()
                             Text("LIVE")
                                 .font(.system(size: 10, weight: .bold))
@@ -122,8 +113,8 @@ struct DashboardView: View {
                         .padding(.horizontal, DesignSystem.Layout.screenInset)
                         .padding(.bottom, 2)
 
-                        // Hero: featured / next game
-                        SectionHeaderView(title: selectedSport == .nfl ? "NFL · Featured game" : "Featured game")
+                        SectionHeaderView(title: "Featured games")
+                        // Score and matchup come from API (Sports Data IO or ESPN); Super Bowl preferred when in feed
                         Group {
                             if let score = appState.scoreService.currentScore {
                                 LiveScoreCard(
@@ -160,7 +151,6 @@ struct DashboardView: View {
                                     .buttonStyle(ScaleButtonStyle())
                                 }
                                 Button {
-                                    HapticService.selection()
                                     showingAddPoolFlow = true
                                 } label: {
                                     HStack(spacing: 8) {
@@ -174,8 +164,12 @@ struct DashboardView: View {
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 14)
                                     .background(
-                                        RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
-                                            .strokeBorder(DesignSystem.Colors.accentBlue.opacity(0.5), lineWidth: 1)
+                                        ZStack {
+                                            RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                                                .fill(.ultraThinMaterial)
+                                            RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                                                .strokeBorder(DesignSystem.Colors.accentBlue.opacity(0.5), lineWidth: 1)
+                                        }
                                     )
                                 }
                                 .buttonStyle(ScaleButtonStyle())
@@ -183,10 +177,9 @@ struct DashboardView: View {
                             .padding(.horizontal, DesignSystem.Layout.screenInset)
                         }
 
-                        // On the Hunt (aggregated across all pools)
                         if !allOnTheHuntItems.isEmpty {
                             SectionHeaderView(title: "On the hunt")
-                            OnTheHuntCard(items: Array(allOnTheHuntItems.prefix(6)))
+                            OnTheHuntCard(items: Array(allOnTheHuntItems.prefix(4)))
                                 .padding(.horizontal, DesignSystem.Layout.screenInset)
                         }
 
@@ -266,20 +259,17 @@ struct DashboardPoolCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                HStack(spacing: 2) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color(hex: pool.awayTeam.primaryColor) ?? DesignSystem.Colors.textTertiary)
-                        .frame(width: 5, height: 36)
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color(hex: pool.homeTeam.primaryColor) ?? DesignSystem.Colors.textTertiary)
-                        .frame(width: 5, height: 36)
+            HStack(spacing: 12) {
+                HStack(spacing: 6) {
+                    TeamLogoView(team: pool.awayTeam, size: 40)
+                    TeamLogoView(team: pool.homeTeam, size: 40)
                 }
+                .frame(minWidth: 92, minHeight: 40)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(pool.name)
                         .font(DesignSystem.Typography.headline)
                         .foregroundColor(DesignSystem.Colors.textPrimary)
-                    Text("\(pool.awayTeam.abbreviation) @ \(pool.homeTeam.abbreviation)")
+                    Text("\(pool.awayTeam.abbreviation) vs \(pool.homeTeam.abbreviation)")
                         .font(DesignSystem.Typography.caption2)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
@@ -314,13 +304,19 @@ struct DashboardPoolCard: View {
         .padding(DesignSystem.Layout.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                .fill(DesignSystem.Colors.cardSurface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                        .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
-                )
+            ZStack {
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                    .fill(DesignSystem.Colors.cardSurface.opacity(0.4))
+            }
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
+        )
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.35), radius: 2, x: 0, y: 1)
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.2), radius: 10, x: 0, y: 3)
     }
 }
 
@@ -347,10 +343,17 @@ struct OnTheHuntCard: View {
                         .foregroundColor(DesignSystem.Colors.textTertiary)
                 }
                 .padding(12)
-                .background(RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall).fill(DesignSystem.Colors.backgroundTertiary.opacity(0.6)))
+                .background(
+                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                                .strokeBorder(DesignSystem.Colors.glassBorder.opacity(0.6), lineWidth: 0.5)
+                        )
+                )
             }
         }
-        .sportsbookCard()
+        .liquidGlassCard(cornerRadius: DesignSystem.Layout.glassCornerRadius)
     }
 
     @ViewBuilder
@@ -368,12 +371,15 @@ struct OnTheHuntCard: View {
     }
 }
 
-// MARK: - Scale on press (high-tech button feel)
+// MARK: - Scale on press + haptic (Control Center–style tap feel)
 struct ScaleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.appQuick, value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.spring(response: 0.35, dampingFraction: 0.7), value: configuration.isPressed)
+            .onChange(of: configuration.isPressed) { _, pressed in
+                if pressed { HapticService.impactLight() }
+            }
     }
 }
 
@@ -420,13 +426,19 @@ struct UpNextPlaceholderCard: View {
         .frame(maxWidth: .infinity)
         .padding(DesignSystem.Layout.cardPadding * 2)
         .background(
-            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                .fill(DesignSystem.Colors.cardSurface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                        .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
-                )
+            ZStack {
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                    .fill(DesignSystem.Colors.cardSurface.opacity(0.35))
+            }
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
+        )
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.35), radius: 2, x: 0, y: 1)
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.2), radius: 10, x: 0, y: 3)
     }
 }
 
@@ -466,23 +478,25 @@ struct LiveScoreCard: View {
             }
             .padding(.bottom, 14)
 
-            // Teams + scores
+            // Teams + scores (larger logos for featured game)
             HStack(spacing: 0) {
                 TeamScoreColumn(
                     team: score.awayTeam,
                     score: score.awayScore,
                     lastDigit: score.awayLastDigit,
-                    isLeading: score.awayScore > score.homeScore
+                    isLeading: score.awayScore > score.homeScore,
+                    logoSize: 56
                 )
-                Text("–")
-                    .font(.system(size: 24, weight: .medium))
+                Text("vs")
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(DesignSystem.Colors.textTertiary)
-                    .frame(width: 24)
+                    .frame(width: 28)
                 TeamScoreColumn(
                     team: score.homeTeam,
                     score: score.homeScore,
                     lastDigit: score.homeLastDigit,
-                    isLeading: score.homeScore > score.awayScore
+                    isLeading: score.homeScore > score.awayScore,
+                    logoSize: 56
                 )
             }
 
@@ -521,7 +535,11 @@ struct LiveScoreCard: View {
                 .padding(.horizontal, 4)
                 .background(
                     RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
-                        .fill(DesignSystem.Colors.backgroundTertiary.opacity(0.6))
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                                .strokeBorder(DesignSystem.Colors.glassBorder.opacity(0.5), lineWidth: 0.5)
+                        )
                 )
             }
         }
@@ -529,27 +547,30 @@ struct LiveScoreCard: View {
         .frame(maxWidth: .infinity)
         .background(
             ZStack {
-                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                    .fill(DesignSystem.Colors.cardSurface)
-                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
                     .fill(
                         LinearGradient(
                             colors: [
-                                (Color(hex: score.awayTeam.primaryColor) ?? Color.clear).opacity(0.06),
+                                (Color(hex: score.awayTeam.primaryColor) ?? Color.clear).opacity(0.08),
                                 Color.clear,
-                                (Color(hex: score.homeTeam.primaryColor) ?? Color.clear).opacity(0.06)
+                                (Color(hex: score.homeTeam.primaryColor) ?? Color.clear).opacity(0.08)
                             ],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
+                    .fill(DesignSystem.Colors.cardSurface.opacity(0.25))
             }
         )
         .overlay(
-            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
+                .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
         )
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.5), radius: 6, x: 0, y: 2)
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.4), radius: 3, x: 0, y: 1)
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.25), radius: 14, x: 0, y: 5)
     }
 }
 
@@ -558,25 +579,29 @@ struct TeamScoreColumn: View {
     let score: Int
     let lastDigit: Int
     let isLeading: Bool
+    /// Logo circle size for featured game (default 40).
+    var logoSize: CGFloat = 40
+
+    private var imageSize: CGFloat { logoSize * 0.82 }
 
     var body: some View {
         VStack(spacing: 6) {
             ZStack {
                 Circle()
                     .fill(Color(hex: team.primaryColor) ?? DesignSystem.Colors.textTertiary)
-                    .frame(width: 40, height: 40)
-                if let urlString = team.logoURL, let url = URL(string: urlString) {
+                    .frame(width: logoSize, height: logoSize)
+                if let urlString = team.displayLogoURL, let url = URL(string: urlString) {
                     AsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let image):
                             image
                                 .resizable()
                                 .scaledToFit()
-                                .frame(width: 32, height: 32)
+                                .frame(width: imageSize, height: imageSize)
                                 .clipShape(Circle())
                         case .failure:
                             Text(team.abbreviation)
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.system(size: logoSize * 0.3, weight: .bold))
                                 .foregroundColor(.white)
                         case .empty:
                             ProgressView()
@@ -584,23 +609,23 @@ struct TeamScoreColumn: View {
                                 .scaleEffect(0.8)
                         @unknown default:
                             Text(team.abbreviation)
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.system(size: logoSize * 0.3, weight: .bold))
                                 .foregroundColor(.white)
                         }
                     }
                 } else {
                     Text(team.abbreviation)
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: logoSize * 0.3, weight: .bold))
                         .foregroundColor(.white)
                 }
             }
-            .frame(width: 40, height: 40)
+            .frame(width: logoSize, height: logoSize)
             Text(team.abbreviation)
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: logoSize * 0.22, weight: .medium))
                 .foregroundColor(DesignSystem.Colors.textTertiary)
 
             Text("\(score)")
-                .font(.system(size: 32, weight: .bold))
+                .font(.system(size: logoSize * 0.58, weight: .bold))
                 .monospacedDigit()
                 .foregroundColor(isLeading ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.textPrimary)
                 .contentTransition(.numericText())
@@ -625,10 +650,7 @@ struct AddPoolChipView: View {
     let onTap: () -> Void
 
     var body: some View {
-        Button(action: {
-            HapticService.selection()
-            onTap()
-        }) {
+        Button(action: onTap) {
             HStack(spacing: 8) {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 16))
@@ -640,12 +662,14 @@ struct AddPoolChipView: View {
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
-                    .fill(DesignSystem.Colors.accentBlue.opacity(0.2))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
-                            .strokeBorder(DesignSystem.Colors.accentBlue.opacity(0.6), lineWidth: 1)
-                    )
+                ZStack {
+                    RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                        .fill(.ultraThinMaterial)
+                    RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                        .fill(DesignSystem.Colors.accentBlue.opacity(0.15))
+                    RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                        .strokeBorder(DesignSystem.Colors.accentBlue.opacity(0.6), lineWidth: 1)
+                }
             )
             .foregroundColor(DesignSystem.Colors.accentBlue)
         }
@@ -731,7 +755,7 @@ struct AddPoolFlowView: View {
                                     } label: {
                                         HStack(spacing: 12) {
                                             TeamLogoView(team: game.awayTeam, size: 28)
-                                            Text("\(game.awayTeam.abbreviation) @ \(game.homeTeam.abbreviation)")
+                                            Text("\(game.awayTeam.abbreviation) vs \(game.homeTeam.abbreviation)")
                                                 .font(.subheadline)
                                                 .fontWeight(selectedGame?.id == game.id ? .semibold : .regular)
                                             Spacer()
@@ -1206,7 +1230,7 @@ struct InteractiveGridCard: View {
                     .foregroundColor(DesignSystem.Colors.textTertiary)
             }
         }
-        .sportsbookCard()
+        .liquidGlassCard(cornerRadius: DesignSystem.Layout.glassCornerRadius)
     }
 }
 
@@ -1315,14 +1339,17 @@ struct QuickStatsCard: View {
         .padding(.vertical, 12)
         .padding(.horizontal, DesignSystem.Layout.cardPadding)
         .background(
-            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                .fill(DesignSystem.Colors.cardSurface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                        .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 0.5)
-                )
+            ZStack {
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                    .fill(DesignSystem.Colors.cardSurface.opacity(0.4))
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                    .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
+            }
         )
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.4), radius: 6, x: 0, y: 2)
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.35), radius: 2, x: 0, y: 1)
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.2), radius: 10, x: 0, y: 3)
     }
 }
 

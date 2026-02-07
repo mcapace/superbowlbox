@@ -77,7 +77,7 @@ class GamesService: ObservableObject {
                     awayTeam = team
                 }
             }
-            guard let home = homeTeam, let away = awayTeam else { continue }
+            guard let home = homeTeam, let away = awayTeam, home.id != away.id else { continue }
             let status = (competition["status"] as? [String: Any])?["type"] as? [String: Any]
             let statusName = status?["shortDetail"] as? String ?? status?["name"] as? String ?? "Scheduled"
             result.append(ListableGame(

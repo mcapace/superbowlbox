@@ -236,6 +236,10 @@ struct SettingsView: View {
             }
             }
             .scrollContentBackground(.hidden)
+            .listRowBackground(
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                    .fill(.ultraThinMaterial)
+            )
             .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
             .navigationTitle("Settings")
             .sheet(isPresented: $showingJoinPool) {
@@ -469,8 +473,14 @@ struct SharePoolSheet: View {
                 }
                 .padding()
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(DesignSystem.Colors.surfaceElevated)
+                    ZStack {
+                        RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                            .fill(.ultraThinMaterial)
+                        RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                            .fill(DesignSystem.Colors.surfaceElevated.opacity(0.5))
+                        RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                            .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
+                    }
                 )
             }
             .padding()
@@ -566,7 +576,9 @@ struct JoinPoolSheet: View {
                     ClaimYourSquaresView(
                         pool: pool,
                         onConfirm: { updatedPool in
-                            appState.addPool(updatedPool)
+                            var p = updatedPool
+                            p.joinedViaCode = code.trimmingCharacters(in: .whitespaces).uppercased()
+                            appState.addPool(p, isOwner: false)
                             HapticService.success()
                             dismiss()
                         },

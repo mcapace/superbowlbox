@@ -91,7 +91,7 @@ private struct GameRowView: View {
             TeamLogoView(team: game.awayTeam, size: 40)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(game.awayTeam.abbreviation) @ \(game.homeTeam.abbreviation)")
+                Text("\(game.awayTeam.abbreviation) vs \(game.homeTeam.abbreviation)")
                     .font(AppTypography.headline)
                 Text(game.statusShort)
                     .font(AppTypography.caption2)
@@ -119,7 +119,7 @@ struct TeamLogoView: View {
             Circle()
                 .fill(Color(hex: team.primaryColor) ?? .gray)
                 .frame(width: size, height: size)
-            if let urlString = team.logoURL, let url = URL(string: urlString) {
+            if let urlString = team.displayLogoURL, let url = URL(string: urlString) {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let image):

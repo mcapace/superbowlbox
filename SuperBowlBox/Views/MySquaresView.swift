@@ -39,9 +39,12 @@ struct MySquaresView: View {
                 }
                 .padding(DesignSystem.Layout.cardPadding)
                 .background(
-                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
-                        .fill(DesignSystem.Colors.cardSurface)
-                        .overlay(RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall).strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1))
+                    ZStack {
+                        RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                            .fill(.ultraThinMaterial)
+                        RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                            .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
+                    }
                 )
                 .padding(.horizontal, DesignSystem.Layout.screenInset)
                 .padding(.vertical, 16)
@@ -194,7 +197,7 @@ struct MySquaresSummaryCard: View {
                 }
             }
         }
-        .sportsbookCard()
+        .liquidGlassCard(cornerRadius: DesignSystem.Layout.glassCornerRadius)
     }
 }
 
@@ -208,22 +211,60 @@ struct PoolSquaresCard: View {
         return pool.winningSquare(for: score)
     }
 
+    /// One-line payout summary for this pool (e.g. "Quarters · $25 each" or "25% per period").
+    private var payoutSummary: String {
+        let s = pool.resolvedPoolStructure
+        let first = s.payoutDescriptions.first ?? "—"
+        if s.payoutDescriptions.count > 1, s.payoutDescriptions.allSatisfy({ $0 == first }) {
+            return "\(s.poolTypeLabel) · \(first) each"
+        }
+        if let total = s.totalPoolAmount, total > 0 {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .currency
+            formatter.currencyCode = s.currencyCode
+            formatter.maximumFractionDigits = 0
+            let totalStr = formatter.string(from: NSNumber(value: total)) ?? "$\(Int(total))"
+            return "\(s.poolTypeLabel) · \(totalStr) pool"
+        }
+        return s.poolTypeLabel
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
+            // Pool name + box count
             HStack {
                 Text(pool.name)
                     .font(DesignSystem.Typography.headline)
                     .foregroundColor(DesignSystem.Colors.textPrimary)
-
                 Spacer()
-
-                Text("\(squares.count) boxes")
+                Text("\(squares.count) \(squares.count == 1 ? "box" : "boxes")")
                     .font(DesignSystem.Typography.caption)
                     .foregroundColor(DesignSystem.Colors.textSecondary)
             }
 
-            // Grid of my numbers
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
+            // Matchup with team logos (away = rows, home = columns)
+            HStack(spacing: 10) {
+                TeamLogoView(team: pool.awayTeam, size: 32)
+                Text("vs")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                TeamLogoView(team: pool.homeTeam, size: 32)
+                Spacer()
+            }
+            .padding(.vertical, 4)
+
+            // Payout summary
+            HStack(spacing: 6) {
+                Image(systemName: "dollarsign.circle.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(DesignSystem.Colors.winnerGold.opacity(0.9))
+                Text(payoutSummary)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
+            }
+
+            // Grid of my boxes with numbers + payouts
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2), spacing: 10) {
                 ForEach(squares) { square in
                     let isCurrentWinner = currentWinningSquare?.id == square.id
                     SquareNumberCell(
@@ -234,7 +275,7 @@ struct PoolSquaresCard: View {
                 }
             }
         }
-        .sportsbookCard()
+        .liquidGlassCard(cornerRadius: DesignSystem.Layout.glassCornerRadius)
     }
 }
 
@@ -243,57 +284,109 @@ struct SquareNumberCell: View {
     let square: BoxSquare
     let isCurrentWinner: Bool
 
-    var rowNumber: Int {
-        pool.awayNumbers[square.row]
+    var awayNumber: Int { pool.awayNumbers[square.row] }
+    var homeNumber: Int { pool.homeNumbers[square.column] }
+
+    /// Payout amount for a given period index (e.g. "Q1" → $25).
+    private func payoutForPeriod(_ index: Int) -> String? {
+        guard index >= 0, index < pool.resolvedPoolStructure.periods.count else { return nil }
+        if let amount = pool.resolvedPoolStructure.amountPerPeriod(at: index), amount > 0 {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .currency
+            formatter.currencyCode = pool.resolvedPoolStructure.currencyCode
+            formatter.maximumFractionDigits = 0
+            return formatter.string(from: NSNumber(value: amount))
+        }
+        return pool.resolvedPoolStructure.payoutDescriptions[safe: index]
     }
 
-    var colNumber: Int {
-        pool.homeNumbers[square.column]
+    /// Won payouts for this square (e.g. "Q1: $25", "Halftime: $50").
+    private var wonPayoutLines: [String] {
+        let struct_ = pool.resolvedPoolStructure
+        return square.allWonPeriodLabels.compactMap { label in
+            guard let idx = struct_.periods.firstIndex(where: { $0.displayLabel == label }) else { return label }
+            if let amt = payoutForPeriod(idx) { return "\(label): \(amt)" }
+            return label
+        }
+    }
+
+    /// One short line for potential payout per period (e.g. "$25/period" or "25% each").
+    private var potentialPayoutLine: String? {
+        let s = pool.resolvedPoolStructure
+        guard let first = s.payoutDescriptions.first, !first.isEmpty else { return nil }
+        if s.payoutDescriptions.count > 1, s.payoutDescriptions.allSatisfy({ $0 == first }) {
+            return "\(first)/period"
+        }
+        return first
     }
 
     var body: some View {
-        VStack(spacing: 4) {
-            HStack(spacing: 2) {
-                Text("\(rowNumber)")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                Text("-")
-                    .font(.system(size: 14))
+        VStack(alignment: .leading, spacing: 8) {
+            // Square combo: Away # – Home # with team context
+            HStack(spacing: 6) {
+                VStack(spacing: 2) {
+                    TeamLogoView(team: pool.awayTeam, size: 22)
+                    Text("\(awayNumber)")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                }
+                Text("–")
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(DesignSystem.Colors.textSecondary)
-                Text("\(colNumber)")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                VStack(spacing: 2) {
+                    TeamLogoView(team: pool.homeTeam, size: 22)
+                    Text("\(homeNumber)")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                }
+                Spacer(minLength: 0)
             }
 
+            // Status: LIVE or quarter wins
             if isCurrentWinner {
-                HStack(spacing: 2) {
-                    Image(systemName: "person.text.rectangle")
-                        .font(.system(size: 8))
+                HStack(spacing: 4) {
+                    Image(systemName: "livephoto")
+                        .font(.system(size: 9))
                     Text("LIVE")
-                        .font(.system(size: 8, weight: .bold))
+                        .font(.system(size: 10, weight: .bold))
                 }
                 .foregroundColor(.white)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
                 .background(DesignSystem.Colors.liveGreen)
-                .cornerRadius(4)
+                .cornerRadius(6)
             } else if !square.quarterWins.isEmpty {
-                HStack(spacing: 2) {
-                    ForEach(square.quarterWins, id: \.self) { q in
-                        Text("Q\(q)")
-                            .font(.system(size: 8, weight: .bold))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Won")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(DesignSystem.Colors.winnerGold)
+                    ForEach(wonPayoutLines, id: \.self) { line in
+                        Text(line)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
                     }
                 }
-                .foregroundColor(DesignSystem.Colors.winnerGold)
+            } else if let potential = potentialPayoutLine {
+                Text("Potential: \(potential)")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(DesignSystem.Colors.textTertiary)
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(backgroundColor)
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(backgroundColor)
+                if !isCurrentWinner && square.quarterWins.isEmpty {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(.ultraThinMaterial.opacity(0.5))
+                }
+            }
         )
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(isCurrentWinner ? DesignSystem.Colors.winnerGold : Color.clear, lineWidth: 2)
+                .stroke(isCurrentWinner ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.glassBorder.opacity(0.5), lineWidth: isCurrentWinner ? 2 : 0.6)
         )
     }
 
@@ -303,7 +396,14 @@ struct SquareNumberCell: View {
         } else if !square.quarterWins.isEmpty {
             return DesignSystem.Colors.winnerGold.opacity(0.15)
         }
-        return DesignSystem.Colors.backgroundTertiary
+        return DesignSystem.Colors.backgroundTertiary.opacity(0.8)
+    }
+}
+
+// Safe array subscript for payout descriptions.
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }
 

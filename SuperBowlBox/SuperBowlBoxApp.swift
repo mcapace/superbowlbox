@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 @main
 struct SquareUpApp: App {
@@ -7,7 +8,7 @@ struct SquareUpApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
                 .environmentObject(appState)
                 .font(DesignSystem.Typography.body)
                 .preferredColorScheme(.dark)
@@ -15,10 +16,51 @@ struct SquareUpApp: App {
     }
 }
 
-// MARK: - App delegate (push notification token)
+// MARK: - Root: splash then main content
+struct RootView: View {
+    @EnvironmentObject var appState: AppState
+    @State private var showSplash = true
+
+    var body: some View {
+        ZStack {
+            ContentView()
+
+            if showSplash {
+                SplashView()
+                    .transition(.opacity)
+                    .zIndex(1)
+            }
+        }
+        .animation(.easeOut(duration: 0.4), value: showSplash)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                showSplash = false
+            }
+        }
+    }
+}
+
+// MARK: - Splash: SquareUp logo + wordmark on every launch
+struct SplashView: View {
+    var body: some View {
+        ZStack {
+            DesignSystem.Colors.backgroundPrimary
+                .ignoresSafeArea()
+            VStack(spacing: 12) {
+                SquareUpLogoView(showIcon: true, wordmarkSize: 44, iconSize: 56)
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .allowsHitTesting(true)
+    }
+}
+
+// MARK: - App delegate (push notification token + foreground display)
 final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         HapticService.prepare()
+        UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
         return true
     }
 
@@ -52,13 +94,23 @@ class AppState: ObservableObject {
         // No sample/fake pool: when empty, user can upload, create, or join with code
     }
 
-    func addPool(_ pool: BoxGrid) {
-        pools.append(pool)
+    /// Add a pool (e.g. after create or join). Lock it when saving. Pass isOwner: false when joining via invite code.
+    func addPool(_ pool: BoxGrid, isOwner: Bool = true) {
+        var p = pool
+        p.isLocked = true
+        p.isOwner = isOwner
+        pools.append(p)
         savePools()
     }
 
     func removePool(at index: Int) {
         guard index >= 0 && index < pools.count else { return }
+        let pool = pools[index]
+        if let code = pool.sharedCode, !code.isEmpty {
+            Task {
+                try? await SharedPoolsService.deletePool(code: code)
+            }
+        }
         pools.remove(at: index)
         if selectedPoolIndex >= pools.count {
             selectedPoolIndex = max(0, pools.count - 1)
@@ -71,6 +123,59 @@ class AppState: ObservableObject {
             pools[index] = pool
             savePools()
         }
+    }
+
+    /// Check joined pools (participant view); if host deleted or updated the pool, update local list and alert the user.
+    @MainActor
+    func refreshJoinedPoolsIfNeeded() async {
+        guard SharedPoolsConfig.isConfigured else { return }
+        var indicesToRemove: [Int] = []
+        var updates: [(index: Int, pool: BoxGrid)] = []
+        for (index, pool) in pools.enumerated() where !pool.isOwner {
+            guard let code = pool.joinedViaCode, !code.isEmpty else { continue }
+            do {
+                let serverPool = try await SharedPoolsService.fetchPool(code: code)
+                if serverPool.lastModified > pool.lastModified {
+                    var updated = serverPool
+                    updated.isOwner = false
+                    updated.joinedViaCode = code
+                    updated.ownerLabels = pool.ownerLabels
+                    updates.append((index, updated))
+                }
+            } catch let e as SharedPoolsService.SharedPoolsError {
+                switch e {
+                case .noPoolForCode:
+                    indicesToRemove.append(index)
+                    NotificationService.scheduleLocal(
+                        title: "Pool removed by host",
+                        body: "'\(pool.name)' was removed by the host.",
+                        identifier: "pool-removed-\(pool.id.uuidString)"
+                    )
+                case .fetchFailed(404):
+                    indicesToRemove.append(index)
+                    NotificationService.scheduleLocal(
+                        title: "Pool removed by host",
+                        body: "'\(pool.name)' was removed by the host.",
+                        identifier: "pool-removed-\(pool.id.uuidString)"
+                    )
+                default: break
+                }
+            } catch { continue }
+        }
+        for (index, updated) in updates {
+            guard index < pools.count, pools[index].id == updated.id else { continue }
+            pools[index] = updated
+            NotificationService.scheduleLocal(
+                title: "Pool updated by host",
+                body: "'\(updated.name)' was updated by the host.",
+                identifier: "pool-updated-\(updated.id.uuidString)"
+            )
+        }
+        for idx in indicesToRemove.sorted(by: >) {
+            pools.remove(at: idx)
+            if selectedPoolIndex >= pools.count { selectedPoolIndex = max(0, pools.count - 1) }
+        }
+        if !indicesToRemove.isEmpty || !updates.isEmpty { savePools() }
     }
 
     /// Updates winner state on all pools from current score and saves. Also reviews what’s happening and may push local notifications.

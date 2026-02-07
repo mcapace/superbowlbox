@@ -8,11 +8,11 @@ Use this to make sure **Sign in**, **Camera**, **OCR**, **live scores**, and **n
 |--------|----------------|
 | **Scan / create pools, “my name on sheet”, multiple boxes** | Nothing extra. Works out of the box. |
 | **Live scores** | Optional: add **SportsDataIOApiKey** in Info.plist (see §4). Otherwise ESPN is used. |
-| **In-app “review & push” (You’re leading!, Halftime winner, One score away)** | Allow **notifications** when the app asks. No capability required. Runs when the app is open and scores refresh. |
+| **Notifications (local)** | Already set up. Allow notifications when the app asks. You get: “You’re leading!”, period winners, “One score away”, and “Pool removed/updated by host” when relevant. Works with app open or in background. No extra setup. |
 | **Sign in with Apple** | Set **Team** in Xcode; add **Sign in with Apple** capability (§1). |
 | **Sign in with Google** | Add **GoogleSignIn-iOS** package; set **GIDClientID** and URL scheme in Info.plist (§2). |
 | **Camera / photo library** | Allow when prompted. Usage strings are already in Info.plist (§3). |
-| **Remote push (e.g. from your server)** | Add **Push Notifications** capability; send APNs payloads using the device token (§6). |
+| **Remote push (e.g. from your server)** | Entitlement `aps-environment` is already in the project. Send the device token from the app to your backend and use APNs (§6). |
 
 ---
 
@@ -132,23 +132,25 @@ If OCR fails, it’s usually due to image quality (blur, lighting, or a sheet th
 
 ---
 
-## 6. Notifications (local “review & push” and optional remote push)
+## 6. Notifications (fully set up; no extra steps for local)
 
 **Already in the project:**  
-- The app requests notification permission on launch and registers for remote notifications.  
-- **GameContextService** reviews the score and pool state and schedules **local** notifications when you’re leading, when a quarter/halftime/final winner is decided, or when your square is one score away.
+- **Entitlement:** `aps-environment` is in `SuperBowlBox.entitlements` so the app can register for remote notifications.  
+- Permission is requested on launch; the app registers for remote notifications when the user allows.  
+- **GameContextService** schedules **local** notifications when you’re leading, when a quarter/halftime/final winner is decided, or when your square is one score away.  
+- **Pool alerts:** When a host deletes or updates a shared pool, joined participants get a local notification on next app open/refresh.  
+- **Foreground:** Notifications show as banners/sound when the app is open (via `NotificationDelegate`).
 
-**For local “review & push” (no extra setup):**
+**You don’t need to add anything for local notifications:**
 
-- When iOS prompts for notification permission, tap **Allow**.  
-- Score updates run every 30 seconds while the app is **in the foreground**. When a score update triggers a moment (e.g. you take the lead), the app schedules a local notification.  
-- **Note:** Those moments are only evaluated when the app has recently refreshed scores. If the app is fully closed, you won’t get those alerts until you open the app again. For alerts while the app is closed, you’d use a backend + remote push (§6 below).
+- Run the app; when iOS prompts for notification permission, tap **Allow**.  
+- Local alerts (leading, period winner, one score away, pool removed/updated) work with the app in foreground or background.  
+- Score updates run every 30 seconds while the app is in the foreground; when a moment is triggered, a local notification is scheduled. If the app is fully closed, alerts are evaluated the next time the app opens and refreshes scores.
 
 **For remote push (optional, from your own server):**
 
-1. In Xcode: **Signing & Capabilities** → **+ Capability** → **Push Notifications**.  
-2. The device token is saved when registration succeeds (see `NotificationService.didRegisterForRemoteNotifications(deviceToken:)`). Send that token to your backend (e.g. on login or app launch).  
-3. Your backend fetches scores (or uses webhooks), decides when to notify (e.g. “halftime winner”), and sends an APNs payload to that token.
+1. The device token is stored when registration succeeds (`NotificationService.didRegisterForRemoteNotifications`). Send it to your backend (e.g. on login or app launch).  
+2. Your backend sends APNs payloads to that token. For App Store builds, ensure your App ID has Push Notifications enabled and use a production provisioning profile so `aps-environment` is `production`.
 
 ---
 
@@ -163,7 +165,7 @@ If OCR fails, it’s usually due to image quality (blur, lighting, or a sheet th
 | Sports Data IO       | (none)                        | Resources/Secrets.plist (SportsDataIOApiKey); template: Secrets.example.plist | Copy example to Secrets.plist in Resources/; add key (file is gitignored) |
 | OCR (Vision)         | (none)                        | (none)                                  | None                                |
 | Local notifications  | (none)                        | (none)                                  | Allow when prompted                 |
-| Remote push          | Add “Push Notifications”       | (none)                                  | Backend sends APNs to device token  |
+| Remote push          | `aps-environment` in entitlements ✓ | (none)                            | Backend sends APNs to device token  |
 
 ---
 

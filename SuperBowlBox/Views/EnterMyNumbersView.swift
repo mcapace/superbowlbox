@@ -142,7 +142,7 @@ struct EnterMyNumbersView: View {
             }
             .onAppear {
                 if poolName.isEmpty {
-                    poolName = "\(game.awayTeam.abbreviation) @ \(game.homeTeam.abbreviation)"
+                    poolName = "\(game.awayTeam.abbreviation) vs \(game.homeTeam.abbreviation)"
                 }
                 if ownerName.isEmpty, !appState.myName.isEmpty {
                     ownerName = appState.myName
@@ -153,7 +153,7 @@ struct EnterMyNumbersView: View {
 
     private func createAndSave() {
         let name = poolName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let displayName = name.isEmpty ? "\(game.awayTeam.abbreviation) @ \(game.homeTeam.abbreviation)" : name
+        let displayName = name.isEmpty ? "\(game.awayTeam.abbreviation) vs \(game.homeTeam.abbreviation)" : name
         let owner = ownerName.trimmingCharacters(in: .whitespacesAndNewlines)
         let label = owner.isEmpty ? nil : [owner]
 

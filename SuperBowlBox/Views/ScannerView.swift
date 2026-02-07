@@ -19,7 +19,7 @@ struct ScannerView: View {
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedSport: Sport = .nfl
     @State private var selectedGameForScan: ListableGame?
-    /// Name(s) and pool name entered before OCR, so we match and pre-fill the review step.
+    /// Name(s) and pool name entered before scan, so we match and pre-fill the review step.
     @State private var ownerNameFieldsBeforeScan: [String] = [""]
     @State private var poolNameBeforeScan: String = ""
 
@@ -88,7 +88,7 @@ struct ScannerView: View {
                                 HapticService.success()
                                 var pool = poolToSave
                                 if pool.name == "Scanned Pool" || pool.name.isEmpty, let game = selectedGameForScan {
-                                    pool.name = "\(game.awayTeam.abbreviation) @ \(game.homeTeam.abbreviation)"
+                                    pool.name = "\(game.awayTeam.abbreviation) vs \(game.homeTeam.abbreviation)"
                                 }
                                 onPoolScanned(pool)
                                 dismiss()
@@ -194,7 +194,7 @@ struct ScannerView: View {
         }
     }
 
-    /// Run OCR after user has entered their name as on sheet; then match and show review.
+    /// Run AI scan after user has entered their name as on sheet; then match and show review.
     private func startOCRWithEnteredName() {
         guard let image = selectedImage else { return }
         Task { @MainActor in
@@ -215,25 +215,33 @@ struct ScannerView: View {
                     poolToReview.name = poolName.isEmpty ? "Scanned Pool" : poolName
                     // Use selected game for team identities; confirm column/row order from the scan
                     if let game = selectedGameForScan {
-                        let ocrColumnTeam = pool.homeTeam   // OCR: team on columns (header row)
-                        let ocrRowTeam = pool.awayTeam     // OCR: team on rows (left strip)
-                        if ocrColumnTeam.id == game.homeTeam.id {
+                        let scanColumnTeam = pool.homeTeam   // AI: team on columns (header row)
+                        let scanRowTeam = pool.awayTeam     // AI: team on rows (left strip)
+                        // If AI returned same team twice, use game's two teams so grid shows correct matchup
+                        if scanColumnTeam.id == scanRowTeam.id {
                             poolToReview.homeTeam = game.homeTeam
                             poolToReview.awayTeam = game.awayTeam
-                        } else if ocrColumnTeam.id == game.awayTeam.id {
+                        } else if scanColumnTeam.id == game.homeTeam.id {
+                            poolToReview.homeTeam = game.homeTeam
+                            poolToReview.awayTeam = game.awayTeam
+                        } else if scanColumnTeam.id == game.awayTeam.id {
                             poolToReview.homeTeam = game.awayTeam
                             poolToReview.awayTeam = game.homeTeam
-                        } else if ocrRowTeam.id == game.awayTeam.id {
+                        } else if scanRowTeam.id == game.awayTeam.id {
                             poolToReview.homeTeam = game.homeTeam
                             poolToReview.awayTeam = game.awayTeam
-                        } else if ocrRowTeam.id == game.homeTeam.id {
+                        } else if scanRowTeam.id == game.homeTeam.id {
                             poolToReview.homeTeam = game.awayTeam
                             poolToReview.awayTeam = game.homeTeam
                         } else {
-                            // OCR didn’t match (e.g. unknown); default to game order
+                            // Scan didn’t match (e.g. unknown); default to game order
                             poolToReview.homeTeam = game.homeTeam
                             poolToReview.awayTeam = game.awayTeam
                         }
+                    } else if poolToReview.homeTeam.id == poolToReview.awayTeam.id,
+                              let score = appState.scoreService.currentScore {
+                        poolToReview.homeTeam = score.homeTeam
+                        poolToReview.awayTeam = score.awayTeam
                     }
                     scannedPool = poolToReview
                     withAnimation(.appEntrance) {
@@ -307,7 +315,7 @@ struct SelectGameForScanView: View {
                             } label: {
                                 HStack(spacing: 12) {
                                     TeamLogoView(team: game.awayTeam, size: 32)
-                                    Text("\(game.awayTeam.abbreviation) @ \(game.homeTeam.abbreviation)")
+                                    Text("\(game.awayTeam.abbreviation) vs \(game.homeTeam.abbreviation)")
                                         .font(.subheadline)
                                         .fontWeight(selectedGame?.id == game.id ? .semibold : .regular)
                                     Spacer()
@@ -509,7 +517,7 @@ struct IdleScanView: View {
     }
 }
 
-// MARK: - Enter Name (before OCR) – name as on sheet, then we match via OCR
+// MARK: - Enter Name (before scan) – name as on sheet, then we match via AI scan
 struct EnterNameForScanView: View {
     let image: UIImage
     @Binding var ownerNameFields: [String]

@@ -88,6 +88,29 @@ enum SharedPoolsService {
         guard let first = rows.first else { throw SharedPoolsError.noPoolForCode }
         return first.pool_json
     }
+
+    /// Delete a shared pool by invite code (owner only). Participants will get noPoolForCode when they next check and can be alerted.
+    static func deletePool(code: String) async throws {
+        guard SharedPoolsConfig.isConfigured else { throw SharedPoolsError.notConfigured }
+        let trimmed = code.trimmingCharacters(in: .whitespaces).uppercased()
+        guard trimmed.count == 8 else { return }
+
+        guard let base = SharedPoolsConfig.baseURL else { throw SharedPoolsError.invalidURL }
+        var comp = URLComponents(url: base.appendingPathComponent(tablePath), resolvingAgainstBaseURL: true)!
+        comp.queryItems = [URLQueryItem(name: "code", value: "eq.\(trimmed)")]
+        guard let url = comp.url else { throw SharedPoolsError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        if let key = SharedPoolsConfig.apiKey {
+            request.setValue(key, forHTTPHeaderField: "Apikey")
+            request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        }
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw SharedPoolsError.uploadFailed(0) }
+        guard (200...299).contains(http.statusCode) else { throw SharedPoolsError.uploadFailed(http.statusCode) }
+    }
 }
 
 private struct SharedPoolRowPayload: Encodable {

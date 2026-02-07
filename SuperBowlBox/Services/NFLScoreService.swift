@@ -97,31 +97,43 @@ class NFLScoreService: ObservableObject {
         return try parseESPNResponse(data)
     }
 
+    /// Featured game is always from API (Sports Data IO if configured, else ESPN scoreboard). Prefer Super Bowl when present.
     private func parseESPNResponse(_ data: Data) throws -> GameScore {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let events = json["events"] as? [[String: Any]] else {
             throw ScoreError.decodingError
         }
 
-        // Look for the featured game (e.g. Super Bowl) or current NFL game
+        // 1) Prefer Super Bowl by name (neutral site in CA etc.) so we show the right "next game"
         for event in events {
-            guard let name = event["name"] as? String,
+            guard let name = event["name"] as? String, name.lowercased().contains("super bowl"),
                   let competitions = event["competitions"] as? [[String: Any]],
                   let competition = competitions.first,
                   let competitors = competition["competitors"] as? [[String: Any]] else {
                 continue
             }
-
-            // Prefer championship/featured game when available
-            let isSuperBowl = name.lowercased().contains("super bowl")
-            let isPlayoff = (event["season"] as? [String: Any])?["type"] as? Int == 3
-
-            if isSuperBowl || isPlayoff || events.count == 1 {
-                return try parseCompetition(competition, competitors: competitors, scheduledStart: parseEventDate(event))
-            }
+            return try parseCompetition(competition, competitors: competitors, scheduledStart: parseEventDate(event))
         }
 
-        // If no featured game found, return the first game
+        // 2) Else prefer any playoff game
+        let playoffType = 3
+        for event in events {
+            guard (event["season"] as? [String: Any])?["type"] as? Int == playoffType,
+                  let competitions = event["competitions"] as? [[String: Any]],
+                  let competition = competitions.first,
+                  let competitors = competition["competitors"] as? [[String: Any]] else {
+                continue
+            }
+            return try parseCompetition(competition, competitors: competitors, scheduledStart: parseEventDate(event))
+        }
+
+        // 3) Else single game or first game in list
+        if events.count == 1, let event = events.first,
+           let competitions = event["competitions"] as? [[String: Any]],
+           let competition = competitions.first,
+           let competitors = competition["competitors"] as? [[String: Any]] {
+            return try parseCompetition(competition, competitors: competitors, scheduledStart: parseEventDate(event))
+        }
         if let event = events.first,
            let competitions = event["competitions"] as? [[String: Any]],
            let competition = competitions.first,

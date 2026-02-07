@@ -6,8 +6,15 @@ private let _googleBlue = Color(red: 66/255, green: 133/255, blue: 244/255)
 private let _googleYellow = Color(red: 251/255, green: 188/255, blue: 5/255)
 private let _googleGreen = Color(red: 52/255, green: 168/255, blue: 83/255)
 
-// MARK: - Google Sign-In button (material style, matches web gsi-material-button)
-// Uses official Google brand colors for the "G" icon; label: "Continue with Google"
+// gsi-material-button colors from Google's official CSS
+private let _gsiBorder = Color(red: 116/255, green: 119/255, blue: 117/255)       // #747775
+private let _gsiText = Color(red: 31/255, green: 31/255, blue: 31/255)          // #1f1f1f
+private let _gsiDisabledBg = Color.white.opacity(0.38)                          // #ffffff61
+private let _gsiDisabledBorder = Color(red: 31/255, green: 31/255, blue: 31/255).opacity(0.12)  // #1f1f1f1f
+private let _gsiPressedOverlay = Color(red: 48/255, green: 48/255, blue: 48/255).opacity(0.12)   // #303030 12%
+
+// MARK: - Google Sign-In button (official gsi-material-button style)
+// Matches Google's web CSS: white bg, 1px #747775 border, 4px radius, 40px height, 14pt font, "Sign in with Google"
 
 struct GoogleSignInButton: View {
     var action: () -> Void
@@ -15,27 +22,40 @@ struct GoogleSignInButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
-                GoogleLogoView(size: 22)
-                Text("Continue with Google")
-                    .font(AppTypography.headline)
-                    .foregroundColor(.primary)
-                Spacer()
+            HStack(spacing: 10) {
+                GoogleLogoView(size: 20)
+                Text("Sign in with Google")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(isDisabled ? _gsiText.opacity(0.38) : _gsiText)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 12)
             .frame(maxWidth: .infinity)
-            .frame(height: 52)
-            .background(Color(.systemBackground))
+            .frame(height: 40)
+            .background(isDisabled ? _gsiDisabledBg : Color.white)
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(Color.primary.opacity(0.2), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 4)
+                    .strokeBorder(isDisabled ? _gsiDisabledBorder : _gsiBorder, lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.06), radius: 4, y: 2)
-            .cornerRadius(12)
+            .shadow(color: Color.black.opacity(0.08), radius: 1, y: 1)
+            .shadow(color: Color.black.opacity(0.04), radius: 3, y: 1)
+            .cornerRadius(4)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GsiMaterialButtonStyle(isDisabled: isDisabled))
         .disabled(isDisabled)
-        .opacity(isDisabled ? 0.6 : 1)
+    }
+}
+
+private struct GsiMaterialButtonStyle: ButtonStyle {
+    let isDisabled: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(_gsiPressedOverlay)
+                    .opacity(configuration.isPressed && !isDisabled ? 1 : 0)
+            )
+            .animation(.easeInOut(duration: 0.218), value: configuration.isPressed)
     }
 }
 

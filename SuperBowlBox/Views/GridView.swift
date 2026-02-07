@@ -7,134 +7,209 @@ struct GridDetailView: View {
     @State private var selectedSquare: BoxSquare?
     @State private var showingEditSheet = false
     @State private var showingEditRulesSheet = false
+    @State private var showingEditMatchupSheet = false
     @State private var zoomScale: CGFloat = 1.0
     @State private var showingShareSheet = false
     @State private var showingDeletePoolConfirmation = false
     @State private var showingPayoutRulesModal = false
+    @State private var lastZoomScale: CGFloat = 1.0
 
     var score: GameScore? {
         appState.scoreService.currentScore
     }
 
+    /// Winning square from live score (API). Correct when this pool's teams match the featured game.
     var winningPosition: (row: Int, column: Int)? {
         guard let score = score else { return nil }
         return pool.winningPosition(homeDigit: score.homeLastDigit, awayDigit: score.awayLastDigit)
     }
 
+    /// Cell size so grid fits on screen (1 corner + 10 cells); clamped for readability.
+    private static let minCellSize: CGFloat = 26
+    private static let maxCellSize: CGFloat = 44
+    private static let minZoom: CGFloat = 0.5
+    private static let maxZoom: CGFloat = 3.0
+
     var body: some View {
-        ScrollView([.horizontal, .vertical], showsIndicators: true) {
-            VStack(spacing: 0) {
-                // Pool type line — tap to view payout rules (modal shows parsed, professional summary)
-                Button {
-                    HapticService.impactLight()
-                    showingPayoutRulesModal = true
-                } label: {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Label(pool.resolvedPoolStructure.poolTypeLabel, systemImage: "calendar.badge.clock")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(DesignSystem.Colors.liveGreen)
-                            Spacer()
-                            Text("View payout rules")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(DesignSystem.Colors.textSecondary)
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(DesignSystem.Colors.textTertiary)
-                        }
-                        if let score = score, let info = pool.scoreChangeInfo(for: score) {
-                            let formatter: NumberFormatter = {
-                                let f = NumberFormatter()
-                                f.numberStyle = .currency
-                                f.currencyCode = pool.resolvedPoolStructure.currencyCode
-                                f.maximumFractionDigits = 0
-                                return f
-                            }()
-                            let paidStr = formatter.string(from: NSNumber(value: info.paid)) ?? "$\(Int(info.paid))"
-                            let remStr = formatter.string(from: NSNumber(value: info.remainder)) ?? "$\(Int(info.remainder))"
-                            Text("\(info.count) score changes · \(paidStr) paid · \(remStr) to final")
-                                .font(.system(size: 11))
-                                .foregroundColor(DesignSystem.Colors.textTertiary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+        GeometryReader { outer in
+            let availableWidth = outer.size.width - 2 * DesignSystem.Layout.screenInset
+            let fitCellSize = min(Self.maxCellSize, max(Self.minCellSize, availableWidth / 11))
+            let cellSize = fitCellSize * zoomScale
+
+            ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                VStack(spacing: 0) {
+                    // Pool type line — tap to view payout rules
+                    Button {
+                        HapticService.impactLight()
+                        showingPayoutRulesModal = true
+                    } label: {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Label(pool.resolvedPoolStructure.poolTypeLabel, systemImage: "calendar.badge.clock")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(DesignSystem.Colors.liveGreen)
+                                Spacer()
+                                Text("View payout rules")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                            }
+                            if let score = score, let info = pool.scoreChangeInfo(for: score) {
+                                let formatter: NumberFormatter = {
+                                    let f = NumberFormatter()
+                                    f.numberStyle = .currency
+                                    f.currencyCode = pool.resolvedPoolStructure.currencyCode
+                                    f.maximumFractionDigits = 0
+                                    return f
+                                }()
+                                let paidStr = formatter.string(from: NSNumber(value: info.paid)) ?? "$\(Int(info.paid))"
+                                let remStr = formatter.string(from: NSNumber(value: info.remainder)) ?? "$\(Int(info.remainder))"
+                                Text("\(info.count) score changes · \(paidStr) paid · \(remStr) to final")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(DesignSystem.Colors.textTertiary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
                         }
                     }
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(DesignSystem.Colors.backgroundTertiary.opacity(0.8))
-                .cornerRadius(DesignSystem.Layout.cornerRadiusSmall)
-                .padding(.horizontal)
-                .padding(.bottom, 10)
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(DesignSystem.Colors.backgroundTertiary.opacity(0.8))
+                    .cornerRadius(DesignSystem.Layout.cornerRadiusSmall)
+                    .padding(.horizontal)
+                    .padding(.bottom, 10)
 
-                // Grid: column headers (home) + rows
-                HStack(spacing: 0) {
-                    Text("·")
-                        .font(.system(size: 16))
-                        .foregroundColor(DesignSystem.Colors.textMuted)
-                        .frame(width: 44, height: 44)
-                        .background(DesignSystem.Colors.backgroundTertiary)
-
-                    ForEach(0..<10, id: \.self) { col in
-                        let isWinningCol = winningPosition?.column == col
-                        Text("\(pool.homeNumbers[col])")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .monospacedDigit()
-                            .frame(width: 44, height: 44)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(isWinningCol ? DesignSystem.Colors.liveGreen : (Color(hex: pool.homeTeam.primaryColor) ?? .blue).opacity(0.9))
-                            )
-                            .foregroundColor(.white)
-                    }
-                }
-
-                ForEach(0..<10, id: \.self) { row in
+                    // Grid: corner = team logos with labels (Rows = away, Cols = home); numbers from pool; winner from live score
                     HStack(spacing: 0) {
-                        let isWinningRow = winningPosition?.row == row
-                        Text("\(pool.awayNumbers[row])")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .monospacedDigit()
-                            .frame(width: 44, height: 44)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(isWinningRow ? DesignSystem.Colors.liveGreen : (Color(hex: pool.awayTeam.primaryColor) ?? .red).opacity(0.9))
-                            )
-                            .foregroundColor(.white)
+                        // Corner: top = Rows (away), bottom = Cols (home) so it's clear which axis is which
+                        VStack(spacing: 2) {
+                            VStack(spacing: 1) {
+                                Text("Rows")
+                                    .font(.system(size: max(8, cellSize * 0.18), weight: .semibold))
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                                TeamLogoView(team: pool.awayTeam, size: max(20, cellSize * 0.52))
+                            }
+                            .frame(maxWidth: .infinity)
+                            Rectangle()
+                                .fill(DesignSystem.Colors.cardBorder)
+                                .frame(height: 1)
+                            VStack(spacing: 1) {
+                                Text("Cols")
+                                    .font(.system(size: max(8, cellSize * 0.18), weight: .semibold))
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                                TeamLogoView(team: pool.homeTeam, size: max(20, cellSize * 0.52))
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .frame(width: cellSize, height: cellSize)
+                        .background(DesignSystem.Colors.backgroundTertiary)
+                        .cornerRadius(4)
 
-                        // Grid cells
                         ForEach(0..<10, id: \.self) { col in
-                            let square = pool.squares[row][col]
-                            let isWinning = winningPosition?.row == row && winningPosition?.column == col
-                            let ownerLabels = pool.effectiveOwnerLabels(globalName: appState.myName)
-                            let isHighlighted = !ownerLabels.isEmpty && pool.isOwnerSquare(square, ownerLabels: ownerLabels)
+                            let isWinningCol = winningPosition?.column == col
+                            Text("\(pool.homeNumbers[col])")
+                                .font(.system(size: cellSize * 0.38, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                                .frame(width: cellSize, height: cellSize)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(isWinningCol ? DesignSystem.Colors.liveGreen : (Color(hex: pool.homeTeam.primaryColor) ?? .blue).opacity(0.9))
+                                )
+                                .foregroundColor(.white)
+                        }
+                    }
 
-                            FullGridCellView(
-                                square: square,
-                                isWinning: isWinning,
-                                isHighlighted: isHighlighted
-                            )
-                            .onTapGesture {
-                                HapticService.impactLight()
-                                selectedSquare = square
-                                showingEditSheet = true
+                    ForEach(0..<10, id: \.self) { row in
+                        HStack(spacing: 0) {
+                            let isWinningRow = winningPosition?.row == row
+                            Text("\(pool.awayNumbers[row])")
+                                .font(.system(size: cellSize * 0.38, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                                .frame(width: cellSize, height: cellSize)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(isWinningRow ? DesignSystem.Colors.liveGreen : (Color(hex: pool.awayTeam.primaryColor) ?? .red).opacity(0.9))
+                                )
+                                .foregroundColor(.white)
+
+                            ForEach(0..<10, id: \.self) { col in
+                                let square = pool.squares[row][col]
+                                let isWinning = winningPosition?.row == row && winningPosition?.column == col
+                                let ownerLabels = pool.effectiveOwnerLabels(globalName: appState.myName)
+                                let isHighlighted = !ownerLabels.isEmpty && pool.isOwnerSquare(square, ownerLabels: ownerLabels)
+
+                                FullGridCellView(
+                                    square: square,
+                                    isWinning: isWinning,
+                                    isHighlighted: isHighlighted,
+                                    size: cellSize
+                                )
+                                .onTapGesture {
+                                    HapticService.impactLight()
+                                    selectedSquare = square
+                                    showingEditSheet = true
+                                }
                             }
                         }
                     }
                 }
+                .padding()
+                .contentShape(Rectangle())
+                .simultaneousGesture(
+                    MagnificationGesture()
+                        .onChanged { value in
+                            let proposed = lastZoomScale * value
+                            zoomScale = min(Self.maxZoom, max(Self.minZoom, proposed))
+                        }
+                        .onEnded { _ in
+                            lastZoomScale = zoomScale
+                        }
+                )
             }
-            .padding()
-            .scaleEffect(zoomScale)
         }
+        .padding(.horizontal, 0)
         .navigationTitle(pool.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
-                    Button {
-                        showingEditRulesSheet = true
-                    } label: {
-                        Label("Edit payout rules", systemImage: "list.bullet.rectangle")
+                    if !pool.isLocked {
+                        Button {
+                            showingEditRulesSheet = true
+                        } label: {
+                            Label("Edit payout rules", systemImage: "list.bullet.rectangle")
+                        }
+
+                        Button {
+                            showingEditMatchupSheet = true
+                        } label: {
+                            Label("Edit matchup (teams)", systemImage: "sportscourt")
+                        }
+
+                        Button {
+                            pool.randomizeNumbers()
+                            appState.updatePool(pool)
+                        } label: {
+                            Label("Randomize Numbers", systemImage: "shuffle")
+                        }
+
+                        Button(role: .destructive) {
+                            pool = BoxGrid(
+                                name: pool.name,
+                                homeTeam: pool.homeTeam,
+                                awayTeam: pool.awayTeam,
+                                poolStructure: pool.resolvedPoolStructure,
+                                isLocked: pool.isLocked,
+                                isOwner: pool.isOwner
+                            )
+                            appState.updatePool(pool)
+                        } label: {
+                            Label("Clear All Names", systemImage: "trash")
+                        }
+
+                        Divider()
                     }
 
                     Button {
@@ -143,33 +218,12 @@ struct GridDetailView: View {
                         Label("Share Grid", systemImage: "square.and.arrow.up")
                     }
 
-                    Button {
-                        pool.randomizeNumbers()
-                        appState.updatePool(pool)
-                    } label: {
-                        Label("Randomize Numbers", systemImage: "shuffle")
-                    }
-
-                    Divider()
-
-                    Button(role: .destructive) {
-                        pool = BoxGrid(
-                            name: pool.name,
-                            homeTeam: pool.homeTeam,
-                            awayTeam: pool.awayTeam,
-                            poolStructure: pool.resolvedPoolStructure
-                        )
-                        appState.updatePool(pool)
-                    } label: {
-                        Label("Clear All Names", systemImage: "trash")
-                    }
-
                     Divider()
 
                     Button(role: .destructive) {
                         showingDeletePoolConfirmation = true
                     } label: {
-                        Label("Delete pool", systemImage: "trash.fill")
+                        Label(pool.isOwner ? "Delete pool" : "Remove from my list", systemImage: "trash.fill")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -242,6 +296,16 @@ struct GridDetailView: View {
             )
             .environmentObject(appState)
         }
+        .sheet(isPresented: $showingEditMatchupSheet) {
+            EditMatchupSheet(
+                pool: $pool,
+                onSave: {
+                    appState.updatePool(pool)
+                    showingEditMatchupSheet = false
+                },
+                onCancel: { showingEditMatchupSheet = false }
+            )
+        }
         .sheet(isPresented: $showingShareSheet) {
             ShareSheet(items: [exportGridAsImage()])
         }
@@ -251,9 +315,9 @@ struct GridDetailView: View {
                 onDismiss: { showingPayoutRulesModal = false }
             )
         }
-        .alert("Delete pool?", isPresented: $showingDeletePoolConfirmation) {
+        .alert(pool.isOwner ? "Delete pool?" : "Remove from my list?", isPresented: $showingDeletePoolConfirmation) {
             Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) {
+            Button(pool.isOwner ? "Delete" : "Remove", role: .destructive) {
                 if let index = appState.pools.firstIndex(where: { $0.id == pool.id }) {
                     HapticService.impactHeavy()
                     appState.removePool(at: index)
@@ -261,7 +325,9 @@ struct GridDetailView: View {
                 }
             }
         } message: {
-            Text("'\(pool.name)' will be permanently deleted. This cannot be undone.")
+            Text(pool.isOwner
+                 ? "'\(pool.name)' will be removed from this device. It does not delete the pool from the system if it was shared."
+                 : "'\(pool.name)' will be removed from your list only. The pool stays in the system for the host and others.")
         }
     }
 
@@ -282,25 +348,117 @@ struct GridDetailView: View {
     }
 }
 
+// MARK: - Edit pool matchup (fix home/away teams when same team was saved twice)
+struct EditMatchupSheet: View {
+    @Binding var pool: BoxGrid
+    let onSave: () -> Void
+    let onCancel: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var selectedHomeTeam: Team
+    @State private var selectedAwayTeam: Team
+
+    init(pool: Binding<BoxGrid>, onSave: @escaping () -> Void, onCancel: @escaping () -> Void) {
+        _pool = pool
+        self.onSave = onSave
+        self.onCancel = onCancel
+        _selectedHomeTeam = State(initialValue: pool.wrappedValue.homeTeam)
+        _selectedAwayTeam = State(initialValue: pool.wrappedValue.awayTeam)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text("Set the two teams for this pool. Rows = away team, columns = home team.")
+                        .font(.subheadline)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                }
+                Section("Teams") {
+                    Picker("Home Team (Columns)", selection: $selectedHomeTeam) {
+                        ForEach(Team.allTeams, id: \.id) { team in
+                            Text(team.name).tag(team)
+                        }
+                    }
+                    .pickerStyle(.navigationLink)
+                    .onChange(of: selectedHomeTeam) { _, new in
+                        if new.id == selectedAwayTeam.id, let other = Team.allTeams.first(where: { $0.id != new.id }) {
+                            selectedAwayTeam = other
+                        }
+                    }
+
+                    Picker("Away Team (Rows)", selection: $selectedAwayTeam) {
+                        ForEach(Team.allTeams, id: \.id) { team in
+                            Text(team.name).tag(team)
+                        }
+                    }
+                    .pickerStyle(.navigationLink)
+                    .onChange(of: selectedAwayTeam) { _, new in
+                        if new.id == selectedHomeTeam.id, let other = Team.allTeams.first(where: { $0.id != new.id }) {
+                            selectedHomeTeam = other
+                        }
+                    }
+
+                    if selectedHomeTeam.id == selectedAwayTeam.id {
+                        Text("Pick two different teams.")
+                            .font(.caption)
+                            .foregroundColor(DesignSystem.Colors.dangerRed)
+                    }
+                }
+                Section("Preview") {
+                    HStack(spacing: 12) {
+                        TeamLogoView(team: selectedAwayTeam, size: 36)
+                        Text("vs")
+                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                        TeamLogoView(team: selectedHomeTeam, size: 36)
+                        Spacer()
+                        Text("\(selectedAwayTeam.abbreviation) vs \(selectedHomeTeam.abbreviation)")
+                            .font(.subheadline)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
+                    }
+                }
+            }
+            .navigationTitle("Edit matchup")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { onCancel(); dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        pool.homeTeam = selectedHomeTeam
+                        pool.awayTeam = selectedAwayTeam
+                        onSave()
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(selectedHomeTeam.id == selectedAwayTeam.id)
+                }
+            }
+        }
+    }
+}
+
 struct FullGridCellView: View {
     let square: BoxSquare
     let isWinning: Bool
     let isHighlighted: Bool
+    var size: CGFloat = 44
 
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 4)
                 .fill(cellColor)
-                .frame(width: 44, height: 44)
+                .frame(width: size, height: size)
 
             VStack(spacing: 2) {
                 if !square.isEmpty {
                     Text(square.initials)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: size * 0.32, weight: .semibold))
                         .foregroundColor(textColor)
 
                     Text(square.playerName.prefix(6))
-                        .font(.system(size: 8))
+                        .font(.system(size: size * 0.18))
                         .foregroundColor(textColor.opacity(0.8))
                         .lineLimit(1)
                 }
@@ -309,7 +467,7 @@ struct FullGridCellView: View {
             if isWinning {
                 RoundedRectangle(cornerRadius: 4)
                     .strokeBorder(Color.white, lineWidth: 2)
-                    .frame(width: 44, height: 44)
+                    .frame(width: size, height: size)
             }
 
             if square.isWinner && !square.quarterWins.isEmpty {
@@ -318,7 +476,7 @@ struct FullGridCellView: View {
                         Spacer()
                         ForEach(square.quarterWins, id: \.self) { q in
                             Text("Q\(q)")
-                                .font(.system(size: 6, weight: .bold))
+                                .font(.system(size: size * 0.14, weight: .bold))
                                 .foregroundColor(.white)
                                 .padding(2)
                                 .background(DesignSystem.Colors.winnerGold)
@@ -327,7 +485,7 @@ struct FullGridCellView: View {
                     }
                     Spacer()
                 }
-                .frame(width: 44, height: 44)
+                .frame(width: size, height: size)
                 .padding(2)
             }
         }

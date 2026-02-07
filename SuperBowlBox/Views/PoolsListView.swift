@@ -63,7 +63,7 @@ struct PoolsListView: View {
                                             poolToDelete = pool
                                             showingDeleteConfirmation = true
                                         } label: {
-                                            Label("Delete pool", systemImage: "trash")
+                                            Label(pool.isOwner ? "Delete pool" : "Remove from my list", systemImage: "trash")
                                         }
                                     }
                                 }
@@ -145,9 +145,9 @@ struct PoolsListView: View {
                 }
                 .environmentObject(appState)
             }
-            .alert("Delete Pool?", isPresented: $showingDeleteConfirmation) {
+            .alert("Remove pool?", isPresented: $showingDeleteConfirmation) {
                 Button("Cancel", role: .cancel) {}
-                Button("Delete", role: .destructive) {
+                Button("Remove", role: .destructive) {
                     if let pool = poolToDelete,
                        let index = appState.pools.firstIndex(where: { $0.id == pool.id }) {
                         HapticService.impactHeavy()
@@ -156,7 +156,9 @@ struct PoolsListView: View {
                 }
             } message: {
                 if let pool = poolToDelete {
-                    Text("Are you sure you want to delete '\(pool.name)'? This cannot be undone.")
+                    Text(pool.isOwner
+                         ? "'\(pool.name)' will be removed from this device. It does not delete the pool from the system if it was shared."
+                         : "'\(pool.name)' will be removed from your list only. The pool stays in the system for the host and others.")
                 }
             }
         }
@@ -186,13 +188,17 @@ struct ImportPoolCard: View {
         }
         .padding(.vertical, 4)
         .background(
-            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                .fill(DesignSystem.Colors.cardSurface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                        .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
-                )
+            ZStack {
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                    .fill(DesignSystem.Colors.cardSurface.opacity(0.4))
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                    .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
+            }
         )
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.35), radius: 2, x: 0, y: 1)
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.2), radius: 10, x: 0, y: 3)
     }
 }
 
@@ -202,10 +208,7 @@ private struct ImportPoolButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: {
-            HapticService.selection()
-            action()
-        }) {
+        Button(action: action) {
             VStack(spacing: 10) {
                 Image(systemName: icon)
                     .font(.system(size: 22))
@@ -218,6 +221,22 @@ private struct ImportPoolButton: View {
             .padding(.vertical, 16)
         }
         .buttonStyle(ScaleButtonStyle())
+    }
+}
+
+// MARK: - Reusable glass background for no-pools and list cards
+private struct NoPoolsGlassBackground: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                .fill(.ultraThinMaterial)
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                .fill(DesignSystem.Colors.cardSurface.opacity(0.4))
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
+        }
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.35), radius: 2, x: 0, y: 1)
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.2), radius: 10, x: 0, y: 3)
     }
 }
 
@@ -257,14 +276,7 @@ struct NoPoolsEmptyState: View {
                     }
                     .foregroundColor(DesignSystem.Colors.textPrimary)
                     .padding(DesignSystem.Layout.cardPadding)
-                    .background(
-                        RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                            .fill(DesignSystem.Colors.cardSurface)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                                    .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
-                            )
-                    )
+                    .background(NoPoolsGlassBackground())
                 }
                 .buttonStyle(ScaleButtonStyle())
 
@@ -286,14 +298,7 @@ struct NoPoolsEmptyState: View {
                     }
                     .foregroundColor(DesignSystem.Colors.textPrimary)
                     .padding(DesignSystem.Layout.cardPadding)
-                    .background(
-                        RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                            .fill(DesignSystem.Colors.cardSurface)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                                    .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
-                            )
-                    )
+                    .background(NoPoolsGlassBackground())
                 }
                 .buttonStyle(ScaleButtonStyle())
 
@@ -315,14 +320,7 @@ struct NoPoolsEmptyState: View {
                     }
                     .foregroundColor(DesignSystem.Colors.textPrimary)
                     .padding(DesignSystem.Layout.cardPadding)
-                    .background(
-                        RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                            .fill(DesignSystem.Colors.cardSurface)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                                    .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
-                            )
-                    )
+                    .background(NoPoolsGlassBackground())
                 }
                 .buttonStyle(ScaleButtonStyle())
 
@@ -344,14 +342,7 @@ struct NoPoolsEmptyState: View {
                     }
                     .foregroundColor(DesignSystem.Colors.textPrimary)
                     .padding(DesignSystem.Layout.cardPadding)
-                    .background(
-                        RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                            .fill(DesignSystem.Colors.cardSurface)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                                    .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
-                            )
-                    )
+                    .background(NoPoolsGlassBackground())
                 }
                 .buttonStyle(ScaleButtonStyle())
             }
@@ -372,14 +363,10 @@ struct PoolGameCard: View {
     }
 
     var body: some View {
-        HStack(spacing: 16) {
-            HStack(spacing: 2) {
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color(hex: pool.awayTeam.primaryColor) ?? DesignSystem.Colors.textTertiary)
-                    .frame(width: 6, height: 44)
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color(hex: pool.homeTeam.primaryColor) ?? DesignSystem.Colors.textTertiary)
-                    .frame(width: 6, height: 44)
+        HStack(spacing: 12) {
+            HStack(spacing: 6) {
+                TeamLogoView(team: pool.awayTeam, size: 40)
+                TeamLogoView(team: pool.homeTeam, size: 40)
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(pool.name)
@@ -411,13 +398,17 @@ struct PoolGameCard: View {
         }
         .padding(DesignSystem.Layout.cardPadding)
         .background(
-            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                .fill(DesignSystem.Colors.cardSurface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
-                        .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
-                )
+            ZStack {
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                    .fill(DesignSystem.Colors.cardSurface.opacity(0.4))
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                    .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
+            }
         )
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.35), radius: 2, x: 0, y: 1)
+        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.2), radius: 10, x: 0, y: 3)
     }
 }
 
@@ -726,6 +717,11 @@ struct NewPoolSheet: View {
                         }
                     }
                     .pickerStyle(.navigationLink)
+                    .onChange(of: selectedHomeTeam) { _, new in
+                        if new.id == selectedAwayTeam.id, let other = Team.allTeams.first(where: { $0.id != new.id }) {
+                            selectedAwayTeam = other
+                        }
+                    }
 
                     Picker("Away Team (Rows)", selection: $selectedAwayTeam) {
                         ForEach(Team.allTeams, id: \.id) { team in
@@ -733,6 +729,17 @@ struct NewPoolSheet: View {
                         }
                     }
                     .pickerStyle(.navigationLink)
+                    .onChange(of: selectedAwayTeam) { _, new in
+                        if new.id == selectedHomeTeam.id, let other = Team.allTeams.first(where: { $0.id != new.id }) {
+                            selectedHomeTeam = other
+                        }
+                    }
+
+                    if selectedHomeTeam.id == selectedAwayTeam.id {
+                        Text("Pick two different teams for the matchup.")
+                            .font(.caption)
+                            .foregroundColor(DesignSystem.Colors.dangerRed)
+                    }
                 }
 
                 Section("Preview") {
@@ -779,6 +786,7 @@ struct NewPoolSheet: View {
                         onSave(newPool)
                     }
                     .fontWeight(.semibold)
+                    .disabled(selectedHomeTeam.id == selectedAwayTeam.id)
                 }
             }
             .onAppear {

@@ -36,7 +36,8 @@ A modern iOS app for running and tracking any score-based pool—box pools (squa
 
 1. Clone the repository
 2. Open `SuperBowlBox.xcodeproj` in Xcode
-3. Select a simulator or device and run (⌘R)
+3. Select a simulator or device and run (⌘R). The app supports **iOS 17+**; for testing we use **iOS 26.3** (e.g. iPhone 17 simulator). Do not use iPhone 16.
+4. Command-line build: `./scripts/build.sh` (uses iPhone 17 or first available simulator)
 
 ## Project Structure
 

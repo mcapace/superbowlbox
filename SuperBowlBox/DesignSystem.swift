@@ -3,29 +3,27 @@ import SwiftUI
 // MARK: - Premium sportsbook / analytics design (DraftKings-style)
 
 enum DesignSystem {
-    // MARK: Colors (semantic: live/win = green, winner = gold, alert = red)
+    // MARK: Colors (lighter, modern dark theme for readability)
     enum Colors {
-        static let backgroundPrimary = Color(hex: "0E1210") ?? Color(white: 0.06)  // Slight green tint (sports app)
-        static let backgroundSecondary = Color(hex: "161618") ?? Color(white: 0.08)
-        static let headerGreen = Color(hex: "1B2E1F") ?? Color(red: 0.11, green: 0.18, blue: 0.12)  // Apple Sports–style nav
-        static let backgroundTertiary = Color(hex: "1C1C1E") ?? Color(white: 0.11)
-        static let cardSurface = Color(hex: "1A1D1E") ?? Color(white: 0.11)
-        static let cardBorder = Color.white.opacity(0.1)
-        static let cardShadow = Color.black.opacity(0.35)
-        static let glassFill = Color.white.opacity(0.04)
-        static let glassBorder = Color.white.opacity(0.08)
+        static let backgroundPrimary = Color(hex: "16181A") ?? Color(white: 0.09)
+        static let backgroundSecondary = Color(hex: "1C1E21") ?? Color(white: 0.11)
+        static let headerGreen = Color(hex: "1E2D21") ?? Color(red: 0.12, green: 0.18, blue: 0.13)
+        static let backgroundTertiary = Color(hex: "222426") ?? Color(white: 0.13)
+        static let cardSurface = Color(hex: "1E2124") ?? Color(white: 0.12)
+        static let cardBorder = Color.white.opacity(0.12)
+        static let cardShadow = Color.black.opacity(0.3)
+        static let glassFill = Color.white.opacity(0.06)
+        static let glassBorder = Color.white.opacity(0.1)
         static let accentBlue = Color(hex: "0A84FF") ?? Color.blue
         static let accentBlueGlow = (Color(hex: "0A84FF") ?? Color.blue).opacity(0.4)
         static let liveGreen = Color(hex: "30D158") ?? Color.green
         static let winnerGold = Color(hex: "FF9F0A") ?? Color.orange
         static let dangerRed = Color(hex: "FF453A") ?? Color.red
         static let textPrimary = Color.white
-        /// Legible on dark background (WCAG-friendly secondary)
-        static let textSecondary = Color(hex: "B8B8BD") ?? Color(white: 0.75)
-        static let textTertiary = Color(hex: "9A9A9F") ?? Color(white: 0.65)
-        static let textMuted = Color(hex: "7E7E83") ?? Color(white: 0.55)
-        /// Elevated surface for form fields / cards on dark (so text stays legible)
-        static let surfaceElevated = Color(hex: "2C2C2E") ?? Color(white: 0.18)
+        static let textSecondary = Color(hex: "C8C8CE") ?? Color(white: 0.82)
+        static let textTertiary = Color(hex: "A8A8B0") ?? Color(white: 0.72)
+        static let textMuted = Color(hex: "8E8E96") ?? Color(white: 0.6)
+        static let surfaceElevated = Color(hex: "2A2D30") ?? Color(white: 0.2)
         static let cyberCyan = Color(hex: "64D2FF") ?? Color.cyan
         static let matrixGreen = liveGreen
         static let neonPink = Color(hex: "FF375F") ?? Color.pink
@@ -33,12 +31,11 @@ enum DesignSystem {
         static let matrixGreenGlow = liveGreen.opacity(0.4)
     }
 
-    /// Dashboard palette — blue-tinted dark (so new build is obvious) so the new build is obvious (not gray).
     enum Dashboard {
-        static let header = Color(hex: "0D2818") ?? Color(red: 0.05, green: 0.16, blue: 0.09)
-        static let headerBright = Color(hex: "2DD068") ?? Color.green
-        static let background = Color(hex: "0C1322") ?? Color(red: 0.05, green: 0.07, blue: 0.13)
-        static let card = Color(hex: "151B28") ?? Color(red: 0.08, green: 0.11, blue: 0.16)
+        static let header = Color(hex: "1A2520") ?? Color(red: 0.1, green: 0.14, blue: 0.13)
+        static let headerBright = Color(hex: "34D96C") ?? Color.green
+        static let background = Color(hex: "14181E") ?? Color(red: 0.08, green: 0.09, blue: 0.12)
+        static let card = Color(hex: "1C2228") ?? Color(red: 0.11, green: 0.13, blue: 0.16)
         static let cardBorder = Color.white.opacity(0.12)
     }
 
@@ -67,6 +64,9 @@ enum DesignSystem {
         static let sectionSpacing: CGFloat = 14
         static let screenInset: CGFloat = 14
         static let sectionHeaderBottom: CGFloat = 6
+        /// Control Center / liquid glass: larger radius for frosted segments
+        static let glassCornerRadius: CGFloat = 18
+        static let glassCornerRadiusLarge: CGFloat = 22
     }
 }
 
@@ -242,6 +242,27 @@ extension View {
                     .strokeBorder(accentBorder ?? DesignSystem.Colors.cardBorder, lineWidth: 1)
             )
             .shadow(color: DesignSystem.Colors.cardShadow, radius: 6, x: 0, y: 2)
+    }
+
+    /// Liquid glass / Control Center style: frosted material, depth shadows, thin border
+    func liquidGlassCard(
+        cornerRadius: CGFloat = DesignSystem.Layout.glassCornerRadius,
+        useThinMaterial: Bool = true
+    ) -> some View {
+        let material: Material = useThinMaterial ? .ultraThinMaterial : .thinMaterial
+        return self
+            .padding(DesignSystem.Layout.cardPadding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(material)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
+            )
+            .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.4), radius: 2, x: 0, y: 1)
+            .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.25), radius: 12, x: 0, y: 4)
     }
 }
 
