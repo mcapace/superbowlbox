@@ -38,16 +38,19 @@ class NFLScoreService: ObservableObject {
     func startLiveUpdates(interval: TimeInterval = 30) {
         stopLiveUpdates()
 
-        // Fetch immediately
+        // Fetch immediately so live scores appear as soon as the app is ready
         Task {
             await fetchCurrentScore()
         }
 
-        // Then fetch periodically
+        // Poll every interval (e.g. 30s); use .common run loop mode so timer fires even while user scrolls
         timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             Task {
                 await self?.fetchCurrentScore()
             }
+        }
+        if let t = timer {
+            RunLoop.main.add(t, forMode: .common)
         }
     }
 
@@ -75,16 +78,16 @@ class NFLScoreService: ObservableObject {
     }
 
     private func fetchScoreFromAPI() async throws -> GameScore {
-        // Prefer Sports Data IO when API key is set (Info.plist: SportsDataIOApiKey)
+        // Primary: Sports Data IO (when API key is set in Secrets.plist or Info.plist)
         if SportsDataIOConfig.isConfigured {
             do {
                 return try await SportsDataIOService.fetchNFLScore()
             } catch {
-                // Fall through to ESPN if Sports Data IO fails (e.g. no games today, key invalid)
+                // Backup: if Sports Data IO is down, rate-limited, or returns no game, use ESPN
             }
         }
 
-        // ESPN API fallback (no key required)
+        // Backup / default: ESPN scoreboard (no key required; always available)
         let urlString = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
         guard let url = URL(string: urlString) else {
             throw ScoreError.apiError("Invalid URL")

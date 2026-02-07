@@ -43,6 +43,8 @@ struct ContentView: View {
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
             await appState.refreshJoinedPoolsIfNeeded()
+            // Refetch live score when app becomes active so scores are current during games
+            await appState.scoreService.fetchCurrentScore()
         }
         .onChange(of: appState.scoreService.lastUpdated) { _, _ in
             appState.refreshWinnersFromCurrentScore()
@@ -192,6 +194,10 @@ struct DashboardView: View {
             .toolbarBackground(DesignSystem.Colors.headerGreen, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    AppNavBrandView()
+                        .foregroundStyle(.white)
+                }
                 ToolbarItem(placement: .principal) {
                     VStack(spacing: 0) {
                         Text("Live")

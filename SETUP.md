@@ -145,7 +145,7 @@ If OCR fails, it’s usually due to image quality (blur, lighting, or a sheet th
 
 - Run the app; when iOS prompts for notification permission, tap **Allow**.  
 - Local alerts (leading, period winner, one score away, pool removed/updated) work with the app in foreground or background.  
-- Score updates run every 30 seconds while the app is in the foreground; when a moment is triggered, a local notification is scheduled. If the app is fully closed, alerts are evaluated the next time the app opens and refreshes scores.
+- Score updates run every 30 seconds while the app is in the foreground (timer also fires during scrolling). When you return to the app from background, scores refetch immediately so live scores are current during games. When a moment is triggered, a local notification is scheduled. If the app is fully closed, alerts are evaluated the next time the app opens and refreshes scores.
 
 **For remote push (optional, from your own server):**
 

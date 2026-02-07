@@ -82,6 +82,9 @@ struct PoolsListView: View {
             .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
             .navigationTitle("Pools")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    AppNavBrandView()
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button {

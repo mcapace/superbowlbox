@@ -86,6 +86,11 @@ struct MySquaresView: View {
             }
             .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
             .navigationTitle("My Boxes")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    AppNavBrandView()
+                }
+            }
         }
     }
 }

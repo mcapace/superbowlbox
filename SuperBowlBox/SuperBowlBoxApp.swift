@@ -334,6 +334,21 @@ struct AppCardStyle {
     static let shadowYTight: CGFloat = 3
 }
 
+// MARK: - Small app logo + text for upper-left of each main tab (so you know what app you're in)
+struct AppNavBrandView: View {
+    var body: some View {
+        HStack(spacing: 6) {
+            Image("SquareUpLogo")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 22, height: 22)
+            Text("SquareUp")
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundColor(DesignSystem.Colors.textPrimary)
+        }
+    }
+}
+
 // MARK: - SquareUp in-app logo: App Store icon graphic (arrow) above wordmark
 struct SquareUpLogoView: View {
     var showIcon: Bool = true

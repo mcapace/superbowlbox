@@ -242,6 +242,11 @@ struct SettingsView: View {
             )
             .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
             .navigationTitle("Settings")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    AppNavBrandView()
+                }
+            }
             .sheet(isPresented: $showingJoinPool) {
                 JoinPoolSheet()
             }
