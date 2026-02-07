@@ -31,7 +31,8 @@ Use this before uploading to App Store Connect so nothing is missing.
    - [ ] No asset catalog warnings (missing images).
 
 3. **App Store Connect**
-   - [ ] **App Information**: Name (e.g. SquareUp), subtitle, category.
+   - [ ] **App Information** → **Name**: Set to **"Square Up"** (this is the name shown in the App Store; the app’s home-screen name is set by `CFBundleDisplayName` in the project).
+   - [ ] Subtitle, category, and other metadata as needed.
    - [ ] **Screenshots**: Add for required device sizes (e.g. 6.7", 6.5", 5.5").
    - [ ] **App Icon**: Picked up from the build; no separate upload if using asset catalog.
 

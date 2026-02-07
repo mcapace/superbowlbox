@@ -6,7 +6,6 @@ struct SettingsView: View {
     @State private var showingJoinPool = false
     @State private var showingAbout = false
     @State private var showingInstructions = false
-    @State private var showingOnboardingAgain = false
     @State private var showingSignIn = false
     @State private var showingEraseConfirmation = false
 
@@ -176,21 +175,6 @@ struct SettingsView: View {
                 // About Section
                 Section {
                     Button {
-                        showingOnboardingAgain = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "hand.wave.fill")
-                                .foregroundColor(DesignSystem.Colors.accentBlue)
-                            Text("Show onboarding again")
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(DesignSystem.Colors.textSecondary)
-                        }
-                        .foregroundColor(DesignSystem.Colors.textPrimary)
-                    }
-
-                    Button {
                         showingInstructions = true
                     } label: {
                         HStack {
@@ -241,6 +225,7 @@ struct SettingsView: View {
                 SettingsListRowGlassBackground()
             )
             .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.inline)
             .navigationTitle("Settings")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -256,13 +241,6 @@ struct SettingsView: View {
             .sheet(isPresented: $showingInstructions) {
                 InstructionsView(isOnboarding: false) { }
                     .environmentObject(appState)
-            }
-            .fullScreenCover(isPresented: $showingOnboardingAgain) {
-                InstructionsView(isOnboarding: true) {
-                    showingOnboardingAgain = false
-                    appState.completeOnboarding()
-                }
-                .environmentObject(appState)
             }
             .sheet(isPresented: $showingSignIn) {
                 OnboardingSignInView(authService: appState.authService, onSkip: { showingSignIn = false })

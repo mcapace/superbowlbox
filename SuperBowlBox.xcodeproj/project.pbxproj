@@ -523,7 +523,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SuperBowlBox/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = SquareUp;
+				INFOPLIST_KEY_CFBundleDisplayName = "Square Up";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is needed to scan pool sheets and box grids";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo library access is needed to import pool or bracket sheet images";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -554,7 +554,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SuperBowlBox/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = SquareUp;
+				INFOPLIST_KEY_CFBundleDisplayName = "Square Up";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is needed to scan pool sheets and box grids";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo library access is needed to import pool or bracket sheet images";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

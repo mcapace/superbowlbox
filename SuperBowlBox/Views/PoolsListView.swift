@@ -80,6 +80,7 @@ struct PoolsListView: View {
                     .environmentObject(appState)
             }
             .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.inline)
             .navigationTitle("Pools")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

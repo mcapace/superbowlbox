@@ -836,6 +836,9 @@ struct AddPoolFlowView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    AppNavBrandView()
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         onDismiss()

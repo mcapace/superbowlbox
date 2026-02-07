@@ -85,6 +85,7 @@ struct MySquaresView: View {
             }
             }
             .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.inline)
             .navigationTitle("My Boxes")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

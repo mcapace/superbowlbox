@@ -130,6 +130,9 @@ struct ScannerView: View {
             .navigationTitle("Scan Pool Sheet")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    AppNavBrandView()
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()

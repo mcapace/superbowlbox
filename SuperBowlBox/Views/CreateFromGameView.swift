@@ -71,6 +71,9 @@ struct CreateFromGameView: View {
             .navigationTitle("Upcoming Games")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    AppNavBrandView()
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         onCancel()
