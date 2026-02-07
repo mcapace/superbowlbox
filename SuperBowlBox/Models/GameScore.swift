@@ -67,6 +67,26 @@ struct GameScore: Codable, Equatable {
         return formatter.string(from: start) + " ET"
     }
 
+    /// Countdown until kickoff from a given "now". e.g. "2d 5h 23m", "5h 23m", "23m", "Soon"
+    static func countdownToKickoff(from now: Date, to kickoff: Date) -> String {
+        let diff = kickoff.timeIntervalSince(now)
+        guard diff > 0 else { return "Soon" }
+        let totalSeconds = Int(diff)
+        let days = totalSeconds / 86400
+        let hours = (totalSeconds % 86400) / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        if days > 0 {
+            return "\(days)d \(hours)h \(minutes)m"
+        }
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        }
+        if minutes > 0 {
+            return "\(minutes)m"
+        }
+        return "Under 1 min"
+    }
+
     var scoreDisplay: String {
         "\(awayTeam.abbreviation) \(awayScore) - \(homeScore) \(homeTeam.abbreviation)"
     }

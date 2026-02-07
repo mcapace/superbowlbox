@@ -458,6 +458,27 @@ struct UpNextPlaceholderCard: View {
     }
 }
 
+// MARK: - Kickoff countdown (updates every minute until game start)
+private struct KickoffCountdownView: View {
+    let kickoff: Date
+    var kickoffDisplayString: String?
+
+    var body: some View {
+        TimelineView(.periodic(from: Date(), by: 60)) { context in
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("Kickoff in \(GameScore.countdownToKickoff(from: context.date, to: kickoff))")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.accentBlue)
+                if let time = kickoffDisplayString {
+                    Text(time)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Live Score Card (Apple Sports style: league + status top, team gradient, kickoff when scheduled)
 struct LiveScoreCard: View {
     let score: GameScore
@@ -512,10 +533,8 @@ struct LiveScoreCard: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(DesignSystem.Colors.textTertiary)
                 Spacer()
-                if isUpcoming, let kickoff = score.kickoffDisplayString {
-                    Text("Kickoff \(kickoff)")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(DesignSystem.Colors.accentBlue)
+                if isUpcoming, let kickoffDate = score.scheduledStart {
+                    KickoffCountdownView(kickoff: kickoffDate, kickoffDisplayString: score.kickoffDisplayString)
                 } else {
                     HStack(spacing: 8) {
                         LivePulseIndicator(isLive: score.isGameActive, size: 8)
@@ -664,12 +683,12 @@ struct TeamScoreColumn: View {
                 .font(.system(size: logoSize * 0.22, weight: .medium))
                 .foregroundColor(DesignSystem.Colors.textTertiary)
 
-            HStack(spacing: 2) {
+            HStack(spacing: 0) {
                 ForEach(Array(scoreDigits(score).enumerated()), id: \.offset) { _, digit in
                     FlipDigit(
                         digit: digit,
                         color: isLeading ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.textPrimary,
-                        size: logoSize * 0.5
+                        size: min(logoSize * 0.45, 26)
                     )
                 }
             }

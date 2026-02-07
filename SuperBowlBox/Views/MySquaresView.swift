@@ -175,8 +175,8 @@ struct MySquaresSummaryCard: View {
                 Spacer()
             }
 
-            HStack(spacing: 24) {
-                VStack {
+            HStack(spacing: 0) {
+                VStack(spacing: 4) {
                     Text("\(totalSquares)")
                         .font(DesignSystem.Typography.scoreMedium)
                         .foregroundColor(DesignSystem.Colors.accentBlue)
@@ -185,11 +185,12 @@ struct MySquaresSummaryCard: View {
                         .font(DesignSystem.Typography.caption)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
+                .frame(maxWidth: .infinity)
 
                 Divider()
                     .frame(height: 40)
 
-                VStack {
+                VStack(spacing: 4) {
                     Text("\(winningSquares)")
                         .font(DesignSystem.Typography.scoreMedium)
                         .foregroundColor(DesignSystem.Colors.winnerGold)
@@ -198,11 +199,12 @@ struct MySquaresSummaryCard: View {
                         .font(DesignSystem.Typography.caption)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
+                .frame(maxWidth: .infinity)
 
                 Divider()
                     .frame(height: 40)
 
-                VStack {
+                VStack(spacing: 4) {
                     Text("\(poolCount)")
                         .font(DesignSystem.Typography.scoreMedium)
                         .foregroundColor(DesignSystem.Colors.textPrimary)
@@ -211,6 +213,7 @@ struct MySquaresSummaryCard: View {
                         .font(DesignSystem.Typography.caption)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
+                .frame(maxWidth: .infinity)
             }
         }
         .liquidGlassCard(cornerRadius: DesignSystem.Layout.glassCornerRadius)
@@ -281,13 +284,16 @@ struct PoolSquaresCard: View {
             }
 
             // Grid of my boxes with numbers + payouts
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2), spacing: 10) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                 ForEach(squares) { square in
                     let isCurrentWinner = currentWinningSquare?.id == square.id
+                    let hunt = huntItems.first { $0.square.id == square.id }
                     SquareNumberCell(
                         pool: pool,
                         square: square,
-                        isCurrentWinner: isCurrentWinner
+                        isCurrentWinner: isCurrentWinner,
+                        pointsAway: hunt?.pointsNeeded,
+                        teamAbbrAway: hunt?.teamNeedsToScore.abbreviation
                     )
                 }
             }
