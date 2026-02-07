@@ -172,14 +172,15 @@ struct SettingsView: View {
                     Text("Erase removes all pools and your name from this device. You can sign in again and create or join pools.")
                 }
 
-                // About Section
+                // About Section (icons same width so labels line up)
                 Section {
                     Button {
                         showingInstructions = true
                     } label: {
-                        HStack {
+                        HStack(alignment: .center, spacing: 12) {
                             Image(systemName: "questionmark.circle.fill")
                                 .foregroundColor(DesignSystem.Colors.accentBlue)
+                                .frame(width: 28, height: 28, alignment: .center)
                             Text("How it works")
                             Spacer()
                             Image(systemName: "chevron.right")
@@ -192,11 +193,11 @@ struct SettingsView: View {
                     Button {
                         showingAbout = true
                     } label: {
-                        HStack {
+                        HStack(alignment: .center, spacing: 12) {
                             Image(systemName: "apps.iphone")
                                 .foregroundColor(DesignSystem.Colors.accentBlue)
-                                .frame(width: 28, alignment: .center)
-                            Text("About SquareUp")
+                                .frame(width: 28, height: 28, alignment: .center)
+                            Text("About Square Up")
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.caption)
@@ -205,10 +206,10 @@ struct SettingsView: View {
                         .foregroundColor(DesignSystem.Colors.textPrimary)
                     }
 
-                    HStack {
+                    HStack(alignment: .center, spacing: 12) {
                         Image(systemName: "checkmark.seal.fill")
                             .foregroundColor(DesignSystem.Colors.liveGreen)
-                            .frame(width: 28, alignment: .center)
+                            .frame(width: 28, height: 28, alignment: .center)
                         Text("Version")
                         Spacer()
                         Text("1.0.0")
@@ -348,32 +349,39 @@ struct SharePoolSheet: View {
     @State private var isUploading = false
     @State private var uploadError: String? = nil
     @State private var copied = false
+    @State private var showingSystemShare = false
 
     private var inviteCode: String {
         displayedCode ?? pool.sharedCode ?? ""
     }
 
+    private var shareMessage: String {
+        "Join my pool '\(pool.name)' on Square Up!\n\nInvite Code: \(inviteCode)"
+    }
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 32) {
+            VStack(spacing: DesignSystem.Layout.sectionSpacing * 2) {
                 // Pool info
-                VStack(spacing: 8) {
+                VStack(spacing: DesignSystem.Layout.sectionSpacing) {
                     Image(systemName: "rectangle.split.3x3")
-                        .font(.system(size: 50))
+                        .font(.system(size: 44))
                         .foregroundColor(DesignSystem.Colors.accentBlue)
 
                     Text(pool.name)
-                        .font(.title2)
-                        .fontWeight(.bold)
+                        .font(DesignSystem.Typography.title)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
 
                     Text("\(pool.awayTeam.abbreviation) vs \(pool.homeTeam.abbreviation)")
+                        .font(DesignSystem.Typography.caption)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
 
                 // Invite code
-                VStack(spacing: 12) {
+                VStack(spacing: DesignSystem.Layout.sectionSpacing) {
                     Text("Invite Code")
-                        .font(.caption)
+                        .font(DesignSystem.Typography.labelUppercase)
+                        .tracking(0.6)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
 
                     if isUploading {
@@ -381,21 +389,23 @@ struct SharePoolSheet: View {
                             .scaleEffect(1.2)
                             .padding()
                         Text("Generating code…")
-                            .font(.caption)
+                            .font(DesignSystem.Typography.caption)
                             .foregroundColor(DesignSystem.Colors.textSecondary)
                     } else if let err = uploadError {
                         Text(err)
-                            .font(.caption)
-                            .foregroundColor(.red)
+                            .font(DesignSystem.Typography.caption)
+                            .foregroundColor(DesignSystem.Colors.dangerRed)
                             .multilineTextAlignment(.center)
                     } else if !inviteCode.isEmpty {
                         HStack(spacing: 8) {
                             ForEach(Array(inviteCode), id: \.self) { char in
                                 Text(String(char))
-                                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                                    .font(DesignSystem.Typography.mono)
+                                    .fontWeight(.bold)
+                                    .font(.system(size: 26))
                                     .frame(width: 36, height: 48)
                                     .background(DesignSystem.Colors.surfaceElevated)
-                                    .cornerRadius(8)
+                                    .cornerRadius(DesignSystem.Layout.cornerRadiusSmall)
                             }
                         }
 
@@ -406,13 +416,13 @@ struct SharePoolSheet: View {
                                 copied = false
                             }
                         } label: {
-                            HStack {
+                            HStack(spacing: 8) {
                                 Image(systemName: copied ? "checkmark" : "doc.on.doc")
                                 Text(copied ? "Copied!" : "Copy Code")
                             }
-                            .font(.subheadline)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
+                            .font(DesignSystem.Typography.callout)
+                            .padding(.horizontal, DesignSystem.Layout.cardPadding + 6)
+                            .padding(.vertical, DesignSystem.Layout.sectionSpacing)
                             .background(
                                 Capsule()
                                     .fill(copied ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.accentBlue)
@@ -421,56 +431,56 @@ struct SharePoolSheet: View {
                         }
                     } else if !SharedPoolsConfig.isConfigured {
                         Text("Configure SharedPoolsURL or LoginDatabaseURL in Secrets.plist to generate codes.")
-                            .font(.caption)
+                            .font(DesignSystem.Typography.caption)
                             .foregroundColor(DesignSystem.Colors.textSecondary)
                             .multilineTextAlignment(.center)
                     }
                 }
 
                 Divider()
+                    .background(DesignSystem.Colors.cardBorder)
 
                 // Share options
-                VStack(spacing: 16) {
+                VStack(spacing: DesignSystem.Layout.sectionSpacing) {
                     Text("Share via")
-                        .font(.caption)
+                        .font(DesignSystem.Typography.labelUppercase)
+                        .tracking(0.6)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
 
                     HStack(spacing: 24) {
-                        ShareOptionButton(icon: "message.fill", label: "Message", color: .green) {
-                            shareViaMessages()
+                        ShareOptionButton(icon: "message.fill", label: "Message", color: DesignSystem.Colors.liveGreen, disabled: inviteCode.isEmpty) {
+                            showingSystemShare = true
                         }
-
-                        ShareOptionButton(icon: "envelope.fill", label: "Email", color: .blue) {
-                            shareViaEmail()
+                        ShareOptionButton(icon: "envelope.fill", label: "Email", color: DesignSystem.Colors.accentBlue, disabled: inviteCode.isEmpty) {
+                            showingSystemShare = true
                         }
-
-                        ShareOptionButton(icon: "square.and.arrow.up", label: "More", color: .gray) {
-                            shareGeneric()
+                        ShareOptionButton(icon: "square.and.arrow.up", label: "More", color: DesignSystem.Colors.textTertiary, disabled: inviteCode.isEmpty) {
+                            showingSystemShare = true
                         }
                     }
                 }
 
-                Spacer()
+                Spacer(minLength: 0)
 
                 // Instructions
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: DesignSystem.Layout.sectionSpacing) {
                     Text("How to join:")
-                        .font(.caption)
+                        .font(DesignSystem.Typography.caption)
                         .fontWeight(.semibold)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
 
-                    Text("1. Download SquareUp from the App Store")
-                        .font(.caption)
+                    Text("1. Download Square Up from the App Store")
+                        .font(DesignSystem.Typography.caption)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
-
-                    Text("2. Go to Settings > Join Pool with Code")
-                        .font(.caption)
+                    Text("2. Go to Settings → Join Pool with Code")
+                        .font(DesignSystem.Typography.caption)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
-
                     Text("3. Enter the code above")
-                        .font(.caption)
+                        .font(DesignSystem.Typography.caption)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
                 }
-                .padding()
+                .padding(DesignSystem.Layout.cardPadding)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     ZStack {
                         RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
@@ -482,15 +492,24 @@ struct SharePoolSheet: View {
                     }
                 )
             }
-            .padding()
+            .padding(DesignSystem.Layout.screenInset)
+            .background(DesignSystem.Colors.backgroundPrimary)
             .navigationTitle("Share Pool")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    AppNavBrandView()
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
+                    .fontWeight(.medium)
                 }
+            }
+            .sheet(isPresented: $showingSystemShare) {
+                ShareSheet(items: [shareMessage])
             }
             .onAppear {
                 if displayedCode == nil, pool.sharedCode == nil, SharedPoolsConfig.isConfigured {
@@ -518,44 +537,32 @@ struct SharePoolSheet: View {
         }
     }
 
-    private func shareViaMessages() {
-        let message = "Join my pool '\(pool.name)' on SquareUp!\n\nInvite Code: \(inviteCode)"
-        // In a real app, this would open the Messages app
-        UIPasteboard.general.string = message
-    }
-
-    private func shareViaEmail() {
-        let message = "Join my pool '\(pool.name)' on SquareUp!\n\nInvite Code: \(inviteCode)"
-        UIPasteboard.general.string = message
-    }
-
-    private func shareGeneric() {
-        let message = "Join my pool '\(pool.name)' on SquareUp!\n\nInvite Code: \(inviteCode)"
-        UIPasteboard.general.string = message
-    }
 }
 
 struct ShareOptionButton: View {
     let icon: String
     let label: String
     let color: Color
+    var disabled: Bool = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
+            VStack(spacing: DesignSystem.Layout.sectionSpacing) {
                 Image(systemName: icon)
-                    .font(.title2)
-                    .frame(width: 50, height: 50)
-                    .background(color)
+                    .font(.system(size: 22, weight: .medium))
+                    .frame(width: 52, height: 52)
+                    .background(disabled ? DesignSystem.Colors.surfaceElevated : color)
                     .foregroundColor(.white)
-                    .cornerRadius(12)
+                    .cornerRadius(DesignSystem.Layout.cornerRadius)
 
                 Text(label)
-                    .font(.caption)
-                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                    .font(DesignSystem.Typography.caption)
+                    .foregroundColor(disabled ? DesignSystem.Colors.textTertiary : DesignSystem.Colors.textPrimary)
             }
         }
+        .disabled(disabled)
+        .buttonStyle(.plain)
     }
 }
 
