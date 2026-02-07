@@ -60,7 +60,7 @@ struct SettingsView: View {
                 Section {
                     if let user = appState.authService.currentUser {
                         HStack(spacing: 12) {
-                            Image(systemName: user.provider == .apple ? "apple.logo" : "g.circle.fill")
+                            Image(systemName: user.provider == .apple ? "apple.logo" : (user.provider == .google ? "g.circle.fill" : "envelope.fill"))
                                 .font(.title2)
                                 .foregroundColor(DesignSystem.Colors.accentBlue)
                             VStack(alignment: .leading, spacing: 2) {

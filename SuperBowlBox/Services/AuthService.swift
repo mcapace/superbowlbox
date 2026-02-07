@@ -7,6 +7,7 @@ import SwiftUI
 enum AuthProvider: String, Codable {
     case apple
     case google
+    case email
 }
 
 struct AuthUser: Equatable {
@@ -25,6 +26,7 @@ class AuthService: ObservableObject {
 
     private let appleUserKey = "squareUp.appleUserID"
     private let authUserKey = "squareUp.authUser"
+    private let emailRefreshTokenKey = "squareUp.emailRefreshToken"
 
     init() {
         loadSavedUser()
@@ -51,6 +53,7 @@ class AuthService: ObservableObject {
         } else {
             UserDefaults.standard.removeObject(forKey: authUserKey)
             UserDefaults.standard.removeObject(forKey: appleUserKey)
+            UserDefaults.standard.removeObject(forKey: emailRefreshTokenKey)
         }
         currentUser = user
     }
@@ -124,6 +127,64 @@ class AuthService: ObservableObject {
         case .failure(let error):
             errorMessage = error.localizedDescription
         }
+    }
+
+    // MARK: - Sign in with Email (Supabase Auth)
+
+    @MainActor
+    func signInWithEmail(email: String, password: String) async {
+        guard SupabaseAuthService.isConfigured else {
+            errorMessage = SupabaseAuthError.notConfigured.errorDescription
+            return
+        }
+        isSigningIn = true
+        errorMessage = nil
+        do {
+            let session = try await SupabaseAuthService.signIn(email: email.trimmingCharacters(in: .whitespaces), password: password)
+            let user = AuthUser(
+                provider: .email,
+                id: session.user.id,
+                email: session.user.email ?? email,
+                displayName: nil
+            )
+            if let refresh = session.refreshToken {
+                UserDefaults.standard.set(refresh, forKey: emailRefreshTokenKey)
+            }
+            saveUser(user)
+            LoginDatabaseService.recordLogin(user: user)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isSigningIn = false
+    }
+
+    @MainActor
+    func signUpWithEmail(email: String, password: String) async {
+        guard SupabaseAuthService.isConfigured else {
+            errorMessage = SupabaseAuthError.notConfigured.errorDescription
+            return
+        }
+        isSigningIn = true
+        errorMessage = nil
+        do {
+            let session = try await SupabaseAuthService.signUp(email: email.trimmingCharacters(in: .whitespaces), password: password)
+            let user = AuthUser(
+                provider: .email,
+                id: session.user.id,
+                email: session.user.email ?? email,
+                displayName: nil
+            )
+            if let refresh = session.refreshToken {
+                UserDefaults.standard.set(refresh, forKey: emailRefreshTokenKey)
+            }
+            saveUser(user)
+            LoginDatabaseService.recordLogin(user: user)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isSigningIn = false
     }
 
     // MARK: - Sign out

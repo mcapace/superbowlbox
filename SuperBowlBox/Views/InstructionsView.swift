@@ -14,7 +14,7 @@ private let steps: [InstructionStep] = [
     InstructionStep(
         icon: "person.crop.circle.badge.plus",
         title: "Sign in to sync",
-        subtitle: "Optional—sign in with Apple or Google to sync your pools and preferences across devices.",
+        subtitle: "Optional—sign in with Apple, Google, or email to sync your pools and preferences across devices.",
         accent: AppColors.fieldGreen
     ),
     InstructionStep(
@@ -196,10 +196,11 @@ struct InstructionsView: View {
     }
 }
 
-// MARK: - Onboarding sign-in step (Apple + Google); also used from Settings sign-in sheet.
+// MARK: - Onboarding sign-in step (Apple + Google + Email); also used from Settings sign-in sheet.
 struct OnboardingSignInView: View {
     @ObservedObject var authService: AuthService
     let onSkip: () -> Void
+    @State private var showingEmailSignIn = false
 
     var body: some View {
         VStack(spacing: 28) {
@@ -236,6 +237,24 @@ struct OnboardingSignInView: View {
                     useLargeSize: true
                 )
 
+                Button {
+                    HapticService.impactLight()
+                    showingEmailSignIn = true
+                } label: {
+                    HStack {
+                        Image(systemName: "envelope.fill")
+                        Text("Sign in with Email")
+                    }
+                    .font(.headline)
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(DesignSystem.Colors.surfaceElevated)
+                    .cornerRadius(12)
+                }
+                .buttonStyle(.plain)
+                .disabled(authService.isSigningIn)
+
                 if let error = authService.errorMessage {
                     Text(error)
                         .font(AppTypography.caption2)
@@ -249,6 +268,11 @@ struct OnboardingSignInView: View {
 
             Spacer(minLength: 80)
         }
+        .sheet(isPresented: $showingEmailSignIn) {
+            EmailSignInView(authService: authService) {
+                showingEmailSignIn = false
+            }
+        }
     }
 
     private func topViewController() -> UIViewController? {
@@ -257,6 +281,85 @@ struct OnboardingSignInView: View {
         var vc = window.rootViewController
         while let presented = vc?.presentedViewController { vc = presented }
         return vc
+    }
+}
+
+// MARK: - Email / password sign-in (Supabase Auth); carries over to Supabase and logins table
+struct EmailSignInView: View {
+    @ObservedObject var authService: AuthService
+    var onDismiss: () -> Void
+    @State private var email = ""
+    @State private var password = ""
+    @State private var isSignUp = false
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                TextField("Email", text: $email)
+                    .textFieldStyle(.roundedBorder)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.emailAddress)
+                    .autocorrectionDisabled()
+
+                SecureField("Password", text: $password)
+                    .textFieldStyle(.roundedBorder)
+
+                if let error = authService.errorMessage {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                }
+
+                Button {
+                    Task { @MainActor in
+                        if isSignUp {
+                            await authService.signUpWithEmail(email: email, password: password)
+                        } else {
+                            await authService.signInWithEmail(email: email, password: password)
+                        }
+                        if authService.currentUser != nil {
+                            onDismiss()
+                            dismiss()
+                        }
+                    }
+                } label: {
+                    Text(isSignUp ? "Create account" : "Sign In")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(AppColors.fieldGreen)
+                        .cornerRadius(12)
+                }
+                .buttonStyle(.plain)
+                .disabled(email.trimmingCharacters(in: .whitespaces).isEmpty || password.isEmpty || authService.isSigningIn)
+
+                Button {
+                    isSignUp.toggle()
+                    authService.errorMessage = nil
+                } label: {
+                    Text(isSignUp ? "Already have an account? Sign in" : "Create an account")
+                        .font(.caption)
+                        .foregroundColor(DesignSystem.Colors.accentBlue)
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+            }
+            .padding(24)
+            .navigationTitle("Sign in with Email")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        onDismiss()
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 
