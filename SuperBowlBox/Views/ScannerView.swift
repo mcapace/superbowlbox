@@ -685,7 +685,7 @@ struct ProcessingScanView: View {
                 }
             }
 
-            VStack(spacing: 8) {
+            VStack(spacing: 12) {
                 Text("Analyzing Image...")
                     .font(.title3)
                     .fontWeight(.semibold)
@@ -693,6 +693,13 @@ struct ProcessingScanView: View {
                 Text("Detecting grid and reading names")
                     .font(.subheadline)
                     .foregroundColor(DesignSystem.Colors.textSecondary)
+
+                HStack(spacing: 8) {
+                    SkeletonView(width: 80, height: 24, cornerRadius: 6)
+                    SkeletonView(width: 100, height: 24, cornerRadius: 6)
+                    SkeletonView(width: 60, height: 24, cornerRadius: 6)
+                }
+                .padding(.top, 8)
             }
 
             Spacer()

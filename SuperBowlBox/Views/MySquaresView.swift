@@ -70,10 +70,15 @@ struct MySquaresView: View {
                                     ? pool.squaresForOwner(ownerLabels: pool.effectiveOwnerLabels(globalName: appState.myName))
                                     : pool.squares(for: searchName)
                                 if !squares.isEmpty {
+                                    let ownerLabels = searchName.isEmpty ? pool.effectiveOwnerLabels(globalName: appState.myName) : [searchName]
+                                    let huntItems = appState.scoreService.currentScore.map { score in
+                                        pool.onTheHuntItems(score: score, ownerLabels: ownerLabels)
+                                    } ?? []
                                     PoolSquaresCard(
                                         pool: pool,
                                         squares: squares,
-                                        score: appState.scoreService.currentScore
+                                        score: appState.scoreService.currentScore,
+                                        huntItems: huntItems
                                     )
                                     .padding(.horizontal, DesignSystem.Layout.screenInset)
                                 }
@@ -175,6 +180,7 @@ struct MySquaresSummaryCard: View {
                     Text("\(totalSquares)")
                         .font(DesignSystem.Typography.scoreMedium)
                         .foregroundColor(DesignSystem.Colors.accentBlue)
+                        .contentTransition(.numericText())
                     Text("Total Boxes")
                         .font(DesignSystem.Typography.caption)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
@@ -187,6 +193,7 @@ struct MySquaresSummaryCard: View {
                     Text("\(winningSquares)")
                         .font(DesignSystem.Typography.scoreMedium)
                         .foregroundColor(DesignSystem.Colors.winnerGold)
+                        .contentTransition(.numericText())
                     Text("Quarter Wins")
                         .font(DesignSystem.Typography.caption)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
@@ -199,6 +206,7 @@ struct MySquaresSummaryCard: View {
                     Text("\(poolCount)")
                         .font(DesignSystem.Typography.scoreMedium)
                         .foregroundColor(DesignSystem.Colors.textPrimary)
+                        .contentTransition(.numericText())
                     Text("Pools")
                         .font(DesignSystem.Typography.caption)
                         .foregroundColor(DesignSystem.Colors.textSecondary)
@@ -213,6 +221,7 @@ struct PoolSquaresCard: View {
     let pool: BoxGrid
     let squares: [BoxSquare]
     let score: GameScore?
+    var huntItems: [OnTheHuntItem] = []
 
     var currentWinningSquare: BoxSquare? {
         guard let score = score else { return nil }
@@ -291,6 +300,8 @@ struct SquareNumberCell: View {
     let pool: BoxGrid
     let square: BoxSquare
     let isCurrentWinner: Bool
+    var pointsAway: Int? = nil
+    var teamAbbrAway: String? = nil
 
     var awayNumber: Int { pool.awayNumbers[square.row] }
     var homeNumber: Int { pool.homeNumbers[square.column] }
@@ -378,6 +389,9 @@ struct SquareNumberCell: View {
                 Text("Potential: \(potential)")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundColor(DesignSystem.Colors.textTertiary)
+            }
+            if let pts = pointsAway, let abbr = teamAbbrAway, !isCurrentWinner {
+                PointsAwayIndicator(pointsAway: pts, teamAbbr: abbr)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

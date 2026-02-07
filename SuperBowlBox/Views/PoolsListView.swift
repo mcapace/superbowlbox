@@ -68,6 +68,7 @@ struct PoolsListView: View {
                                     }
                                 }
                             }
+                            .animation(.easeInOut(duration: 0.3), value: appState.pools.count)
                             .padding(.horizontal, DesignSystem.Layout.screenInset)
                         }
                         Spacer(minLength: 100)

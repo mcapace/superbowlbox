@@ -344,6 +344,7 @@ struct OnTheHuntCard: View {
                             .foregroundColor(DesignSystem.Colors.textSecondary)
                     }
                     Spacer()
+                    PointsAwayIndicator(pointsAway: item.pointsNeeded, teamAbbr: item.teamNeedsToScore.abbreviation)
                     Text(item.poolName)
                         .font(DesignSystem.Typography.caption2)
                         .foregroundColor(DesignSystem.Colors.textTertiary)
@@ -399,11 +400,18 @@ struct UpNextPlaceholderCard: View {
     var body: some View {
         VStack(spacing: 20) {
             if isLoading {
-                ProgressView()
-                    .scaleEffect(1.2)
-                    .tint(DesignSystem.Colors.textSecondary)
+                VStack(spacing: 16) {
+                    SkeletonView(width: 200, height: 24, cornerRadius: 8)
+                    HStack(spacing: 16) {
+                        SkeletonView(width: 80, height: 80, cornerRadius: 40)
+                        SkeletonView(width: 60, height: 40, cornerRadius: 8)
+                        SkeletonView(width: 80, height: 80, cornerRadius: 40)
+                    }
+                    SkeletonView(width: 160, height: 16, cornerRadius: 6)
+                }
+                .padding(.vertical, 8)
                 Text("Loading game…")
-                    .font(DesignSystem.Typography.callout)
+                    .font(DesignSystem.Typography.caption)
                     .foregroundColor(DesignSystem.Colors.textSecondary)
             } else {
                 Image(systemName: "calendar.badge.clock")
@@ -458,6 +466,45 @@ struct LiveScoreCard: View {
     private var isUpcoming: Bool { !score.isGameActive && !score.isGameOver }
 
     var body: some View {
+        Group {
+            if isLoading {
+                LiveScoreCardSkeleton()
+            } else {
+                liveScoreContent
+            }
+        }
+        .padding(DesignSystem.Layout.cardPadding)
+        .frame(maxWidth: .infinity)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                (Color(hex: score.awayTeam.primaryColor) ?? Color.clear).opacity(0.08),
+                                Color.clear,
+                                (Color(hex: score.homeTeam.primaryColor) ?? Color.clear).opacity(0.08)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
+                    .fill(DesignSystem.Colors.cardSurface.opacity(0.25))
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
+                .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
+        )
+        .glassInnerDepth(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
+        .glassBevelHighlight(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
+        .glassDepthShadowsEnhanced()
+    }
+
+    private var liveScoreContent: some View {
         VStack(spacing: 0) {
             // Top: League + status or kickoff timeline
             HStack {
@@ -470,17 +517,19 @@ struct LiveScoreCard: View {
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(DesignSystem.Colors.accentBlue)
                 } else {
-                    HStack(spacing: 4) {
-                        if score.isGameActive {
-                            Circle()
-                                .fill(DesignSystem.Colors.liveGreen)
-                                .frame(width: 5, height: 5)
-                                .pulse(isActive: true)
-                        }
+                    HStack(spacing: 8) {
+                        LivePulseIndicator(isLive: score.isGameActive, size: 8)
                         Text(score.isGameActive ? "LIVE" : score.gameStatusText.uppercased())
                             .font(.system(size: 11, weight: .semibold))
                             .tracking(0.6)
                             .foregroundColor(score.isGameActive ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.textTertiary)
+                        if score.isGameActive {
+                            Spacer()
+                            QuarterProgressDots(currentQuarter: min(max(score.quarter, 1), 4))
+                            Text(score.timeRemaining)
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
+                        }
                     }
                 }
             }
@@ -552,35 +601,39 @@ struct LiveScoreCard: View {
                 .glassDepthShadows()
             }
         }
-        .padding(DesignSystem.Layout.cardPadding)
-        .frame(maxWidth: .infinity)
-        .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
-                    .fill(.ultraThinMaterial)
-                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                (Color(hex: score.awayTeam.primaryColor) ?? Color.clear).opacity(0.08),
-                                Color.clear,
-                                (Color(hex: score.homeTeam.primaryColor) ?? Color.clear).opacity(0.08)
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
-                    .fill(DesignSystem.Colors.cardSurface.opacity(0.25))
+    }
+}
+
+// MARK: - Score card skeleton (loading state)
+private struct LiveScoreCardSkeleton: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            HStack {
+                SkeletonView(width: 40, height: 14, cornerRadius: 6)
+                Spacer()
+                SkeletonView(width: 100, height: 14, cornerRadius: 6)
             }
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
-                .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
-        )
-        .glassInnerDepth(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
-        .glassBevelHighlight(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
-        .glassDepthShadowsEnhanced()
+            HStack(spacing: 16) {
+                VStack(spacing: 8) {
+                    SkeletonView(width: 56, height: 56, cornerRadius: 28)
+                    SkeletonView(width: 50, height: 12, cornerRadius: 4)
+                    SkeletonView(width: 60, height: 44, cornerRadius: 8)
+                }
+                .frame(maxWidth: .infinity)
+                SkeletonView(width: 24, height: 16, cornerRadius: 2)
+                VStack(spacing: 8) {
+                    SkeletonView(width: 56, height: 56, cornerRadius: 28)
+                    SkeletonView(width: 50, height: 12, cornerRadius: 4)
+                    SkeletonView(width: 60, height: 44, cornerRadius: 8)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            HStack {
+                SkeletonView(width: 120, height: 12, cornerRadius: 4)
+                Spacer()
+                SkeletonView(width: 80, height: 20, cornerRadius: 6)
+            }
+        }
     }
 }
 
@@ -611,11 +664,15 @@ struct TeamScoreColumn: View {
                 .font(.system(size: logoSize * 0.22, weight: .medium))
                 .foregroundColor(DesignSystem.Colors.textTertiary)
 
-            Text("\(score)")
-                .font(.system(size: logoSize * 0.58, weight: .bold))
-                .monospacedDigit()
-                .foregroundColor(isLeading ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.textPrimary)
-                .contentTransition(.numericText())
+            HStack(spacing: 2) {
+                ForEach(Array(scoreDigits(score).enumerated()), id: \.offset) { _, digit in
+                    FlipDigit(
+                        digit: digit,
+                        color: isLeading ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.textPrimary,
+                        size: logoSize * 0.5
+                    )
+                }
+            }
 
             Text("\(lastDigit)")
                 .font(.system(size: 12, weight: .medium))
@@ -629,6 +686,11 @@ struct TeamScoreColumn: View {
                 )
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private func scoreDigits(_ s: Int) -> [Int] {
+        if s < 10 { return [0, s] }
+        return String(s).compactMap { Int(String($0)) }
     }
 }
 
