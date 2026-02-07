@@ -197,8 +197,7 @@ struct ImportPoolCard: View {
                     .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
             }
         )
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.35), radius: 2, x: 0, y: 1)
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.2), radius: 10, x: 0, y: 3)
+        .glassDepthShadows()
     }
 }
 
@@ -235,8 +234,7 @@ private struct NoPoolsGlassBackground: View {
             RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
                 .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
         }
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.35), radius: 2, x: 0, y: 1)
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.2), radius: 10, x: 0, y: 3)
+        .glassDepthShadows()
     }
 }
 
@@ -407,8 +405,7 @@ struct PoolGameCard: View {
                     .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
             }
         )
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.35), radius: 2, x: 0, y: 1)
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.2), radius: 10, x: 0, y: 3)
+        .glassDepthShadows()
     }
 }
 

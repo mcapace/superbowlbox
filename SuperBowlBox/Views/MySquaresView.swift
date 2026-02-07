@@ -46,6 +46,7 @@ struct MySquaresView: View {
                             .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
                     }
                 )
+                .glassDepthShadows()
                 .padding(.horizontal, DesignSystem.Layout.screenInset)
                 .padding(.vertical, 16)
 
@@ -388,6 +389,7 @@ struct SquareNumberCell: View {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(isCurrentWinner ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.glassBorder.opacity(0.5), lineWidth: isCurrentWinner ? 2 : 0.6)
         )
+        .glassDepthShadows()
     }
 
     var backgroundColor: Color {

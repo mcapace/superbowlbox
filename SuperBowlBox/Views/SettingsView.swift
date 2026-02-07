@@ -236,9 +236,9 @@ struct SettingsView: View {
             }
             }
             .scrollContentBackground(.hidden)
+            .listRowInsets(EdgeInsets(top: 4, leading: DesignSystem.Layout.screenInset, bottom: 4, trailing: DesignSystem.Layout.screenInset))
             .listRowBackground(
-                RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
-                    .fill(.ultraThinMaterial)
+                SettingsListRowGlassBackground()
             )
             .toolbarBackground(DesignSystem.Colors.backgroundSecondary, for: .navigationBar)
             .navigationTitle("Settings")
@@ -293,6 +293,21 @@ struct SettingsView: View {
         var vc = window.rootViewController
         while let presented = vc?.presentedViewController { vc = presented }
         return vc
+    }
+}
+
+// MARK: - Settings list row glass background (depth + border)
+private struct SettingsListRowGlassBackground: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                .fill(.ultraThinMaterial)
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                .fill(DesignSystem.Colors.backgroundTertiary.opacity(0.5))
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
+        }
+        .glassDepthShadows()
     }
 }
 

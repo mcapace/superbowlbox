@@ -86,38 +86,19 @@ struct GridDetailView: View {
                                 .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
                         }
                     )
-                    .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.35), radius: 2, x: 0, y: 1)
-                    .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.2), radius: 8, x: 0, y: 3)
+                    .glassDepthShadows()
                     .padding(.horizontal)
                     .padding(.bottom, 10)
 
-                    // Grid: corner = matchup (Away = rows, Home = cols) with logos; numbers and cells have depth
+                    // Grid: corner = matchup (Away = rows, Home = cols) — logos prominent with depth
                     HStack(spacing: 0) {
-                        // Corner: Away team (rows) | Home team (cols) — clear labels + logos
+                        let logoSize = max(26, min(cellSize * 0.58, 36))
                         VStack(spacing: 0) {
-                            VStack(spacing: 2) {
-                                Text(pool.awayTeam.abbreviation)
-                                    .font(.system(size: max(7, cellSize * 0.16), weight: .bold))
-                                    .foregroundColor(DesignSystem.Colors.textPrimary)
-                                TeamLogoView(team: pool.awayTeam, size: max(18, cellSize * 0.44))
-                                Text("Rows")
-                                    .font(.system(size: max(6, cellSize * 0.14), weight: .medium))
-                                    .foregroundColor(DesignSystem.Colors.textTertiary)
-                            }
-                            .frame(maxWidth: .infinity)
+                            GridCornerTeamBadge(team: pool.awayTeam, axisLabel: "Rows", logoSize: logoSize)
                             Rectangle()
                                 .fill(DesignSystem.Colors.glassBorder)
                                 .frame(height: 0.8)
-                            VStack(spacing: 2) {
-                                Text(pool.homeTeam.abbreviation)
-                                    .font(.system(size: max(7, cellSize * 0.16), weight: .bold))
-                                    .foregroundColor(DesignSystem.Colors.textPrimary)
-                                TeamLogoView(team: pool.homeTeam, size: max(18, cellSize * 0.44))
-                                Text("Cols")
-                                    .font(.system(size: max(6, cellSize * 0.14), weight: .medium))
-                                    .foregroundColor(DesignSystem.Colors.textTertiary)
-                            }
-                            .frame(maxWidth: .infinity)
+                            GridCornerTeamBadge(team: pool.homeTeam, axisLabel: "Cols", logoSize: logoSize)
                         }
                         .frame(width: cellSize, height: cellSize)
                         .background(
@@ -130,8 +111,7 @@ struct GridDetailView: View {
                                     .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
                             }
                         )
-                        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.4), radius: 2, x: 0, y: 1)
-                        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.25), radius: 6, x: 0, y: 2)
+                        .glassDepthShadows()
 
                         ForEach(0..<10, id: \.self) { col in
                             let isWinningCol = winningPosition?.column == col
@@ -481,6 +461,45 @@ struct EditMatchupSheet: View {
     }
 }
 
+// MARK: - Grid corner team badge (logo-first with depth)
+private struct GridCornerTeamBadge: View {
+    let team: Team
+    let axisLabel: String
+    let logoSize: CGFloat
+
+    var body: some View {
+        VStack(spacing: 3) {
+            // Logo as primary element with raised-badge look
+            ZStack {
+                Circle()
+                    .fill(DesignSystem.Colors.cardShadow.opacity(0.35))
+                    .frame(width: logoSize + 4, height: logoSize + 4)
+                    .blur(radius: 2)
+                    .offset(x: 0, y: 1)
+                TeamLogoView(team: team, size: logoSize)
+                    .overlay(
+                        Circle()
+                            .strokeBorder(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.5), Color.white.opacity(0.08)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 0.8
+                            )
+                    )
+            }
+            Text(team.abbreviation)
+                .font(.system(size: max(8, logoSize * 0.28), weight: .bold))
+                .foregroundColor(DesignSystem.Colors.textPrimary)
+            Text(axisLabel)
+                .font(.system(size: max(6, logoSize * 0.2), weight: .medium))
+                .foregroundColor(DesignSystem.Colors.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
 struct FullGridCellView: View {
     let square: BoxSquare
     let isWinning: Bool
@@ -551,8 +570,7 @@ struct FullGridCellView: View {
             RoundedRectangle(cornerRadius: 6)
                 .strokeBorder(isWinning ? Color.white.opacity(0.6) : DesignSystem.Colors.glassBorder, lineWidth: isWinning ? 1 : 0.6)
         )
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.45), radius: 1.5, x: 0, y: 1)
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.25), radius: 4, x: 0, y: 2)
+        .glassDepthShadows()
     }
 
     private var glassOpacity: Double {

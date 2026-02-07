@@ -175,12 +175,12 @@
 		A30000000000000000000004 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				A00000000000000000000010 /* SettingsView.swift */,
 				A00000000000000000000008 /* GridView.swift */,
 				A00000000000000000000009 /* ScannerView.swift */,
 				A0000000000000000000000A /* SquareDetailView.swift */,
 				A0000000000000000000000E /* CameraViewController.swift */,
 				A0000000000000000000000F /* ScoreOverlayView.swift */,
-				A00000000000000000000010 /* SettingsView.swift */,
 				A00000000000000000000011 /* ManualEntryView.swift */,
 				A00000000000000000000013 /* PoolsListView.swift */,
 				A00000000000000000000014 /* MySquaresView.swift */,

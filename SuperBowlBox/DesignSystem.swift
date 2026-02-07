@@ -244,6 +244,13 @@ extension View {
             .shadow(color: DesignSystem.Colors.cardShadow, radius: 6, x: 0, y: 2)
     }
 
+    /// Two-layer shadow for visible depth (use on any glass card or widget)
+    func glassDepthShadows() -> some View {
+        self
+            .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.5), radius: 3, x: 0, y: 1.5)
+            .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.35), radius: 14, x: 0, y: 5)
+    }
+
     /// Liquid glass / Control Center style: frosted material, depth shadows, thin border
     func liquidGlassCard(
         cornerRadius: CGFloat = DesignSystem.Layout.glassCornerRadius,
@@ -261,8 +268,7 @@ extension View {
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
             )
-            .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.4), radius: 2, x: 0, y: 1)
-            .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.25), radius: 12, x: 0, y: 4)
+            .glassDepthShadows()
     }
 }
 

@@ -315,8 +315,7 @@ struct DashboardPoolCard: View {
             RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
                 .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
         )
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.35), radius: 2, x: 0, y: 1)
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.2), radius: 10, x: 0, y: 3)
+        .glassDepthShadows()
     }
 }
 
@@ -344,13 +343,14 @@ struct OnTheHuntCard: View {
                 }
                 .padding(12)
                 .background(
-                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
-                        .fill(.ultraThinMaterial)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
-                                .strokeBorder(DesignSystem.Colors.glassBorder.opacity(0.6), lineWidth: 0.5)
-                        )
+                    ZStack {
+                        RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                            .fill(.ultraThinMaterial)
+                        RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                            .strokeBorder(DesignSystem.Colors.glassBorder.opacity(0.6), lineWidth: 0.5)
+                    }
                 )
+                .glassDepthShadows()
             }
         }
         .liquidGlassCard(cornerRadius: DesignSystem.Layout.glassCornerRadius)
@@ -437,8 +437,7 @@ struct UpNextPlaceholderCard: View {
             RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
                 .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
         )
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.35), radius: 2, x: 0, y: 1)
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.2), radius: 10, x: 0, y: 3)
+        .glassDepthShadows()
     }
 }
 
@@ -534,13 +533,14 @@ struct LiveScoreCard: View {
                 .padding(.vertical, 12)
                 .padding(.horizontal, 4)
                 .background(
-                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
-                        .fill(.ultraThinMaterial)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
-                                .strokeBorder(DesignSystem.Colors.glassBorder.opacity(0.5), lineWidth: 0.5)
-                        )
+                    ZStack {
+                        RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                            .fill(.ultraThinMaterial)
+                        RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                            .strokeBorder(DesignSystem.Colors.glassBorder.opacity(0.5), lineWidth: 0.5)
+                    }
                 )
+                .glassDepthShadows()
             }
         }
         .padding(DesignSystem.Layout.cardPadding)
@@ -569,8 +569,7 @@ struct LiveScoreCard: View {
             RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
                 .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
         )
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.4), radius: 3, x: 0, y: 1)
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.25), radius: 14, x: 0, y: 5)
+        .glassDepthShadows()
     }
 }
 
@@ -1348,8 +1347,7 @@ struct QuickStatsCard: View {
                     .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
             }
         )
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.35), radius: 2, x: 0, y: 1)
-        .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.2), radius: 10, x: 0, y: 3)
+        .glassDepthShadows()
     }
 }
 
