@@ -61,9 +61,14 @@ struct BoxGrid: Codable, Identifiable {
         }
     }
 
-    /// Resolved pool structure (defaults to standard quarterly for legacy pools).
+    /// Resolved pool structure (defaults to standard quarterly for legacy pools). Payout details are shown in the "View payout rules" modal.
     var resolvedPoolStructure: PoolStructure {
         poolStructure ?? .standardQuarterly
+    }
+
+    /// Structure for the payout rules modal. AI-powered: use only the stored structure from the Lambda (no local inference).
+    var structureForPayoutModal: PoolStructure {
+        resolvedPoolStructure
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -157,6 +162,8 @@ struct BoxGrid: Codable, Identifiable {
             switch period {
             case .quarter(let q):
                 squares[pos.row][pos.column].quarterWins.append(q)
+            case .scoreChange:
+                squares[pos.row][pos.column].winningPeriodIds.append(period.id)
             default:
                 squares[pos.row][pos.column].winningPeriodIds.append(period.id)
             }
@@ -174,6 +181,11 @@ struct BoxGrid: Codable, Identifiable {
             return totalScore.map { ($0.home % 10, $0.away % 10) }
         case .firstScoreChange, .custom:
             return totalScore.map { ($0.home % 10, $0.away % 10) }
+        case .scoreChange(let n):
+            guard let t = totalScore else { return nil }
+            let totalPoints = t.home + t.away
+            guard totalPoints == n else { return nil }
+            return (t.home % 10, t.away % 10)
         }
     }
 
@@ -195,6 +207,12 @@ struct BoxGrid: Codable, Identifiable {
             return nil
         case .custom:
             return nil
+        case .perScoreChange(_, let maxChanges):
+            let totalPoints = score.homeScore + score.awayScore
+            let cap = maxChanges ?? 25
+            if totalPoints == 0 { return nil }
+            if totalPoints <= cap { return .scoreChange(totalPoints) }
+            return score.isGameOver ? .final : .scoreChange(cap)
         }
     }
 
@@ -210,6 +228,8 @@ struct BoxGrid: Codable, Identifiable {
             return score.isGameOver
         case .firstScoreChange:
             return (score.homeScore + score.awayScore) > 0
+        case .scoreChange(let n):
+            return (score.homeScore + score.awayScore) >= n
         case .custom:
             return score.isGameOver
         }
@@ -228,6 +248,18 @@ struct BoxGrid: Codable, Identifiable {
             }
         }
         return nil
+    }
+
+    /// For perScoreChange pools: count so far, amount paid so far, remainder to final (for real-time UI).
+    func scoreChangeInfo(for score: GameScore) -> (count: Int, paid: Double, remainder: Double)? {
+        guard let (amountPerChange, maxChanges) = resolvedPoolStructure.perScoreChangeParams,
+              let total = resolvedPoolStructure.totalPoolAmount else { return nil }
+        let count = score.homeScore + score.awayScore
+        let cap = maxChanges
+        let paidCount = min(count, cap)
+        let paid = Double(paidCount) * amountPerChange
+        let remainder = total - (Double(cap) * amountPerChange)
+        return (count, paid, remainder)
     }
 
     /// Finalized periods with winner name and payout amount (for "Current winnings" UI).

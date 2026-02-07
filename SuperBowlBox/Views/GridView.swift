@@ -10,6 +10,7 @@ struct GridDetailView: View {
     @State private var zoomScale: CGFloat = 1.0
     @State private var showingShareSheet = false
     @State private var showingDeletePoolConfirmation = false
+    @State private var showingPayoutRulesModal = false
 
     var score: GameScore? {
         appState.scoreService.currentScore
@@ -23,22 +24,44 @@ struct GridDetailView: View {
     var body: some View {
         ScrollView([.horizontal, .vertical], showsIndicators: true) {
             VStack(spacing: 0) {
-                // Pool structure & payouts (parsed: periods + amounts only — no raw rules blob)
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Label(pool.resolvedPoolStructure.periodLabels.joined(separator: " · "), systemImage: "calendar.badge.clock")
-                            .font(.system(size: 12))
-                            .foregroundColor(DesignSystem.Colors.liveGreen)
-                        Spacer()
-                        if !pool.resolvedPoolStructure.payoutDescriptions.isEmpty {
-                            Text(pool.resolvedPoolStructure.payoutDescriptions.joined(separator: "  "))
+                // Pool type line — tap to view payout rules (modal shows parsed, professional summary)
+                Button {
+                    HapticService.impactLight()
+                    showingPayoutRulesModal = true
+                } label: {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Label(pool.resolvedPoolStructure.poolTypeLabel, systemImage: "calendar.badge.clock")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(DesignSystem.Colors.liveGreen)
+                            Spacer()
+                            Text("View payout rules")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(DesignSystem.Colors.textTertiary)
+                        }
+                        if let score = score, let info = pool.scoreChangeInfo(for: score) {
+                            let formatter: NumberFormatter = {
+                                let f = NumberFormatter()
+                                f.numberStyle = .currency
+                                f.currencyCode = pool.resolvedPoolStructure.currencyCode
+                                f.maximumFractionDigits = 0
+                                return f
+                            }()
+                            let paidStr = formatter.string(from: NSNumber(value: info.paid)) ?? "$\(Int(info.paid))"
+                            let remStr = formatter.string(from: NSNumber(value: info.remainder)) ?? "$\(Int(info.remainder))"
+                            Text("\(info.count) score changes · \(paidStr) paid · \(remStr) to final")
                                 .font(.system(size: 11))
                                 .foregroundColor(DesignSystem.Colors.textTertiary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
                 }
+                .buttonStyle(.plain)
                 .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                .padding(.vertical, 12)
                 .background(DesignSystem.Colors.backgroundTertiary.opacity(0.8))
                 .cornerRadius(DesignSystem.Layout.cornerRadiusSmall)
                 .padding(.horizontal)
@@ -221,6 +244,12 @@ struct GridDetailView: View {
         }
         .sheet(isPresented: $showingShareSheet) {
             ShareSheet(items: [exportGridAsImage()])
+        }
+        .sheet(isPresented: $showingPayoutRulesModal) {
+            PayoutRulesModalView(
+                pool: pool,
+                onDismiss: { showingPayoutRulesModal = false }
+            )
         }
         .alert("Delete pool?", isPresented: $showingDeletePoolConfirmation) {
             Button("Cancel", role: .cancel) {}
@@ -530,7 +559,7 @@ struct EditPoolRulesSheet: View {
         }
     }
 
-    /// Save rules: if AI parse is configured, parse first so the pool understands who's winning, payouts, and what you've earned. No raw blob is shown above the grid.
+    /// Save rules: AI (Lambda) powers logic when backend is configured. Grid, modal, and payouts use only the parsed structure from the API.
     private func saveRulesAndDismiss() {
         let text = rulesText.trimmingCharacters(in: .whitespacesAndNewlines)
         var ps = pool.poolStructure ?? PoolStructure.standardQuarterly
@@ -559,11 +588,13 @@ struct EditPoolRulesSheet: View {
                 }
             }
         } else {
+            payoutParseError = nil
             pool.poolStructure = ps
             onSave()
         }
     }
 
+    /// Parse with AI only (no local fallback). Grid and modal use this structure.
     private func parsePayoutRulesWithAI() {
         let text = rulesText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
@@ -585,6 +616,64 @@ struct EditPoolRulesSheet: View {
                     payoutParseError = error.localizedDescription
                     payoutParsedSummary = nil
                     payoutParseInProgress = false
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Payout rules modal (parsed, professional summary when user taps "View payout rules")
+struct PayoutRulesModalView: View {
+    let pool: BoxGrid
+    let onDismiss: () -> Void
+
+    private var structure: PoolStructure { pool.structureForPayoutModal }
+
+    /// Main copy: AI-readable summary when available, otherwise formatted structure summary.
+    private var primaryRulesText: String {
+        if let ai = structure.readableRulesSummary, !ai.isEmpty {
+            return ai
+        }
+        return structure.professionalPayoutSummary
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text(primaryRulesText)
+                        .font(.body)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)
+
+                    if let raw = structure.customPayoutDescription, !raw.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("As you entered")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
+                            Text(raw)
+                                .font(.subheadline)
+                                .foregroundColor(DesignSystem.Colors.textTertiary)
+                                .italic()
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)
+                    }
+                }
+                .padding(.vertical, 20)
+            }
+            .background(DesignSystem.Colors.backgroundPrimary)
+            .navigationTitle("Payout rules")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        HapticService.impactLight()
+                        onDismiss()
+                    }
+                    .fontWeight(.semibold)
                 }
             }
         }

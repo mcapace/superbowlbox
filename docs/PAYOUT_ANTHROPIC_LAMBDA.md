@@ -2,6 +2,20 @@
 
 You can use **the same Anthropic API** (and same pattern as the grid-analyze Lambda) to parse payout rules. The app then uses that structure for **who's winning**, **period winners**, and **what you've earned**.
 
+## Pool rules vary (basic vs complex)
+
+**Not every pool has the same rules.** Each pool has its own payout description; the AI parses that text and the app applies the result only to that pool.
+
+- **Basic examples:** "$25 per quarter", "25% each quarter", "first score wins", "halftime and final only".
+- **More complex examples:** "$400 per score change, payouts stop at 25, remainder to final", "$100 per box / $10,000 pot, no payments for end of quarters or halftime".
+
+The Lambda and app are built so that:
+1. The **AI** reads the user’s free text and returns a **single** structure (pool type, amounts, cap, etc.) for that pool.
+2. The **app** uses that structure only for that pool — grid header, current winner, and winnings all follow the parsed rules.
+3. Other pools keep their own, possibly different, rules.
+
+So one pool can be "Quarters · $25 each" and another "Score change · $400 per change, cap 25, remainder to final" in the same app.
+
 ## 1. Reuse your grid Lambda setup
 
 - Same **ANTHROPIC_API_KEY** (you already have it for the grid Lambda).

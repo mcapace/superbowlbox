@@ -926,6 +926,7 @@ struct WinnerSpotlightCard: View {
             case .halftime: return "Halftime"
             case .final: return "Final"
             case .firstScoreChange: return "First score"
+            case .scoreChange(let n): return "Score change \(n)"
             case .custom(_, let label): return label
             }
         }

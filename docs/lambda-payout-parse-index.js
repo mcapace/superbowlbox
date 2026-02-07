@@ -1,40 +1,29 @@
 /**
  * Lambda: parse payout rules with Anthropic (same pattern as grid-analyze).
- * App sends: POST { "payoutDescription": "e.g. $25 per quarter, halftime pays double" }
- * Returns: JSON matching PayoutParseService.Response for leader/earnings logic.
+ * App sends: POST { "payoutDescription": "<user's free text>" }
+ * Returns: JSON matching PayoutParseService.Response. The app supports all pool types
+ * (byQuarter, halftimeOnly, finalOnly, halftimeAndFinal, firstScoreChange, custom, perScoreChange)
+ * and uses the returned structure for grid header, modal, and payouts. Not all pools use the same
+ * logic — parse exactly what this user described (standard, score-change, or other).
  */
 
-const PROMPT = `You parse football/sports pool payout rules into structured JSON. The app uses this to show who's winning and what each period pays — so the structure must match how the pool actually pays.
+const PROMPT = `You parse football/sports pool payout rules into structured JSON. The app uses your response for the grid header, current winner, and payouts — so output the structure that matches THIS user's description only.
 
-CRITICAL: If the user mentions specific dollar amounts (e.g. "$25 per quarter", "halftime pays double", "$50 final"), you MUST set:
-  "payoutStyle": "fixedAmount"
-  "amountsPerPeriod": [array of dollar amounts in period order]
-Do NOT use "equalSplit" or leave amountsPerPeriod null when the user describes dollar amounts per period.
+Pools vary. Parse exactly what they wrote — do not assume a type. Common cases:
+- Standard quarterly: "byQuarter", pay at end of Q1/Q2/Q3/Q4. Often "equal split" (25% each) or "$X per quarter" (fixedAmount, amountsPerPeriod). quarterNumbers [1,2,3,4].
+- Halftime / final only: "halftimeOnly", "finalOnly", or "halftimeAndFinal" (two payouts).
+- First score: "firstScoreChange" — ONE payout when the score first changes from 0–0. amountsPerPeriod: [single amount] or equalSplit.
+- Per score change: "perScoreChange" only when they clearly say pay per score change / per point, stop at N, remainder to final, no payments for end of quarters/halftime. Then output amountPerChange, maxScoreChanges, totalPoolAmount. Omit quarterNumbers, amountsPerPeriod, payoutStyle.
+- Custom: "custom" with customPeriodLabels when they name non-standard periods.
 
-Output ONLY a single valid JSON object, no markdown or explanation:
-{
-  "poolType": "byQuarter",
-  "quarterNumbers": [1, 2, 3, 4],
-  "customPeriodLabels": null,
-  "payoutStyle": "fixedAmount",
-  "amountsPerPeriod": [25, 25, 50, 25],
-  "percentagesPerPeriod": null,
-  "totalPoolAmount": 125,
-  "currencyCode": "USD"
-}
+Output ONLY a single valid JSON object, no markdown. Include "readableRules" (REQUIRED): 1–3 clear sentences so the user understands how this pool pays.
 
-Rules:
-- poolType: byQuarter | halftimeOnly | finalOnly | halftimeAndFinal | firstScoreChange | custom
-  - byQuarter = pay at end of Q1,Q2,Q3,Q4 → quarterNumbers [1,2,3,4]
-  - halftimeOnly = one payout at halftime. finalOnly = one at game end. halftimeAndFinal = two. firstScoreChange = first score wins.
-  - custom = use customPeriodLabels e.g. ["Q1","Q2","Halftime","Final"]
-- payoutStyle: equalSplit | fixedAmount | percentage
-  - When user says "$X per quarter" or "Q1 $25, Q2 $25, halftime $50" etc. → use fixedAmount and set amountsPerPeriod to the dollar amounts in period order.
-  - "halftime pays double" with $25/quarter → e.g. [25, 25, 50, 25] (Q1,Q2,halftime,Q3,Q4 or match the periods they describe).
-  - percentage = only when they say "equal split" or "25% each" etc. → use percentagesPerPeriod.
-  - equalSplit = only when no specific amounts are given.
-- amountsPerPeriod must be an array of numbers (dollars), one per period, in order. Never null when user specifies dollar amounts.
-- Infer totalPoolAmount when implied (e.g. 4x$25 = 100). currencyCode "USD" if not stated.`;
+Examples:
+Standard quarterly: { "poolType": "byQuarter", "quarterNumbers": [1,2,3,4], "payoutStyle": "fixedAmount", "amountsPerPeriod": [25,25,50,25], "totalPoolAmount": 125, "currencyCode": "USD", "readableRules": "This pool pays $25 per quarter; halftime pays $50 (double)." }
+Equal split: { "poolType": "byQuarter", "quarterNumbers": [1,2,3,4], "payoutStyle": "equalSplit", "totalPoolAmount": 100, "currencyCode": "USD", "readableRules": "Equal split: 25% per quarter. Total pool $100." }
+Per score change (only if they describe it): { "poolType": "perScoreChange", "amountPerChange": 400, "maxScoreChanges": 25, "totalPoolAmount": 10000, "currencyCode": "USD", "readableRules": "..." }
+
+Infer totalPoolAmount when implied. Use currencyCode "USD" if not stated.`;
 
 exports.handler = async (event) => {
   const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
@@ -78,15 +67,47 @@ exports.handler = async (event) => {
     text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
     const json = JSON.parse(text);
     const inputText = (body.payoutDescription || '').toLowerCase();
+    const raw = body.payoutDescription || '';
+    const isFirstScorePool = /first\s*score\s*wins|first\s*(td|fg|field\s*goal|team\s*to\s*score)/i.test(raw) && !/per\s*score\s*change|\$\d+\s*per\s*(score\s*change|point)/i.test(raw);
+    const isPerScoreChangePool = /\$?\s*\d+\s*(dollars?)?\s*per\s*(score\s*change|point)|per\s*score\s*change|stop\s*at\s*\d+|remainder\s*to\s*final|no\s*payments?\s*for\s*(end\s*of\s*quarters?|halftime|end\s*of\s*game)/i.test(raw);
 
-    // If user text mentions dollars but Claude returned equalSplit / no amounts, infer fixedAmount
-    const hasDollars = /\$|dollar|dollars/.test(inputText);
+    let poolType = json.poolType ?? 'byQuarter';
     let payoutStyle = json.payoutStyle ?? 'equalSplit';
-    let amountsPerPeriod = Array.isArray(json.amountsPerPeriod) && json.amountsPerPeriod.length > 0
-      ? json.amountsPerPeriod
-      : null;
+    let amountsPerPeriod = Array.isArray(json.amountsPerPeriod) && json.amountsPerPeriod.length > 0 ? json.amountsPerPeriod : null;
+    let amountPerChange = typeof json.amountPerChange === 'number' ? json.amountPerChange : null;
+    let maxScoreChanges = typeof json.maxScoreChanges === 'number' ? json.maxScoreChanges : (json.maxScoreChanges === null ? null : undefined);
+    let totalPoolAmount = json.totalPoolAmount;
 
-    if (hasDollars && (!amountsPerPeriod || payoutStyle === 'equalSplit')) {
+    if (isPerScoreChangePool) {
+      poolType = 'perScoreChange';
+      if (amountPerChange == null) {
+        const m = raw.match(/\$?\s*(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:dollars?)?\s*per\s*(?:score\s*change|point)/i) || raw.match(/(\d+)\s*dollars?\s*per\s*(?:score\s*change|point)/i);
+        if (m) amountPerChange = parseFloat(String(m[1]).replace(/,/g, ''));
+      }
+      if (maxScoreChanges === undefined) {
+        const m = raw.match(/stop\s*at\s*(\d+)|(\d+)\s*scoring\s*changes?/i);
+        if (m) maxScoreChanges = parseInt(m[1] || m[2], 10);
+        else maxScoreChanges = 25;
+      }
+      if (totalPoolAmount == null) {
+        const m = raw.match(/\$?\s*(\d+(?:,\d{3})*)\s*(?:total|pot|pool)|(\d+)\s*per\s*box|total\s*pot\s*\$?\s*(\d+)/i);
+        if (m) totalPoolAmount = parseFloat(String(m[1] || m[2] || m[3]).replace(/,/g, ''));
+      }
+    }
+
+    if (isFirstScorePool && poolType !== 'firstScoreChange') {
+      poolType = 'firstScoreChange';
+      if (!amountsPerPeriod || amountsPerPeriod.length === 0) {
+        const match = raw.match(/\$?\s*(\d+(?:\.\d+)?)/);
+        if (match) {
+          amountsPerPeriod = [parseFloat(match[1])];
+          payoutStyle = 'fixedAmount';
+        }
+      }
+    }
+
+    const hasDollars = /\$|dollar|dollars/.test(inputText);
+    if (!isPerScoreChangePool && !isFirstScorePool && hasDollars && (!amountsPerPeriod || payoutStyle === 'equalSplit')) {
       // Extract numbers that look like dollar amounts (after $ or "X dollars")
       const numbers = (body.payoutDescription || '').match(/\$?\s*(\d+(?:\.\d+)?)\s*(?:dollars?)?/gi);
       if (numbers && numbers.length >= 1) {
@@ -110,14 +131,17 @@ exports.handler = async (event) => {
     }
 
     const out = {
-      poolType: json.poolType ?? 'byQuarter',
-      quarterNumbers: json.quarterNumbers ?? [1, 2, 3, 4],
+      poolType,
+      quarterNumbers: poolType === 'perScoreChange' ? null : (json.quarterNumbers ?? [1, 2, 3, 4]),
       customPeriodLabels: json.customPeriodLabels ?? null,
-      payoutStyle,
-      amountsPerPeriod,
+      payoutStyle: poolType === 'perScoreChange' ? null : payoutStyle,
+      amountsPerPeriod: poolType === 'perScoreChange' ? null : amountsPerPeriod,
+      amountPerChange: poolType === 'perScoreChange' ? (amountPerChange ?? 400) : null,
+      maxScoreChanges: poolType === 'perScoreChange' ? (maxScoreChanges ?? 25) : null,
       percentagesPerPeriod: json.percentagesPerPeriod ?? null,
-      totalPoolAmount: json.totalPoolAmount ?? null,
+      totalPoolAmount: totalPoolAmount ?? json.totalPoolAmount ?? null,
       currencyCode: json.currencyCode ?? 'USD',
+      readableRules: typeof json.readableRules === 'string' && json.readableRules.trim() ? json.readableRules.trim() : null,
     };
 
     return { statusCode: 200, headers, body: JSON.stringify(out) };

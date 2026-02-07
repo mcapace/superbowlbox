@@ -975,25 +975,52 @@ struct ReviewScanView: View {
                     }
                 }
 
-                // Action buttons
+                // Action buttons — when payout backend is set, AI parses rules before save (no local inference)
                 VStack(spacing: 12) {
                     Button {
                         pool.name = poolName.isEmpty ? "Scanned Pool" : poolName
                         applyOwnerLabels()
                         applyEditedNumbersIfValid()
-                        var ps = pool.poolStructure ?? PoolStructure.standardQuarterly
-                        ps.customPayoutDescription = payoutRulesText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : payoutRulesText.trimmingCharacters(in: .whitespacesAndNewlines)
-                        pool.poolStructure = ps
-                        onConfirm(pool)
+                        let text = payoutRulesText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !text.isEmpty && PayoutParseConfig.usePayoutParse {
+                            payoutParseError = nil
+                            payoutParseInProgress = true
+                            Task {
+                                do {
+                                    let parsed = try await PayoutParseService.parse(payoutDescription: text)
+                                    await MainActor.run {
+                                        var merged = parsed
+                                        merged.customPayoutDescription = text
+                                        pool.poolStructure = merged
+                                        payoutParseInProgress = false
+                                        onConfirm(pool)
+                                    }
+                                } catch {
+                                    await MainActor.run {
+                                        payoutParseError = error.localizedDescription
+                                        payoutParseInProgress = false
+                                    }
+                                }
+                            }
+                        } else {
+                            var ps = pool.poolStructure ?? PoolStructure.standardQuarterly
+                            ps.customPayoutDescription = text.isEmpty ? nil : text
+                            pool.poolStructure = ps
+                            onConfirm(pool)
+                        }
                     } label: {
-                        Text("Confirm & Save")
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(AppColors.fieldGreen)
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
+                        HStack {
+                            if payoutParseInProgress { ProgressView().tint(.white).scaleEffect(0.9) }
+                            Text(payoutParseInProgress ? "Parsing rules…" : "Confirm & Save")
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(AppColors.fieldGreen)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
                     }
+                    .disabled(payoutParseInProgress)
 
                     Button {
                         onRetry()
@@ -1068,7 +1095,7 @@ struct ReviewScanView: View {
         pool.ownerLabels = labels.isEmpty ? nil : labels
     }
 
-    /// Call payout-parse backend to interpret payout rules and set pool structure (so current leader, winners, in the hunt, current winnings are correct).
+    /// Parse payout rules with AI only (no local fallback). Grid and modal use this structure.
     private func parsePayoutRulesWithAI() {
         let text = payoutRulesText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
