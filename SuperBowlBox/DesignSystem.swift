@@ -462,4 +462,175 @@ extension View {
     }
 }
 
-// Uses Color(hex:) from ContentView extension when available; fallbacks use Color(white:) / Color.blue etc.
+// MARK: - Score flip digit (airport-board style)
+struct FlipDigit: View {
+    let digit: Int
+    let color: Color
+    let size: CGFloat
+    @State private var displayDigit: Int = 0
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.15)
+                .fill(DesignSystem.Colors.surfaceElevated)
+                .frame(width: size, height: size * 1.4)
+            Text("\(displayDigit)")
+                .font(.system(size: size * 0.8, weight: .black, design: .rounded))
+                .foregroundColor(color)
+                .contentTransition(.numericText(value: Double(displayDigit)))
+            Rectangle()
+                .fill(DesignSystem.Colors.backgroundPrimary)
+                .frame(height: 2)
+            RoundedRectangle(cornerRadius: size * 0.15)
+                .stroke(color.opacity(0.3), lineWidth: 1)
+                .frame(width: size, height: size * 1.4)
+        }
+        .shadow(color: color.opacity(0.3), radius: 8, y: 2)
+        .onChange(of: digit) { _, newValue in
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) { displayDigit = newValue }
+        }
+        .onAppear { displayDigit = digit }
+    }
+}
+
+// MARK: - Live pulse indicator
+struct LivePulseIndicator: View {
+    let isLive: Bool
+    var size: CGFloat = 12
+    @State private var pulse = false
+    @State private var ringScale: CGFloat = 1
+    @State private var ringOpacity: Double = 0.8
+
+    var body: some View {
+        ZStack {
+            if isLive {
+                Circle()
+                    .stroke(DesignSystem.Colors.liveGreen, lineWidth: 2)
+                    .frame(width: size * 2.5, height: size * 2.5)
+                    .scaleEffect(ringScale)
+                    .opacity(ringOpacity)
+                Circle()
+                    .stroke(DesignSystem.Colors.liveGreen, lineWidth: 1)
+                    .frame(width: size * 2, height: size * 2)
+                    .scaleEffect(ringScale * 0.8)
+                    .opacity(ringOpacity * 0.6)
+            }
+            Circle()
+                .fill(isLive ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.textMuted)
+                .frame(width: size, height: size)
+                .scaleEffect(pulse ? 1.2 : 1.0)
+                .shadow(color: isLive ? DesignSystem.Colors.liveGreen.opacity(0.6) : .clear, radius: 6)
+        }
+        .onAppear {
+            guard isLive else { return }
+            withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) { pulse = true }
+            withAnimation(.easeOut(duration: 1.5).repeatForever(autoreverses: false)) { ringScale = 2; ringOpacity = 0 }
+        }
+    }
+}
+
+// MARK: - Quarter progress dots
+struct QuarterProgressDots: View {
+    let currentQuarter: Int
+    let totalQuarters: Int = 4
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(1...totalQuarters, id: \.self) { quarter in
+                Circle()
+                    .fill(quarter <= currentQuarter ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.surfaceElevated)
+                    .frame(width: 8, height: 8)
+                    .overlay(Circle().stroke(quarter <= currentQuarter ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.glassBorder, lineWidth: 1))
+                    .shadow(color: quarter <= currentQuarter ? DesignSystem.Colors.liveGreen.opacity(0.5) : .clear, radius: 4)
+            }
+        }
+    }
+}
+
+// MARK: - Winning cell glow
+struct WinningGlow: ViewModifier {
+    let isWinning: Bool
+    let color: Color
+    @State private var glowIntensity: Double = 0.3
+    @State private var borderGlow: Double = 0.5
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(color, lineWidth: isWinning ? 2 : 0).opacity(borderGlow))
+            .shadow(color: color.opacity(isWinning ? glowIntensity : 0), radius: 12)
+            .shadow(color: color.opacity(isWinning ? glowIntensity * 0.5 : 0), radius: 24)
+            .onAppear {
+                guard isWinning else { return }
+                withAnimation(.easeInOut(duration: 1).repeatForever(autoreverses: true)) { glowIntensity = 0.8; borderGlow = 1.0 }
+            }
+    }
+}
+
+extension View {
+    func winningGlow(isWinning: Bool, color: Color = DesignSystem.Colors.liveGreen) -> some View {
+        modifier(WinningGlow(isWinning: isWinning, color: color))
+    }
+}
+
+// MARK: - Skeleton loading
+struct SkeletonView: View {
+    let width: CGFloat?
+    let height: CGFloat
+    var cornerRadius: CGFloat = 8
+    @State private var shimmerOffset: CGFloat = -1
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius)
+            .fill(DesignSystem.Colors.surfaceElevated)
+            .frame(width: width, height: height)
+            .overlay(
+                GeometryReader { geo in
+                    LinearGradient(colors: [.clear, Color.white.opacity(0.1), .clear], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: geo.size.width * 0.5)
+                        .offset(x: shimmerOffset * geo.size.width)
+                }
+                .mask(RoundedRectangle(cornerRadius: cornerRadius))
+            )
+            .onAppear {
+                withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) { shimmerOffset = 1.5 }
+            }
+    }
+}
+
+// MARK: - Points away indicator (e.g. "KC +3 PTS")
+struct PointsAwayIndicator: View {
+    let pointsAway: Int
+    let teamAbbr: String
+
+    var urgencyColor: Color {
+        switch pointsAway {
+        case 1...3: return DesignSystem.Colors.dangerRed
+        case 4...6: return DesignSystem.Colors.winnerGold
+        default: return DesignSystem.Colors.accentBlue
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(teamAbbr)
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(DesignSystem.Colors.textSecondary)
+            Image(systemName: "arrow.right")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundColor(DesignSystem.Colors.textMuted)
+            HStack(spacing: 2) {
+                Text("+\(pointsAway)")
+                    .font(.system(size: 14, weight: .black, design: .monospaced))
+                    .foregroundColor(urgencyColor)
+                Text("PTS")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundColor(urgencyColor.opacity(0.7))
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(urgencyColor.opacity(0.15))
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(urgencyColor.opacity(0.3), lineWidth: 1))
+    }
+}

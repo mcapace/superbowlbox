@@ -581,6 +581,7 @@ struct FullGridCellView: View {
             RoundedRectangle(cornerRadius: 6)
                 .strokeBorder(isWinning ? Color.white.opacity(0.6) : DesignSystem.Colors.glassBorder, lineWidth: isWinning ? 1 : 0.6)
         )
+        .winningGlow(isWinning: isWinning, color: DesignSystem.Colors.liveGreen)
         .glassDepthShadows()
     }
 
