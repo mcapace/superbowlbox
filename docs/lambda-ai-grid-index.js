@@ -30,7 +30,19 @@ exports.handler = async (event) => {
       return { statusCode: 500, headers, body: JSON.stringify({ error: 'ANTHROPIC_API_KEY not set' }) };
     }
 
-    const prompt = 'You are reading a football (NFL) pool sheet image. It has:\n- A 10x10 grid of squares.\n- One team name/abbreviation for the COLUMNS (header row with digits 0-9).\n- Another for the ROWS (column with digits 0-9).\n- In each cell, a player name or empty.\n\nExtract and return ONLY a single JSON object, no markdown, with this exact structure:\n{"homeTeamAbbreviation":"<NFL abbr for COLUMN team>","awayTeamAbbreviation":"<NFL abbr for ROW team>","homeNumbers":[10 digits 0-9 left to right],"awayNumbers":[10 digits 0-9 top to bottom],"names":[[10 strings row 0],...[10 rows total]]}\nUse NFL abbreviations: KC, SF, PHI, BAL, BUF, DET, DAL, GB, NE, SEA. Use "" for empty cells.';
+    const prompt = `You are reading a football (NFL) pool sheet image. It has:
+- A 10x10 grid. COLUMNS (horizontal) have a header row with digits 0-9. ROWS (vertical) have a column with digits 0-9.
+- One team is the COLUMN team (header across top). One team is the ROW team (left column).
+- Each cell may contain a player name or be empty.
+
+Return ONLY a single JSON object, no markdown, no code fence. Exact structure:
+{"homeTeamAbbreviation":"<abbr for COLUMN team>","awayTeamAbbreviation":"<abbr for ROW team>","homeNumbers":[10 digits 0-9 in order left to right],"awayNumbers":[10 digits 0-9 in order top to bottom],"names":[[cell row 0],...[10 rows]]}
+
+Rules:
+- homeTeamAbbreviation = the team whose numbers are the COLUMN headers (top row).
+- awayTeamAbbreviation = the team whose numbers are the ROW labels (left column).
+- names[r][c] = the player name in the cell at row r (0=top), column c (0=left). Use "" for empty cells. Exactly 10 rows, 10 strings per row.
+- Use these abbreviations only: KC, SF, PHI, BAL, BUF, DET, DAL, GB, NE, SEA (for Seattle use SEA not SE).`;
 
     const model = process.env.MODEL || 'claude-sonnet-4-20250514';
     const res = await fetch('https://api.anthropic.com/v1/messages', {

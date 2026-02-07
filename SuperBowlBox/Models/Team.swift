@@ -159,7 +159,10 @@ struct Team: Codable, Identifiable, Equatable, Hashable {
         let abbr = abbreviation.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !abbr.isEmpty else { return nil }
         let matchable: [Team] = allTeams + [.patriots, .seahawks]
-        return matchable.first { $0.abbreviation.lowercased() == abbr }
+        if let t = matchable.first(where: { $0.abbreviation.lowercased() == abbr }) { return t }
+        // API/sheet often use "SE" for Seattle; map to canonical abbreviation so logo and name resolve
+        let aliasMap: [String: Team] = ["se": .seahawks, "nep": .patriots, "pat": .patriots, "kan": .chiefs, "nin": .fortyNiners, "rav": .ravens, "gnb": .packers]
+        return aliasMap[abbr]
     }
 
     /// Match sheet text to a team (abbreviation or distinctive name part). Used by OCR to set grid teams.

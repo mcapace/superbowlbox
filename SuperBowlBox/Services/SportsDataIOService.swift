@@ -153,8 +153,7 @@ enum SportsDataIOService {
         let colorKeys = home ? ["HomeTeamColor", "homeTeamColor"] : ["AwayTeamColor", "awayTeamColor"]
         var color = string(from: game, keys: colorKeys) ?? "000000"
         if !color.hasPrefix("#") { color = "#\(color)" }
-        // ESPN hosts NFL scoreboard logos; use same URL pattern when Sports Data IO doesn't provide logos
-        let logoURL = "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/\(abbrev.lowercased()).png"
-        return Team(name: name, abbreviation: abbrev, primaryColor: color, logoURL: logoURL)
+        // Leave logoURL nil so Team.displayLogoURL uses ESPN URL with slug mapping (e.g. SE -> sea); avoids wrong /se.png for Seattle
+        return Team(name: name, abbreviation: abbrev, primaryColor: color, logoURL: nil)
     }
 }

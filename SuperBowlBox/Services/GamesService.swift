@@ -62,9 +62,8 @@ class GamesService: ObservableObject {
                 let abbrev = teamInfo["abbreviation"] as? String ?? "??"
                 let color = (teamInfo["color"] as? String) ?? "000000"
                 var logoURL = teamInfo["logo"] as? String
-                if logoURL == nil, let slug = sport.espnLogoLeagueSlug {
-                    logoURL = "https://a.espncdn.com/i/teamlogos/\(slug)/500/scoreboard/\(abbrev.lowercased()).png"
-                }
+                if logoURL?.isEmpty == true { logoURL = nil }
+                // When API gives no logo, leave nil so Team.displayLogoURL uses ESPN URL with slug mapping (e.g. SE -> sea)
                 let team = Team(
                     name: displayName,
                     abbreviation: abbrev,

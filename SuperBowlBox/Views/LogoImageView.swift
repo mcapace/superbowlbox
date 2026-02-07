@@ -29,7 +29,7 @@ struct LogoImageView: View {
             }
         }
         .task(id: url) {
-            guard image == nil, !failed else { return }
+            await MainActor.run { image = nil; failed = false }
             var request = URLRequest(url: url)
             request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
             do {
