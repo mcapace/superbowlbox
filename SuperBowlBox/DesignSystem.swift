@@ -251,7 +251,34 @@ extension View {
             .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.35), radius: 14, x: 0, y: 5)
     }
 
-    /// Liquid glass / Control Center style: frosted material, depth shadows, thin border
+    /// Extra dimension: third softer shadow for more lift
+    func glassDepthShadowsEnhanced() -> some View {
+        self
+            .glassDepthShadows()
+            .shadow(color: DesignSystem.Colors.cardShadow.opacity(0.22), radius: 20, x: 0, y: 8)
+    }
+
+    /// 3D bevel: top-edge highlight so cards look raised (call after background + border)
+    func glassBevelHighlight(cornerRadius: CGFloat = DesignSystem.Layout.glassCornerRadius) -> some View {
+        self
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.4),
+                                Color.white.opacity(0.08),
+                                Color.clear
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 1
+                    )
+            )
+    }
+
+    /// Liquid glass / Control Center style: frosted material, depth shadows, bevel, thin border
     func liquidGlassCard(
         cornerRadius: CGFloat = DesignSystem.Layout.glassCornerRadius,
         useThinMaterial: Bool = true
@@ -268,7 +295,8 @@ extension View {
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
             )
-            .glassDepthShadows()
+            .glassBevelHighlight(cornerRadius: cornerRadius)
+            .glassDepthShadowsEnhanced()
     }
 }
 

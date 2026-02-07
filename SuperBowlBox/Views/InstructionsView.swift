@@ -165,6 +165,14 @@ struct InstructionsView: View {
         .onChange(of: currentPage) { _, _ in
             triggerStepAnimation()
         }
+        .onChange(of: appState.authService.currentUser) { _, new in
+            if new != nil && currentPage == 0 {
+                HapticService.success()
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    currentPage = 1
+                }
+            }
+        }
         .onAppear {
             triggerStepAnimation()
         }
@@ -188,7 +196,7 @@ struct InstructionsView: View {
     }
 }
 
-// MARK: - Onboarding sign-in step (Apple + Google); also used from Settings sign-in sheet
+// MARK: - Onboarding sign-in step (Apple + Google); also used from Settings sign-in sheet.
 struct OnboardingSignInView: View {
     @ObservedObject var authService: AuthService
     let onSkip: () -> Void
@@ -199,19 +207,14 @@ struct OnboardingSignInView: View {
                 .frame(height: 20)
 
             SquareUpLogoView(showIcon: true, wordmarkSize: 38)
-                .padding(.bottom, 8)
+                .padding(.bottom, 12)
 
-            VStack(spacing: 12) {
-                Text("Sign in to sync")
-                    .font(AppTypography.title2)
-                    .foregroundStyle(DesignSystem.Colors.textPrimary)
-                    .multilineTextAlignment(.center)
-                Text("Optional—sign in with Apple or Google to sync your pools and preferences across devices.")
-                    .font(AppTypography.body)
-                    .foregroundColor(DesignSystem.Colors.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-            }
+            Text("Your box pools, live scores, and winning numbers—all in one place.")
+                .font(AppTypography.body)
+                .foregroundColor(DesignSystem.Colors.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 28)
+                .padding(.bottom, 8)
 
             VStack(spacing: 12) {
                 SignInWithAppleButton {
@@ -229,7 +232,8 @@ struct OnboardingSignInView: View {
                             await authService.signInWithGoogle(presenting: vc)
                         }
                     },
-                    isDisabled: authService.isSigningIn
+                    isDisabled: authService.isSigningIn,
+                    useLargeSize: true
                 )
 
                 if let error = authService.errorMessage {
@@ -242,13 +246,6 @@ struct OnboardingSignInView: View {
             }
             .padding(.horizontal, 24)
             .padding(.top, 8)
-
-            Button("Skip for now") {
-                onSkip()
-            }
-            .font(AppTypography.callout)
-            .foregroundColor(DesignSystem.Colors.textSecondary)
-            .padding(.top, 16)
 
             Spacer(minLength: 80)
         }

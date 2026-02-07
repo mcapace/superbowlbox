@@ -86,32 +86,28 @@ struct GridDetailView: View {
                                 .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
                         }
                     )
-                    .glassDepthShadows()
+                    .glassBevelHighlight(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+                    .glassDepthShadowsEnhanced()
                     .padding(.horizontal)
-                    .padding(.bottom, 10)
+                    .padding(.bottom, 24)
 
-                    // Grid: corner = matchup (Away = rows, Home = cols) — logos prominent with depth
+                    // Section label so rules stay clearly separate from grid
+                    Text("Grid")
+                        .font(DesignSystem.Typography.labelUppercase)
+                        .tracking(0.6)
+                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 4)
+                        .padding(.bottom, 8)
+
+                    // Grid: one Matchup corner (Away | Home) so logos are anchored, not floating
                     HStack(spacing: 0) {
-                        let logoSize = max(26, min(cellSize * 0.58, 36))
-                        VStack(spacing: 0) {
-                            GridCornerTeamBadge(team: pool.awayTeam, axisLabel: "Rows", logoSize: logoSize)
-                            Rectangle()
-                                .fill(DesignSystem.Colors.glassBorder)
-                                .frame(height: 0.8)
-                            GridCornerTeamBadge(team: pool.homeTeam, axisLabel: "Cols", logoSize: logoSize)
-                        }
-                        .frame(width: cellSize, height: cellSize)
-                        .background(
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(.ultraThinMaterial)
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(DesignSystem.Colors.backgroundTertiary.opacity(0.7))
-                                RoundedRectangle(cornerRadius: 6)
-                                    .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
-                            }
+                        GridMatchupCornerView(
+                            awayTeam: pool.awayTeam,
+                            homeTeam: pool.homeTeam,
+                            cellSize: cellSize
                         )
-                        .glassDepthShadows()
+                        .frame(width: cellSize, height: cellSize)
 
                         ForEach(0..<10, id: \.self) { col in
                             let isWinningCol = winningPosition?.column == col
@@ -461,42 +457,57 @@ struct EditMatchupSheet: View {
     }
 }
 
-// MARK: - Grid corner team badge (logo-first with depth)
-private struct GridCornerTeamBadge: View {
-    let team: Team
-    let axisLabel: String
-    let logoSize: CGFloat
+// MARK: - Grid corner: single Matchup card (Away | Home) so logos are anchored to axes
+private struct GridMatchupCornerView: View {
+    let awayTeam: Team
+    let homeTeam: Team
+    let cellSize: CGFloat
+
+    private var logoSize: CGFloat { max(18, min(cellSize * 0.36, 28)) }
 
     var body: some View {
-        VStack(spacing: 3) {
-            // Logo as primary element with raised-badge look
-            ZStack {
-                Circle()
-                    .fill(DesignSystem.Colors.cardShadow.opacity(0.35))
-                    .frame(width: logoSize + 4, height: logoSize + 4)
-                    .blur(radius: 2)
-                    .offset(x: 0, y: 1)
-                TeamLogoView(team: team, size: logoSize)
-                    .overlay(
-                        Circle()
-                            .strokeBorder(
-                                LinearGradient(
-                                    colors: [Color.white.opacity(0.5), Color.white.opacity(0.08)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 0.8
-                            )
-                    )
+        HStack(spacing: 0) {
+            // Away = Rows (left half)
+            VStack(spacing: 2) {
+                TeamLogoView(team: awayTeam, size: logoSize)
+                Text(awayTeam.abbreviation)
+                    .font(.system(size: max(7, cellSize * 0.2), weight: .bold))
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                Text("Rows")
+                    .font(.system(size: max(5, cellSize * 0.14), weight: .medium))
+                    .foregroundColor(DesignSystem.Colors.textTertiary)
             }
-            Text(team.abbreviation)
-                .font(.system(size: max(8, logoSize * 0.28), weight: .bold))
-                .foregroundColor(DesignSystem.Colors.textPrimary)
-            Text(axisLabel)
-                .font(.system(size: max(6, logoSize * 0.2), weight: .medium))
-                .foregroundColor(DesignSystem.Colors.textTertiary)
+            .frame(maxWidth: .infinity)
+
+            Rectangle()
+                .fill(DesignSystem.Colors.glassBorder)
+                .frame(width: 0.8)
+                .padding(.vertical, 4)
+
+            // Home = Cols (right half)
+            VStack(spacing: 2) {
+                TeamLogoView(team: homeTeam, size: logoSize)
+                Text(homeTeam.abbreviation)
+                    .font(.system(size: max(7, cellSize * 0.2), weight: .bold))
+                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                Text("Cols")
+                    .font(.system(size: max(5, cellSize * 0.14), weight: .medium))
+                    .foregroundColor(DesignSystem.Colors.textTertiary)
+            }
+            .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(DesignSystem.Colors.backgroundTertiary.opacity(0.7))
+                RoundedRectangle(cornerRadius: 6)
+                    .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
+            }
+        )
+        .glassDepthShadows()
     }
 }
 

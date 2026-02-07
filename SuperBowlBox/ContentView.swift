@@ -315,7 +315,8 @@ struct DashboardPoolCard: View {
             RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
                 .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
         )
-        .glassDepthShadows()
+        .glassBevelHighlight(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+        .glassDepthShadowsEnhanced()
     }
 }
 
@@ -437,7 +438,8 @@ struct UpNextPlaceholderCard: View {
             RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadius)
                 .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
         )
-        .glassDepthShadows()
+        .glassBevelHighlight(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+        .glassDepthShadowsEnhanced()
     }
 }
 
@@ -569,7 +571,8 @@ struct LiveScoreCard: View {
             RoundedRectangle(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
                 .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
         )
-        .glassDepthShadows()
+        .glassBevelHighlight(cornerRadius: DesignSystem.Layout.glassCornerRadiusLarge)
+        .glassDepthShadowsEnhanced()
     }
 }
 
@@ -1347,7 +1350,8 @@ struct QuickStatsCard: View {
                     .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
             }
         )
-        .glassDepthShadows()
+        .glassBevelHighlight(cornerRadius: DesignSystem.Layout.glassCornerRadius)
+        .glassDepthShadowsEnhanced()
     }
 }
 

@@ -13,32 +13,40 @@ private let _gsiDisabledBg = Color.white.opacity(0.38)                          
 private let _gsiDisabledBorder = Color(red: 31/255, green: 31/255, blue: 31/255).opacity(0.12)  // #1f1f1f1f
 private let _gsiPressedOverlay = Color(red: 48/255, green: 48/255, blue: 48/255).opacity(0.12)   // #303030 12%
 
-// MARK: - Google Sign-In button (official gsi-material-button style)
-// Matches Google's web CSS: white bg, 1px #747775 border, 4px radius, 40px height, 14pt font, "Sign in with Google"
+// MARK: - Google Sign-In button (official branding: Light theme #FFF, stroke #747775, G logo, same size as Apple)
+// Guidelines: https://developers.google.com/identity/branding-guidelines — same prominence as other sign-in buttons
 
 struct GoogleSignInButton: View {
     var action: () -> Void
     var isDisabled: Bool = false
+    /// Match Sign in with Apple: 52pt height, 12pt corner radius when true (onboarding/sign-in screens).
+    var useLargeSize: Bool = true
+
+    private var buttonHeight: CGFloat { useLargeSize ? 52 : 40 }
+    private var cornerRadius: CGFloat { useLargeSize ? 12 : 4 }
+    private var logoSize: CGFloat { useLargeSize ? 24 : 20 }
+    private var fontSize: CGFloat { useLargeSize ? 17 : 14 }
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
-                GoogleLogoView(size: 20)
+            HStack(spacing: 12) {
+                OfficialGoogleLogoView(size: logoSize)
                 Text("Sign in with Google")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: fontSize, weight: .medium))
                     .foregroundColor(isDisabled ? _gsiText.opacity(0.38) : _gsiText)
             }
-            .padding(.horizontal, 12)
+            .padding(.leading, 16)
+            .padding(.trailing, 16)
             .frame(maxWidth: .infinity)
-            .frame(height: 40)
+            .frame(height: buttonHeight)
             .background(isDisabled ? _gsiDisabledBg : Color.white)
             .overlay(
-                RoundedRectangle(cornerRadius: 4)
+                RoundedRectangle(cornerRadius: cornerRadius)
                     .strokeBorder(isDisabled ? _gsiDisabledBorder : _gsiBorder, lineWidth: 1)
             )
             .shadow(color: Color.black.opacity(0.08), radius: 1, y: 1)
             .shadow(color: Color.black.opacity(0.04), radius: 3, y: 1)
-            .cornerRadius(4)
+            .cornerRadius(cornerRadius)
         }
         .buttonStyle(GsiMaterialButtonStyle(isDisabled: isDisabled))
         .disabled(isDisabled)
@@ -51,7 +59,7 @@ private struct GsiMaterialButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .overlay(
-                RoundedRectangle(cornerRadius: 4)
+                RoundedRectangle(cornerRadius: 12)
                     .fill(_gsiPressedOverlay)
                     .opacity(configuration.isPressed && !isDisabled ? 1 : 0)
             )
@@ -59,19 +67,27 @@ private struct GsiMaterialButtonStyle: ButtonStyle {
     }
 }
 
-// MARK: - Google "G" logo (four brand colors, SVG-style quadrants)
-private struct GoogleLogoView: View {
+// MARK: - Official Google "G" logo (standard four-color; use asset from branding guidelines)
+// Add "GoogleLogo" image to Assets from https://developers.google.com/static/identity/images/g-logo.png (or signin-assets.zip)
+private struct OfficialGoogleLogoView: View {
     let size: CGFloat
 
     var body: some View {
-        ZStack {
-            // Google G quadrants: red top-left, green top-right, yellow bottom-left, blue bottom-right
-            GoogleLogoSegment(color: _googleRed, start: 90, end: 180)
-            GoogleLogoSegment(color: _googleGreen, start: 0, end: 90)
-            GoogleLogoSegment(color: _googleYellow, start: 180, end: 270)
-            GoogleLogoSegment(color: _googleBlue, start: 270, end: 360)
+        if let img = UIImage(named: "GoogleLogo") {
+            Image(uiImage: img)
+                .resizable()
+                .scaledToFit()
+                .frame(width: size, height: size)
+        } else {
+            // Fallback: four-color G per brand (blue, red, yellow, green quadrants)
+            ZStack {
+                GoogleLogoSegment(color: _googleBlue, start: 270, end: 360)
+                GoogleLogoSegment(color: _googleGreen, start: 0, end: 90)
+                GoogleLogoSegment(color: _googleYellow, start: 180, end: 270)
+                GoogleLogoSegment(color: _googleRed, start: 90, end: 180)
+            }
+            .frame(width: size, height: size)
         }
-        .frame(width: size, height: size)
     }
 }
 

@@ -296,7 +296,7 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Settings list row glass background (depth + border)
+// MARK: - Settings list row glass background (depth + border + bevel)
 private struct SettingsListRowGlassBackground: View {
     var body: some View {
         ZStack {
@@ -307,7 +307,8 @@ private struct SettingsListRowGlassBackground: View {
             RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
                 .strokeBorder(DesignSystem.Colors.glassBorder, lineWidth: 0.8)
         }
-        .glassDepthShadows()
+        .glassBevelHighlight(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+        .glassDepthShadowsEnhanced()
     }
 }
 
