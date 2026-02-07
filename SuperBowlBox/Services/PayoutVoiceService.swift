@@ -14,16 +14,21 @@ final class PayoutVoiceService: ObservableObject {
     func requestAuthorization() async -> Bool {
         let session = AVAudioSession.sharedInstance()
         do {
-            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothHFP])
             try session.setActive(true)
         } catch {
             await MainActor.run { errorMessage = "Audio session: \(error.localizedDescription)" }
             return false
         }
 
-        let micAuthorized = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
-            session.requestRecordPermission { allowed in
-                cont.resume(returning: allowed)
+        let micAuthorized: Bool
+        if #available(iOS 17.0, *) {
+            micAuthorized = await AVAudioApplication.requestRecordPermission()
+        } else {
+            micAuthorized = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
+                session.requestRecordPermission { allowed in
+                    cont.resume(returning: allowed)
+                }
             }
         }
         guard micAuthorized else {

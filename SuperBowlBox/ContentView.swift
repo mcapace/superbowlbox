@@ -76,13 +76,26 @@ enum DashboardSport: String, CaseIterable {
     case nfl = "NFL"
 }
 
-// MARK: - Dashboard View
+// MARK: - Dashboard View (live score + all pools at a glance)
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
-    @State private var selectedPoolIndex = 0
     @State private var showingRefreshAnimation = false
     @State private var selectedSport: DashboardSport = .nfl
+    @State private var showingAddPoolFlow = false
     var onAddPoolTapped: (() -> Void)?
+
+    /// All "on the hunt" items across every pool (for mission control)
+    private var allOnTheHuntItems: [OnTheHuntItem] {
+        guard let score = appState.scoreService.currentScore else { return [] }
+        return appState.pools.flatMap { onTheHuntItems(pool: $0, score: score) }
+    }
+
+    /// Score matches this pool's game (same teams)
+    private func scoreMatchesPool(_ pool: BoxGrid) -> Bool {
+        guard let score = appState.scoreService.currentScore else { return false }
+        return (pool.awayTeam.id == score.awayTeam.id && pool.homeTeam.id == score.homeTeam.id)
+            || (pool.awayTeam.id == score.homeTeam.id && pool.homeTeam.id == score.awayTeam.id)
+    }
 
     var body: some View {
         NavigationStack {
@@ -91,107 +104,93 @@ struct DashboardView: View {
                     .ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: DesignSystem.Layout.sectionSpacing) {
-                    // Sport toggle (NFL only for now — shows next game for that league)
-                    HStack {
-                        Picker("League", selection: $selectedSport) {
-                            ForEach(DashboardSport.allCases, id: \.self) { sport in
-                                Text(sport.rawValue).tag(sport)
+                        // Sport + live label
+                        HStack {
+                            Picker("League", selection: $selectedSport) {
+                                ForEach(DashboardSport.allCases, id: \.self) { sport in
+                                    Text(sport.rawValue).tag(sport)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(maxWidth: 180)
+                            Spacer()
+                            Text("LIVE")
+                                .font(.system(size: 10, weight: .bold))
+                                .tracking(1.2)
+                                .foregroundColor(DesignSystem.Colors.liveGreen)
+                        }
+                        .padding(.horizontal, DesignSystem.Layout.screenInset)
+                        .padding(.bottom, 2)
+
+                        // Hero: featured / next game
+                        SectionHeaderView(title: selectedSport == .nfl ? "NFL · Featured game" : "Featured game")
+                        Group {
+                            if let score = appState.scoreService.currentScore {
+                                LiveScoreCard(
+                                    score: score,
+                                    isLoading: appState.scoreService.isLoading
+                                )
+                            } else {
+                                UpNextPlaceholderCard(
+                                    isLoading: appState.scoreService.isLoading,
+                                    error: appState.scoreService.error?.localizedDescription,
+                                    onRefresh: { Task { await appState.scoreService.fetchCurrentScore() } }
+                                )
                             }
                         }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 200)
-                        Spacer()
-                    }
-                    .padding(.horizontal, DesignSystem.Layout.screenInset)
-                    .padding(.bottom, 4)
+                        .padding(.horizontal, DesignSystem.Layout.screenInset)
 
-                    SectionHeaderView(title: selectedSport == .nfl ? "NFL · Next game" : "Featured Game")
-                    Group {
-                        if let score = appState.scoreService.currentScore {
-                            LiveScoreCard(
-                                score: score,
-                                isLoading: appState.scoreService.isLoading
-                            )
+                        SectionHeaderView(title: "Your pools")
+                        if appState.pools.isEmpty {
+                            AddPoolChipView(onTap: { showingAddPoolFlow = true })
+                                .padding(.horizontal, DesignSystem.Layout.screenInset)
                         } else {
-                            UpNextPlaceholderCard(
-                                isLoading: appState.scoreService.isLoading,
-                                error: appState.scoreService.error?.localizedDescription,
-                                onRefresh: { Task { await appState.scoreService.fetchCurrentScore() } }
-                            )
-                        }
-                    }
-                    .padding(.horizontal, DesignSystem.Layout.screenInset)
-
-                    SectionHeaderView(title: "Your Pools")
-                    if appState.pools.isEmpty {
-                        AddPoolChipView(onTap: { onAddPoolTapped?() })
-                            .padding(.horizontal, DesignSystem.Layout.screenInset)
-                    } else {
-                        VStack(alignment: .leading, spacing: 6) {
-                            PoolSelectorView(
-                                selectedIndex: $selectedPoolIndex,
-                                pools: appState.pools
-                            )
-                            if appState.pools.count > 1 {
-                                Text("Tap a pool to see its leader and winnings")
-                                    .font(.caption)
-                                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                            VStack(spacing: 10) {
+                                ForEach(Array(appState.pools.enumerated()), id: \.element.id) { index, pool in
+                                    NavigationLink {
+                                        GridDetailView(pool: binding(for: pool))
+                                    } label: {
+                                        DashboardPoolCard(
+                                            pool: pool,
+                                            score: appState.scoreService.currentScore,
+                                            scoreMatchesThisPool: scoreMatchesPool(pool),
+                                            globalMyName: appState.myName
+                                        )
+                                    }
+                                    .buttonStyle(ScaleButtonStyle())
+                                }
+                                Button {
+                                    HapticService.selection()
+                                    showingAddPoolFlow = true
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "plus.circle.fill")
+                                            .font(.system(size: 18))
+                                        Text("Add another pool")
+                                            .font(DesignSystem.Typography.callout)
+                                            .fontWeight(.medium)
+                                    }
+                                    .foregroundColor(DesignSystem.Colors.accentBlue)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
+                                            .strokeBorder(DesignSystem.Colors.accentBlue.opacity(0.5), lineWidth: 1)
+                                    )
+                                }
+                                .buttonStyle(ScaleButtonStyle())
                             }
-                        }
-                        .padding(.horizontal, DesignSystem.Layout.screenInset)
-                    }
-
-                    if let pool = currentPool,
-                       let score = appState.scoreService.currentScore,
-                       !onTheHuntItems(pool: pool, score: score).isEmpty {
-                        SectionHeaderView(title: "On the Hunt")
-                        OnTheHuntCard(
-                            items: onTheHuntItems(pool: pool, score: score)
-                        )
-                        .padding(.horizontal, DesignSystem.Layout.screenInset)
-                    }
-
-                    if let pool = currentPool,
-                       let score = appState.scoreService.currentScore {
-                        SectionHeaderView(title: appState.pools.count > 1 ? "Current Leader · \(pool.name)" : "Current Leader")
-                        WinnerSpotlightCard(pool: pool, score: score)
                             .padding(.horizontal, DesignSystem.Layout.screenInset)
-                    }
-
-                    if let pool = currentPool,
-                       let score = appState.scoreService.currentScore,
-                       !pool.finalizedWinnings(score: score).isEmpty {
-                        SectionHeaderView(title: appState.pools.count > 1 ? "Current winnings · \(pool.name)" : "Current winnings (finalized)")
-                        FinalizedWinningsCard(
-                            pool: pool,
-                            score: score,
-                            ownerLabels: pool.effectiveOwnerLabels(globalName: appState.myName)
-                        )
-                        .padding(.horizontal, DesignSystem.Layout.screenInset)
-                    }
-
-                    if let pool = currentPool {
-                        SectionHeaderView(title: "Grid")
-                        NavigationLink {
-                            GridDetailView(pool: binding(for: pool))
-                        } label: {
-                            InteractiveGridCard(
-                                pool: pool,
-                                score: appState.scoreService.currentScore,
-                                globalMyName: appState.myName
-                            )
                         }
-                        .buttonStyle(ScaleButtonStyle())
-                        .padding(.horizontal, DesignSystem.Layout.screenInset)
-                    }
 
-                    if let pool = currentPool {
-                        SectionHeaderView(title: "Stats")
-                        QuickStatsCard(pool: pool, globalMyName: appState.myName)
-                            .padding(.horizontal, DesignSystem.Layout.screenInset)
-                    }
+                        // On the Hunt (aggregated across all pools)
+                        if !allOnTheHuntItems.isEmpty {
+                            SectionHeaderView(title: "On the hunt")
+                            OnTheHuntCard(items: Array(allOnTheHuntItems.prefix(6)))
+                                .padding(.horizontal, DesignSystem.Layout.screenInset)
+                        }
 
-                    Spacer(minLength: 120)
+                        Spacer(minLength: 120)
                     }
                     .padding(.top, 12)
                 }
@@ -201,21 +200,23 @@ struct DashboardView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    SquareUpLogoView(showIcon: true, wordmarkSize: 20, iconSize: 20, inline: true)
-                        .foregroundStyle(.white)
+                    VStack(spacing: 0) {
+                        Text("Live")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(.white)
+                        Text("Scores · Your pools")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         HapticService.impactLight()
-                        withAnimation(.appSpring) {
-                            showingRefreshAnimation = true
-                        }
+                        withAnimation(.appSpring) { showingRefreshAnimation = true }
                         Task {
                             await appState.scoreService.fetchCurrentScore()
                             try? await Task.sleep(nanoseconds: 500_000_000)
-                            withAnimation(.appQuick) {
-                                showingRefreshAnimation = false
-                            }
+                            withAnimation(.appQuick) { showingRefreshAnimation = false }
                         }
                     } label: {
                         Image(systemName: "arrow.triangle.2.circlepath")
@@ -226,12 +227,16 @@ struct DashboardView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showingAddPoolFlow) {
+                AddPoolFlowView(
+                    onAddPool: { _ in
+                        showingAddPoolFlow = false
+                    },
+                    onDismiss: { showingAddPoolFlow = false }
+                )
+                .environmentObject(appState)
+            }
         }
-    }
-
-    var currentPool: BoxGrid? {
-        guard selectedPoolIndex >= 0 && selectedPoolIndex < appState.pools.count else { return nil }
-        return appState.pools[selectedPoolIndex]
     }
 
     func binding(for pool: BoxGrid) -> Binding<BoxGrid> {
@@ -244,6 +249,78 @@ struct DashboardView: View {
     func onTheHuntItems(pool: BoxGrid, score: GameScore) -> [OnTheHuntItem] {
         let labels = pool.effectiveOwnerLabels(globalName: appState.myName)
         return pool.onTheHuntItems(score: score, ownerLabels: labels)
+    }
+}
+
+// MARK: - Dashboard pool card (one per pool: name, teams, leader, winning numbers)
+struct DashboardPoolCard: View {
+    let pool: BoxGrid
+    let score: GameScore?
+    let scoreMatchesThisPool: Bool
+    let globalMyName: String
+
+    private var winner: BoxSquare? {
+        guard let score = score, scoreMatchesThisPool else { return nil }
+        return pool.winningSquare(for: score)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                HStack(spacing: 2) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color(hex: pool.awayTeam.primaryColor) ?? DesignSystem.Colors.textTertiary)
+                        .frame(width: 5, height: 36)
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color(hex: pool.homeTeam.primaryColor) ?? DesignSystem.Colors.textTertiary)
+                        .frame(width: 5, height: 36)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(pool.name)
+                        .font(DesignSystem.Typography.headline)
+                        .foregroundColor(DesignSystem.Colors.textPrimary)
+                    Text("\(pool.awayTeam.abbreviation) @ \(pool.homeTeam.abbreviation)")
+                        .font(DesignSystem.Typography.caption2)
+                        .foregroundColor(DesignSystem.Colors.textSecondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(DesignSystem.Colors.textTertiary)
+            }
+            if scoreMatchesThisPool, let score = score {
+                HStack(spacing: 12) {
+                    Text("\(score.awayLastDigit)–\(score.homeLastDigit)")
+                        .font(.system(size: 14, weight: .bold))
+                        .monospacedDigit()
+                        .foregroundColor(DesignSystem.Colors.liveGreen)
+                    if let winner = winner {
+                        HStack(spacing: 4) {
+                            Image(systemName: "crown.fill")
+                                .font(.caption2)
+                                .foregroundColor(DesignSystem.Colors.winnerGold)
+                            Text(winner.displayName)
+                                .font(DesignSystem.Typography.caption2)
+                                .foregroundColor(DesignSystem.Colors.winnerGold)
+                        }
+                    }
+                }
+            } else {
+                Text("Upcoming")
+                    .font(DesignSystem.Typography.caption2)
+                    .foregroundColor(DesignSystem.Colors.textTertiary)
+            }
+        }
+        .padding(DesignSystem.Layout.cardPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                .fill(DesignSystem.Colors.cardSurface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadius)
+                        .strokeBorder(DesignSystem.Colors.cardBorder, lineWidth: 1)
+                )
+        )
     }
 }
 
@@ -543,7 +620,7 @@ struct TeamScoreColumn: View {
     }
 }
 
-// MARK: - Add pool chip (when no pools — sends user to Pools tab)
+// MARK: - Add pool chip (when no pools — sends user to Add Pool flow)
 struct AddPoolChipView: View {
     let onTap: () -> Void
 
@@ -573,6 +650,226 @@ struct AddPoolChipView: View {
             .foregroundColor(DesignSystem.Colors.accentBlue)
         }
         .buttonStyle(ScaleButtonStyle())
+    }
+}
+
+// MARK: - Unified Add Pool flow: Choose sport → Choose game → Scan | Enter numbers | Join code
+struct AddPoolFlowView: View {
+    let onAddPool: (BoxGrid) -> Void
+    let onDismiss: () -> Void
+    @EnvironmentObject var appState: AppState
+    @StateObject private var gamesService = GamesService()
+    @State private var selectedSport: Sport = .nfl
+    @State private var selectedGame: ListableGame?
+    @State private var showingScanner = false
+    @State private var gameForEnterNumbers: ListableGame?
+    @State private var showingJoin = false
+    @Environment(\.dismiss) private var flowDismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                DesignSystem.Colors.backgroundPrimary.ignoresSafeArea()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        Text("Add a pool")
+                            .font(DesignSystem.Typography.title)
+                            .foregroundColor(DesignSystem.Colors.textPrimary)
+                        Text("Choose sport, pick the game, then scan a sheet or enter your numbers.")
+                            .font(DesignSystem.Typography.callout)
+                            .foregroundColor(DesignSystem.Colors.textSecondary)
+
+                        // 1) Sport
+                        Text("Sport")
+                            .font(DesignSystem.Typography.caption)
+                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(Sport.allCases) { sport in
+                                    Button {
+                                        HapticService.selection()
+                                        selectedSport = sport
+                                        selectedGame = nil
+                                    } label: {
+                                        Text(sport.displayName)
+                                            .font(.callout)
+                                            .fontWeight(selectedSport == sport ? .semibold : .regular)
+                                            .foregroundColor(selectedSport == sport ? .white : .primary)
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 8)
+                                            .background(Capsule().fill(selectedSport == sport ? AppColors.fieldGreen : DesignSystem.Colors.surfaceElevated))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+
+                        // 2) Upcoming game
+                        Text("Upcoming game")
+                            .font(DesignSystem.Typography.caption)
+                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                        if gamesService.isLoading {
+                            HStack {
+                                ProgressView()
+                                Text("Loading games…")
+                                    .font(.caption)
+                                    .foregroundColor(DesignSystem.Colors.textSecondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                        } else if gamesService.games.isEmpty, let err = gamesService.error {
+                            Text(err)
+                                .font(.caption)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
+                                .padding()
+                        } else {
+                            LazyVStack(spacing: 8) {
+                                ForEach(gamesService.games) { game in
+                                    Button {
+                                        HapticService.selection()
+                                        selectedGame = game
+                                    } label: {
+                                        HStack(spacing: 12) {
+                                            TeamLogoView(team: game.awayTeam, size: 28)
+                                            Text("\(game.awayTeam.abbreviation) @ \(game.homeTeam.abbreviation)")
+                                                .font(.subheadline)
+                                                .fontWeight(selectedGame?.id == game.id ? .semibold : .regular)
+                                            Spacer()
+                                            TeamLogoView(team: game.homeTeam, size: 28)
+                                            if selectedGame?.id == game.id {
+                                                Image(systemName: "checkmark.circle.fill")
+                                                    .foregroundColor(AppColors.fieldGreen)
+                                            }
+                                        }
+                                        .padding(.vertical, 10)
+                                        .padding(.horizontal, 12)
+                                        .background(RoundedRectangle(cornerRadius: 8).fill(selectedGame?.id == game.id ? AppColors.fieldGreen.opacity(0.2) : DesignSystem.Colors.surfaceElevated))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+
+                        // 3) How to add
+                        Text("How do you want to add this pool?")
+                            .font(DesignSystem.Typography.caption)
+                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                        VStack(spacing: 10) {
+                            if selectedGame != nil {
+                                Button {
+                                    HapticService.impactMedium()
+                                    showingScanner = true
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "text.viewfinder")
+                                        Text("Scan pool sheet")
+                                            .fontWeight(.medium)
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                                    }
+                                    .padding()
+                                    .background(RoundedRectangle(cornerRadius: 12).fill(DesignSystem.Colors.surfaceElevated))
+                                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                                }
+                                .buttonStyle(ScaleButtonStyle())
+
+                                Button {
+                                    HapticService.impactMedium()
+                                    gameForEnterNumbers = selectedGame
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "square.and.pencil")
+                                        Text("Enter my numbers")
+                                            .fontWeight(.medium)
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                                    }
+                                    .padding()
+                                    .background(RoundedRectangle(cornerRadius: 12).fill(DesignSystem.Colors.surfaceElevated))
+                                    .foregroundColor(DesignSystem.Colors.textPrimary)
+                                }
+                                .buttonStyle(ScaleButtonStyle())
+                            }
+                            Button {
+                                HapticService.impactMedium()
+                                showingJoin = true
+                            } label: {
+                                HStack {
+                                    Image(systemName: "link.badge.plus")
+                                    Text("Join with code")
+                                        .fontWeight(.medium)
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(DesignSystem.Colors.textTertiary)
+                                }
+                                .padding()
+                                .background(RoundedRectangle(cornerRadius: 12).fill(DesignSystem.Colors.surfaceElevated))
+                                .foregroundColor(DesignSystem.Colors.textPrimary)
+                            }
+                            .buttonStyle(ScaleButtonStyle())
+                        }
+                    }
+                    .padding(DesignSystem.Layout.screenInset)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        onDismiss()
+                        flowDismiss()
+                    }
+                }
+            }
+            .task(id: selectedSport) {
+                await gamesService.fetchGames(sport: selectedSport)
+            }
+            .sheet(isPresented: $showingScanner) {
+                Group {
+                    if let game = selectedGame {
+                        ScannerView(
+                            onPoolScanned: { pool in
+                                appState.addPool(pool)
+                                HapticService.success()
+                                showingScanner = false
+                                onDismiss()
+                                flowDismiss()
+                            },
+                            initialGame: game
+                        )
+                        .environmentObject(appState)
+                    } else {
+                        EmptyView()
+                    }
+                }
+            }
+            .sheet(item: $gameForEnterNumbers) { game in
+                EnterMyNumbersView(
+                    game: game,
+                    onSave: { pool in
+                        appState.addPool(pool)
+                        HapticService.success()
+                        gameForEnterNumbers = nil
+                        onDismiss()
+                        flowDismiss()
+                    },
+                    onCancel: { gameForEnterNumbers = nil }
+                )
+                .environmentObject(appState)
+            }
+            .sheet(isPresented: $showingJoin, onDismiss: {
+                onDismiss()
+                flowDismiss()
+            }) {
+                JoinPoolSheet()
+                    .environmentObject(appState)
+            }
+        }
     }
 }
 
@@ -789,12 +1086,6 @@ struct FinalizedWinningsCard: View {
                 RoundedRectangle(cornerRadius: DesignSystem.Layout.cornerRadiusSmall)
                     .fill(DesignSystem.Colors.backgroundTertiary)
             )
-
-            if let custom = pool.resolvedPoolStructure.customPayoutDescription, !custom.isEmpty {
-                Text(custom)
-                    .font(.caption)
-                    .foregroundColor(DesignSystem.Colors.textSecondary)
-            }
         }
         .padding(DesignSystem.Layout.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)

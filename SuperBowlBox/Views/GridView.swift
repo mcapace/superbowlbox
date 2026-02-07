@@ -6,6 +6,7 @@ struct GridDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedSquare: BoxSquare?
     @State private var showingEditSheet = false
+    @State private var showingEditRulesSheet = false
     @State private var zoomScale: CGFloat = 1.0
     @State private var showingShareSheet = false
     @State private var showingDeletePoolConfirmation = false
@@ -22,7 +23,7 @@ struct GridDetailView: View {
     var body: some View {
         ScrollView([.horizontal, .vertical], showsIndicators: true) {
             VStack(spacing: 0) {
-                // Pool structure & payouts summary (sleek)
+                // Pool structure & payouts (parsed: periods + amounts only — no raw rules blob)
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Label(pool.resolvedPoolStructure.periodLabels.joined(separator: " · "), systemImage: "calendar.badge.clock")
@@ -34,11 +35,6 @@ struct GridDetailView: View {
                                 .font(.system(size: 11))
                                 .foregroundColor(DesignSystem.Colors.textTertiary)
                         }
-                    }
-                    if let custom = pool.resolvedPoolStructure.customPayoutDescription, !custom.isEmpty {
-                        Text(custom)
-                            .font(.system(size: 11))
-                            .foregroundColor(DesignSystem.Colors.textSecondary)
                     }
                 }
                 .padding(.horizontal, 14)
@@ -112,6 +108,12 @@ struct GridDetailView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
+                    Button {
+                        showingEditRulesSheet = true
+                    } label: {
+                        Label("Edit payout rules", systemImage: "list.bullet.rectangle")
+                    }
+
                     Button {
                         showingShareSheet = true
                     } label: {
@@ -205,6 +207,17 @@ struct GridDetailView: View {
                 )
                 .presentationDetents([.medium])
             }
+        }
+        .sheet(isPresented: $showingEditRulesSheet) {
+            EditPoolRulesSheet(
+                pool: $pool,
+                onSave: {
+                    appState.updatePool(pool)
+                    showingEditRulesSheet = false
+                },
+                onCancel: { showingEditRulesSheet = false }
+            )
+            .environmentObject(appState)
         }
         .sheet(isPresented: $showingShareSheet) {
             ShareSheet(items: [exportGridAsImage()])
@@ -419,6 +432,160 @@ struct SquareEditSheet: View {
             }
             .onAppear {
                 playerName = square.playerName
+            }
+        }
+    }
+}
+
+// MARK: - Edit pool payout rules (after import)
+struct EditPoolRulesSheet: View {
+    @Binding var pool: BoxGrid
+    let onSave: () -> Void
+    let onCancel: () -> Void
+    @EnvironmentObject var appState: AppState
+
+    @State private var rulesText: String = ""
+    @State private var payoutParseInProgress = false
+    @State private var payoutParsedSummary: String?
+    @State private var payoutParseError: String?
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("How does this pool pay out? (e.g. $25 per quarter, halftime pays double)")
+                    .font(.subheadline)
+                    .foregroundColor(DesignSystem.Colors.textSecondary)
+
+                TextEditor(text: $rulesText)
+                    .frame(minHeight: 100)
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(DesignSystem.Colors.surfaceElevated)
+                    )
+                    .overlay(
+                        Group {
+                            if rulesText.isEmpty {
+                                Text("e.g. $25 per quarter, halftime pays double")
+                                    .font(.body)
+                                    .foregroundColor(DesignSystem.Colors.textSecondary.opacity(0.6))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 16)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                                    .allowsHitTesting(false)
+                            }
+                        }
+                    )
+
+                if PayoutParseConfig.usePayoutParse && !rulesText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Button {
+                        parsePayoutRulesWithAI()
+                    } label: {
+                        if payoutParseInProgress {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            Text("Parse with AI")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(AppColors.fieldGreen)
+                        }
+                    }
+                    .disabled(payoutParseInProgress)
+                }
+
+                if let summary = payoutParsedSummary {
+                    Text(summary)
+                        .font(.caption)
+                        .foregroundColor(AppColors.fieldGreen)
+                }
+                if let error = payoutParseError {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
+
+                Spacer()
+            }
+            .padding()
+            .navigationTitle("Payout rules")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        onCancel()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        saveRulesAndDismiss()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(payoutParseInProgress)
+                }
+            }
+            .onAppear {
+                rulesText = pool.resolvedPoolStructure.customPayoutDescription ?? ""
+            }
+        }
+    }
+
+    /// Save rules: if AI parse is configured, parse first so the pool understands who's winning, payouts, and what you've earned. No raw blob is shown above the grid.
+    private func saveRulesAndDismiss() {
+        let text = rulesText.trimmingCharacters(in: .whitespacesAndNewlines)
+        var ps = pool.poolStructure ?? PoolStructure.standardQuarterly
+        ps.customPayoutDescription = text.isEmpty ? nil : text
+
+        if !text.isEmpty && PayoutParseConfig.usePayoutParse {
+            payoutParseError = nil
+            payoutParseInProgress = true
+            Task {
+                do {
+                    let parsed = try await PayoutParseService.parse(payoutDescription: text)
+                    await MainActor.run {
+                        var merged = parsed
+                        merged.customPayoutDescription = text
+                        pool.poolStructure = merged
+                        payoutParseInProgress = false
+                        onSave()
+                    }
+                } catch {
+                    await MainActor.run {
+                        pool.poolStructure = ps
+                        payoutParseError = error.localizedDescription
+                        payoutParseInProgress = false
+                        onSave()
+                    }
+                }
+            }
+        } else {
+            pool.poolStructure = ps
+            onSave()
+        }
+    }
+
+    private func parsePayoutRulesWithAI() {
+        let text = rulesText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        payoutParseError = nil
+        payoutParsedSummary = nil
+        payoutParseInProgress = true
+        Task {
+            do {
+                let parsed = try await PayoutParseService.parse(payoutDescription: text)
+                await MainActor.run {
+                    var merged = parsed
+                    merged.customPayoutDescription = text
+                    pool.poolStructure = merged
+                    payoutParsedSummary = "Parsed: \(merged.periodLabels.joined(separator: ", "))" + (merged.payoutDescriptions.isEmpty ? "" : " · \(merged.payoutDescriptions.joined(separator: ", "))")
+                    payoutParseInProgress = false
+                }
+            } catch {
+                await MainActor.run {
+                    payoutParseError = error.localizedDescription
+                    payoutParsedSummary = nil
+                    payoutParseInProgress = false
+                }
             }
         }
     }

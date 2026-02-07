@@ -3,30 +3,51 @@ import Foundation
 /// Fetches NFL (and optionally other sports) scores from Sports Data IO when API key is configured.
 /// See SportsDataIOConfig and Info.plist key `SportsDataIOApiKey`.
 enum SportsDataIOService {
-    /// Fetches NFL score for today: prefers first in-progress game, then first scheduled, then first final.
+    /// Fetches NFL score: today first, then next 6 days so "next upcoming game" always shows when you refresh.
     static func fetchNFLScore() async throws -> GameScore {
         guard SportsDataIOConfig.isConfigured else {
             throw NFLScoreService.ScoreError.apiError("Sports Data IO not configured")
         }
-        let dateStr = ISO8601DateFormatter().string(from: Date()).prefix(10)
-        guard let url = SportsDataIOConfig.nflScoresURL(pathComponent: "ScoresByDate/\(dateStr)"),
-              var request = SportsDataIOConfig.authenticatedRequest(url: url) else {
-            throw NFLScoreService.ScoreError.apiError("Invalid Sports Data IO URL or key")
-        }
-        request.httpMethod = "GET"
+        let calendar = Calendar.current
+        let startOfToday = calendar.startOfDay(for: Date())
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            throw NFLScoreService.ScoreError.apiError("Invalid response")
-        }
-        if http.statusCode == 401 {
-            throw NFLScoreService.ScoreError.apiError("Invalid API key")
-        }
-        if http.statusCode != 200 {
-            throw NFLScoreService.ScoreError.apiError("HTTP \(http.statusCode)")
+        for dayOffset in 0..<7 {
+            guard let date = calendar.date(byAdding: .day, value: dayOffset, to: startOfToday) else { continue }
+            let dateStr = formatter.string(from: date).prefix(10)
+            guard let url = SportsDataIOConfig.nflScoresURL(pathComponent: "ScoresByDate/\(dateStr)"),
+                  var request = SportsDataIOConfig.authenticatedRequest(url: url) else {
+                continue
+            }
+            request.httpMethod = "GET"
+
+            let (data, response): (Data, URLResponse)
+            do {
+                (data, response) = try await URLSession.shared.data(for: request)
+            } catch {
+                if dayOffset == 0 { throw NFLScoreService.ScoreError.networkError(error) }
+                continue
+            }
+            guard let http = response as? HTTPURLResponse else {
+                continue
+            }
+            if http.statusCode == 401 {
+                throw NFLScoreService.ScoreError.apiError("Invalid API key")
+            }
+            if http.statusCode != 200 {
+                if dayOffset == 0 { throw NFLScoreService.ScoreError.apiError("HTTP \(http.statusCode)") }
+                continue
+            }
+
+            do {
+                return try parseNFLScoresResponse(data)
+            } catch NFLScoreService.ScoreError.noGameFound {
+                continue
+            }
         }
 
-        return try parseNFLScoresResponse(data)
+        throw NFLScoreService.ScoreError.noGameFound
     }
 
     /// Parses Sports Data IO NFL scores JSON. Handles common field names (PascalCase).

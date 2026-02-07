@@ -3,6 +3,8 @@ import PhotosUI
 
 struct ScannerView: View {
     let onPoolScanned: (BoxGrid) -> Void
+    /// When set (e.g. from Add Pool flow), skip game selection and go straight to scan.
+    var initialGame: ListableGame? = nil
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var appState: AppState
     @StateObject private var visionService = VisionService()
@@ -154,6 +156,13 @@ struct ScannerView: View {
                     dismiss()
                 }
                 .environmentObject(appState)
+            }
+            .onAppear {
+                if let game = initialGame {
+                    selectedGameForScan = game
+                    selectedSport = game.sport
+                    scanProgress = .idle
+                }
             }
             .background(SportsbookBackgroundView())
         }
@@ -899,7 +908,7 @@ struct ReviewScanView: View {
                                 }
                             }
                             // Photo: pick image, OCR into field
-                            if let vs = visionService {
+                            if visionService != nil {
                                 PhotosPicker(
                                     selection: $payoutPhotoItem,
                                     matching: .images
