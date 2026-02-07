@@ -29,8 +29,28 @@ struct Team: Codable, Identifiable, Equatable, Hashable {
         abbreviation: "TM"
     )
 
+    /// ESPN scoreboard logo slug (lowercase). Maps common variants so logos load (e.g. "SE" -> "sea").
+    private static func espnLogoSlug(for abbreviation: String) -> String {
+        let raw = abbreviation.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !raw.isEmpty else { return raw }
+        let mapping: [String: String] = [
+            "se": "sea", "sea": "sea",
+            "ne": "ne", "nep": "ne", "pat": "ne",
+            "kc": "kc", "kan": "kc",
+            "sf": "sf", "nin": "sf",
+            "phi": "phi",
+            "bal": "bal", "rav": "bal",
+            "buf": "buf",
+            "det": "det",
+            "dal": "dal",
+            "gb": "gb", "gnb": "gb",
+        ]
+        return mapping[raw] ?? raw
+    }
+
     private static func espnLogoURL(abbreviation: String) -> String {
-        "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/\(abbreviation.lowercased()).png"
+        let slug = espnLogoSlug(for: abbreviation)
+        return "https://a.espncdn.com/i/teamlogos/nfl/500/scoreboard/\(slug).png"
     }
 
     /// URL to use when displaying a logo (NFL). Uses stored logoURL or ESPN fallback so logos show even for legacy pools.

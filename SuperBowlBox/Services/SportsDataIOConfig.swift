@@ -6,14 +6,17 @@ import Foundation
 enum SportsDataIOConfig {
     private static let apiKeyKey = "SportsDataIOApiKey"
 
+    /// Placeholder values (e.g. YOUR_SPORTSDATA_IO_KEY) are treated as unset so the app uses ESPN when plist is not filled in.
     static var apiKey: String? {
-        // Prefer Secrets.plist (not in repo) so the key is never committed
-        if let url = Bundle.main.url(forResource: "Secrets", withExtension: "plist"),
-           let dict = NSDictionary(contentsOf: url) as? [String: Any],
-           let key = dict[apiKeyKey] as? String, !key.trimmingCharacters(in: .whitespaces).isEmpty {
-            return key
-        }
-        return Bundle.main.object(forInfoDictionaryKey: apiKeyKey) as? String
+        let raw: String? = {
+            if let url = Bundle.main.url(forResource: "Secrets", withExtension: "plist"),
+               let dict = NSDictionary(contentsOf: url) as? [String: Any],
+               let key = dict[apiKeyKey] as? String { return key }
+            return Bundle.main.object(forInfoDictionaryKey: apiKeyKey) as? String
+        }()
+        guard let key = raw?.trimmingCharacters(in: .whitespaces), !key.isEmpty else { return nil }
+        if key.uppercased().contains("YOUR_") || key == "YOUR_SPORTSDATA_IO_KEY" { return nil }
+        return key
     }
 
     static var isConfigured: Bool {

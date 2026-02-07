@@ -17,7 +17,13 @@ enum TextractBackendService {
             throw BackendError.httpError(status: http.statusCode)
         }
 
-        let decoded = try JSONDecoder().decode(BackendOCRResponse.self, from: data)
+        var dataToDecode = data
+        // Lambda proxy can return { "statusCode": 200, "body": "<json string>" }; unwrap body if present
+        if let wrapper = try? JSONDecoder().decode(LambdaProxyWrapper.self, from: data),
+           let bodyData = wrapper.body.data(using: .utf8) {
+            dataToDecode = bodyData
+        }
+        let decoded = try JSONDecoder().decode(BackendOCRResponse.self, from: dataToDecode)
         return decoded.blocks.map { block in
             let rect = CGRect(
                 x: CGFloat(block.x),
@@ -31,6 +37,10 @@ enum TextractBackendService {
                 confidence: Float(block.confidence)
             )
         }
+    }
+
+    private struct LambdaProxyWrapper: Decodable {
+        let body: String
     }
 
     private struct BackendOCRResponse: Decodable {

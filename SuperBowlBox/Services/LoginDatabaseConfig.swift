@@ -7,19 +7,27 @@ enum LoginDatabaseConfig {
     private static let apiKeyKey = "LoginDatabaseApiKey"
 
     /// Base URL for the login API (e.g. https://your-project.supabase.co/rest/v1 or https://api.yourapp.com).
-    /// Trailing slash optional; the service appends the path (e.g. logins).
+    /// Placeholder URLs (YOUR_PROJECT_REF) are treated as unset so the app doesn't call a fake Supabase.
     static var baseURL: URL? {
         guard let urlString = urlString, !urlString.trimmingCharacters(in: .whitespaces).isEmpty,
+              !isPlaceholderURL(urlString),
               let url = URL(string: urlString.trimmingCharacters(in: .whitespaces)) else {
             return nil
         }
         return url
     }
 
+    private static func isPlaceholderURL(_ s: String) -> Bool {
+        let lower = s.lowercased()
+        return lower.contains("your_project_ref") || lower.contains("your-project-ref")
+    }
+
     /// Optional API key (e.g. Supabase anon key). If set, sent as Apikey + Authorization: Bearer.
+    /// Placeholder values (YOUR_SUPABASE_ANON_KEY) are treated as unset.
     static var apiKey: String? {
-        guard let s = apiKeyString, !s.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
-        return s.trimmingCharacters(in: .whitespaces)
+        guard let s = apiKeyString?.trimmingCharacters(in: .whitespaces), !s.isEmpty else { return nil }
+        if s.uppercased().contains("YOUR_") { return nil }
+        return s
     }
 
     private static var urlString: String? {

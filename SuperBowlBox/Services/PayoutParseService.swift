@@ -127,13 +127,26 @@ enum PayoutParseService {
         let body = ["payoutDescription": payoutDescription]
         request.httpBody = try JSONEncoder().encode(body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch let urlError as URLError where urlError.code == .cannotFindHost {
+            throw PayoutParseError.serverUnreachable
+        }
+
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             let code = (response as? HTTPURLResponse)?.statusCode ?? -1
             throw PayoutParseError.httpError(status: code)
         }
 
-        let decoded = try JSONDecoder().decode(Response.self, from: data)
+        var dataToDecode = data
+        // Lambda proxy can return { "statusCode": 200, "body": "<json string>" }; unwrap body if present
+        if let wrapper = try? JSONDecoder().decode(LambdaProxyWrapper.self, from: data),
+           let bodyData = wrapper.body.data(using: .utf8) {
+            dataToDecode = bodyData
+        }
+        let decoded = try JSONDecoder().decode(Response.self, from: dataToDecode)
         return mapToPoolStructure(decoded)
     }
 
@@ -179,13 +192,19 @@ enum PayoutParseService {
         )
     }
 
+    private struct LambdaProxyWrapper: Decodable {
+        let body: String
+    }
+
     enum PayoutParseError: Error, LocalizedError {
         case notConfigured
         case httpError(status: Int)
+        case serverUnreachable
         var errorDescription: String? {
             switch self {
             case .notConfigured: return "Payout parse backend not configured"
             case .httpError(let s): return "Payout parse error (HTTP \(s))"
+            case .serverUnreachable: return "Payout server not found. Use a valid PayoutParseBackendURL in Secrets.plist."
             }
         }
     }

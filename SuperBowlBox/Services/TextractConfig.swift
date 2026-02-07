@@ -8,14 +8,20 @@ enum TextractConfig {
     private static let backendURLKey = "TextractBackendURL"
 
     /// Backend OCR URL (e.g. Lambda + API Gateway). When set, app sends image here; no AWS keys in app.
+    /// Placeholder hostnames (your-api.example.com, your-api-id) are treated as unset so on-device Vision is used.
     static var backendURL: URL? {
-        if let s = stringFromSecrets(key: backendURLKey), !s.isEmpty {
+        if let s = stringFromSecrets(key: backendURLKey), !s.isEmpty, !isPlaceholderURL(s) {
             return URL(string: s.trimmingCharacters(in: .whitespaces))
         }
-        if let s = ProcessInfo.processInfo.environment["TEXTRACT_BACKEND_URL"], !s.isEmpty {
+        if let s = ProcessInfo.processInfo.environment["TEXTRACT_BACKEND_URL"], !s.isEmpty, !isPlaceholderURL(s) {
             return URL(string: s.trimmingCharacters(in: .whitespaces))
         }
         return nil
+    }
+
+    private static func isPlaceholderURL(_ s: String) -> Bool {
+        let host = (URL(string: s.trimmingCharacters(in: .whitespaces))?.host ?? "").lowercased()
+        return host.contains("example.com") || host.contains("your-api")
     }
 
     /// Use Textract via your backend (no keys in app). Prefer this for distributed builds.

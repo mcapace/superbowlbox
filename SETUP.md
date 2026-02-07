@@ -2,6 +2,8 @@
 
 Use this to make sure **Sign in**, **Camera**, **OCR**, **live scores**, and **notifications** all work.
 
+**Before distributing (TestFlight / App Store):** Use **docs/DISTRIBUTION_CHECKLIST.md** so APIs, Lambdas, AI, and Supabase work in the live app.
+
 ## Get all features working (at a glance)
 
 | Feature | What you need |
@@ -111,7 +113,7 @@ No code or entitlement changes are required for camera/photo library beyond what
 3. **Rebuild and run**  
    - The dashboard will fetch NFL scores from Sports Data IO. If no key is found, the app uses ESPN instead.
 
-See **docs/SPORTSDATAIO_SETUP.md** for endpoint details and optional NBA/NHL/MLB usage.
+See **docs/SPORTSDATAIO_SETUP.md** for endpoint details and optional NBA/NHL/MLB usage. If you need to restore **scan or payout** Lambda URLs (Secrets.plist is gitignored), see **docs/SECRETS_URLS_REFERENCE.md**.
 
 ---
 
@@ -166,6 +168,7 @@ If OCR fails, it’s usually due to image quality (blur, lighting, or a sheet th
 | OCR (Vision)         | (none)                        | (none)                                  | None                                |
 | Local notifications  | (none)                        | (none)                                  | Allow when prompted                 |
 | Remote push          | `aps-environment` in entitlements ✓ | (none)                            | Backend sends APNs to device token  |
+| **Distribution**     | (none)                              | **Secrets.plist** (real URLs/keys) | **docs/DISTRIBUTION_CHECKLIST.md** before Archive |
 
 ---
 

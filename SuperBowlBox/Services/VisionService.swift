@@ -28,6 +28,8 @@ class VisionService: ObservableObject {
         case noTextFound
         case gridDetectionFailed
         case invalidGridStructure
+        /// Scan server URL in Secrets.plist could not be reached (e.g. hostname not found).
+        case scanServerUnreachable
 
         var errorDescription: String? {
             switch self {
@@ -39,6 +41,8 @@ class VisionService: ObservableObject {
                 return "Could not detect a valid grid structure"
             case .invalidGridStructure:
                 return "The detected grid doesn't match expected format"
+            case .scanServerUnreachable:
+                return "Scan server not found. Use a valid AIGridBackendURL or TextractBackendURL in Secrets.plist, or remove them to use on-device scanning."
             }
         }
     }
@@ -68,7 +72,11 @@ class VisionService: ObservableObject {
             guard let jpeg = imageForAI.jpegData(compressionQuality: 0.85) else {
                 throw VisionError.imageProcessingFailed
             }
-            return try await AIGridBackendService.parseGrid(imageData: jpeg, url: aiURL)
+            do {
+                return try await AIGridBackendService.parseGrid(imageData: jpeg, url: aiURL)
+            } catch let urlError as URLError where urlError.code == .cannotFindHost {
+                throw VisionError.scanServerUnreachable
+            }
         }
 
         // Try crop first; if we get no names or very little text, retry with full image
@@ -82,7 +90,11 @@ class VisionService: ObservableObject {
                 guard let jpeg = imageForBackend.jpegData(compressionQuality: 0.85) else {
                     throw VisionError.imageProcessingFailed
                 }
-                blocks = try await TextractBackendService.recognize(imageData: jpeg, url: url)
+                do {
+                    blocks = try await TextractBackendService.recognize(imageData: jpeg, url: url)
+                } catch let urlError as URLError where urlError.code == .cannotFindHost {
+                    throw VisionError.scanServerUnreachable
+                }
             } else {
                 blocks = try await recognizeText(in: image)
             }
