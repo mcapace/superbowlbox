@@ -1,4 +1,5 @@
 /**
+ * Runtime: Node.js 22.x recommended (Node 20.x EOL in Lambda April 2026).
  * Lambda: parse payout rules with Anthropic (same pattern as ai-grid).
  * Contract:
  *   App sends: POST application/json { "payoutDescription": "<user's free text>" }

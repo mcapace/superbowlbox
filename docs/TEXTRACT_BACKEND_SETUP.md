@@ -38,7 +38,7 @@ Follow these steps in order. You need an AWS account and the IAM access key you 
 
 1. In the **AWS Console**, open **Lambda** → **Functions** → **Create function**.
 2. **Function name**: e.g. `superbowlbox-ocr`.
-3. **Runtime**: **Node.js 20.x** (or 18.x).
+3. **Runtime**: **Node.js 22.x** (Node 20.x is EOL in Lambda April 2026).
 4. **Architecture**: x86_64 (default).
 5. **Execution role**: Choose **Create a new role with basic Lambda permissions** (we’ll add Textract next).
 6. Click **Create function**.

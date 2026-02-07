@@ -1,3 +1,4 @@
+// Runtime: Node.js 22.x recommended (Node 20.x EOL in Lambda April 2026).
 // Accepts: (1) POST application/json with body { "image": "<base64>" } — recommended so API Gateway does not corrupt binary.
 //          (2) POST raw image bytes (or base64) with image/jpeg — legacy.
 // Requires env: ANTHROPIC_API_KEY. Optional: MODEL (default claude-sonnet-4-20250514).

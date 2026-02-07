@@ -104,7 +104,6 @@
 		A00000000000000000000028 /* SharedPoolsConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPoolsConfig.swift; sourceTree = "<group>"; };
 		A00000000000000000000029 /* SharedPoolsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPoolsService.swift; sourceTree = "<group>"; };
 		A0000000000000000000002A /* EnterMyNumbersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnterMyNumbersView.swift; sourceTree = "<group>"; };
-		A00000000000000000000032 /* LogoImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogoImageView.swift; sourceTree = "<group>"; };
 		A0000000000000000000002B /* TextractConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextractConfig.swift; sourceTree = "<group>"; };
 		A0000000000000000000002C /* TextractBackendService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextractBackendService.swift; sourceTree = "<group>"; };
 		A0000000000000000000002D /* AIGridConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIGridConfig.swift; sourceTree = "<group>"; };
@@ -112,6 +111,7 @@
 		A0000000000000000000002F /* PayoutParseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayoutParseConfig.swift; sourceTree = "<group>"; };
 		A00000000000000000000030 /* PayoutParseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayoutParseService.swift; sourceTree = "<group>"; };
 		A00000000000000000000031 /* PayoutVoiceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayoutVoiceService.swift; sourceTree = "<group>"; };
+		A00000000000000000000032 /* LogoImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogoImageView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -523,7 +523,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SuperBowlBox/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Square Up";
+				INFOPLIST_KEY_CFBundleDisplayName = SquareUp;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is needed to scan pool sheets and box grids";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo library access is needed to import pool or bracket sheet images";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -531,11 +532,12 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.superbowlbox.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -554,7 +556,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SuperBowlBox/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Square Up";
+				INFOPLIST_KEY_CFBundleDisplayName = SquareUp;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is needed to scan pool sheets and box grids";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo library access is needed to import pool or bracket sheet images";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -562,11 +565,12 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.superbowlbox.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

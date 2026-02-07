@@ -1,5 +1,9 @@
 # Lambdas overview – make sure all are working
 
+**Runtime:** Use **Node.js 22.x** when creating or updating Lambdas. Node.js 20.x is end-of-life in Lambda on **April 30, 2026** (no new security patches; from July 2026 you can’t update functions on 20.x). To list functions still on 20.x:  
+`aws lambda list-functions --region us-east-1 --output text --query "Functions[?Runtime=='nodejs20.x'].FunctionArn"`  
+In the AWS Console: Lambda → Configuration → General configuration → Edit → Runtime → Node.js 22.x.
+
 The app uses **AI** for grid/name matching, rules, and payout logic when configured. **AI overrides OCR**: when `AIGridBackendURL` is set, the scan uses only the AI grid Lambda; OCR (Textract) and on-device Vision are not used. Payout rules are parsed by the **payout-parse** Lambda (also AI).
 
 Use this to verify and redeploy: **AI grid (scan)**, **payout parse**, and optionally **OCR (Textract)** only if you do not use the AI grid.
