@@ -243,6 +243,9 @@ struct GridDetailView: View {
         .navigationTitle(pool.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                AppNavBrandView()
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     if !pool.isLocked {
@@ -300,64 +303,67 @@ struct GridDetailView: View {
                 }
             }
 
-            ToolbarItem(placement: .bottomBar) {
-                HStack {
-                    // Zoom controls
-                    Button {
-                        HapticService.impactLight()
-                        withAnimation(.appSpring) {
-                            zoomScale = max(0.5, zoomScale - 0.25)
-                        }
-                    } label: {
-                        Image(systemName: "minus.magnifyingglass")
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            // Bar above tab bar so legend and zoom stay visible (not hidden behind nav/tab bar)
+            HStack {
+                Button {
+                    HapticService.impactLight()
+                    withAnimation(.appSpring) {
+                        zoomScale = max(0.5, zoomScale - 0.25)
                     }
+                } label: {
+                    Image(systemName: "minus.magnifyingglass")
+                }
 
-                    Text("\(Int(zoomScale * 100))%")
-                        .font(.caption)
-                        .frame(width: 50)
+                Text("\(Int(zoomScale * 100))%")
+                    .font(.caption)
+                    .frame(width: 50)
 
-                    Button {
-                        HapticService.impactLight()
-                        withAnimation(.appSpring) {
-                            zoomScale = min(Self.maxZoom, zoomScale + 0.25)
-                        }
-                    } label: {
-                        Image(systemName: "plus.magnifyingglass")
+                Button {
+                    HapticService.impactLight()
+                    withAnimation(.appSpring) {
+                        zoomScale = min(Self.maxZoom, zoomScale + 0.25)
                     }
+                } label: {
+                    Image(systemName: "plus.magnifyingglass")
+                }
 
-                    Spacer()
+                Spacer()
 
-                    // Legend: WIN / MINE / HUNT
-                    HStack(spacing: 10) {
-                        HStack(spacing: 3) {
-                            Circle().fill(DesignSystem.Colors.liveGreen).frame(width: 6, height: 6)
-                            Text("WIN").font(.system(size: 10, weight: .semibold)).foregroundColor(DesignSystem.Colors.textTertiary)
-                        }
-                        HStack(spacing: 3) {
-                            Circle().fill(DesignSystem.Colors.winnerGold).frame(width: 6, height: 6)
-                            Text("MINE").font(.system(size: 10, weight: .semibold)).foregroundColor(DesignSystem.Colors.textTertiary)
-                        }
-                        HStack(spacing: 3) {
-                            Circle().fill(DesignSystem.Colors.accentBlue).frame(width: 6, height: 6)
-                            Text("HUNT").font(.system(size: 10, weight: .semibold)).foregroundColor(DesignSystem.Colors.textTertiary)
-                        }
+                HStack(spacing: 10) {
+                    HStack(spacing: 3) {
+                        Circle().fill(DesignSystem.Colors.liveGreen).frame(width: 6, height: 6)
+                        Text("WIN").font(.system(size: 10, weight: .semibold)).foregroundColor(DesignSystem.Colors.textTertiary)
                     }
+                    HStack(spacing: 3) {
+                        Circle().fill(DesignSystem.Colors.winnerGold).frame(width: 6, height: 6)
+                        Text("MINE").font(.system(size: 10, weight: .semibold)).foregroundColor(DesignSystem.Colors.textTertiary)
+                    }
+                    HStack(spacing: 3) {
+                        Circle().fill(DesignSystem.Colors.accentBlue).frame(width: 6, height: 6)
+                        Text("HUNT").font(.system(size: 10, weight: .semibold)).foregroundColor(DesignSystem.Colors.textTertiary)
+                    }
+                }
 
-                    Spacer()
+                Spacer()
 
-                    if let score = score {
-                        HStack(spacing: 4) {
-                            Text("Winner:")
-                                .font(.system(size: 12))
-                                .foregroundColor(DesignSystem.Colors.textTertiary)
-                            Text("\(score.awayLastDigit)–\(score.homeLastDigit)")
-                                .font(.system(size: 15, weight: .bold))
-                                .monospacedDigit()
-                                .foregroundColor(DesignSystem.Colors.liveGreen)
-                        }
+                if let score = score {
+                    HStack(spacing: 4) {
+                        Text("Winner:")
+                            .font(.system(size: 12))
+                            .foregroundColor(DesignSystem.Colors.textTertiary)
+                        Text("\(score.awayLastDigit)–\(score.homeLastDigit)")
+                            .font(.system(size: 15, weight: .bold))
+                            .monospacedDigit()
+                            .foregroundColor(DesignSystem.Colors.liveGreen)
                     }
                 }
             }
+            .padding(.horizontal, DesignSystem.Layout.screenInset)
+            .padding(.vertical, 10)
+            .background(DesignSystem.Colors.backgroundSecondary)
+            .overlay(Rectangle().frame(height: 0.5).foregroundColor(DesignSystem.Colors.glassBorder), alignment: .top)
         }
         .sheet(isPresented: $showingEditSheet) {
             if let square = selectedSquare {
