@@ -45,6 +45,8 @@ Example:
 
 ## 3. Suggested database schema
 
+**Canonical schema (Supabase):** See **`supabase/migrations/20250204120000_create_logins_and_shared_pools.sql`** and **docs/SCHEMA.md** for the exact `logins` (and `shared_pools`) tables and RLS used by the app.
+
 ### Option A: Supabase (Postgres)
 
 1. In Supabase: **Table Editor** → **New table** → name it `logins`.

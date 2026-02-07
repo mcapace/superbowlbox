@@ -1,6 +1,6 @@
-# SquareUp — App Flow (Mermaid)
+# Square Up — App Flow (Mermaid)
 
-This document describes how the SquareUp app works and the complete user/system flow using Mermaid flowcharts.
+This document describes how the Square Up app works and the complete user/system flow using Mermaid flowcharts.
 
 ---
 
@@ -44,7 +44,7 @@ flowchart LR
     T0 --> D[Next game score, Your Pools selector, On the Hunt, Current Leader / Winnings]
     T1 --> P[Add Pool options + list of My Pools]
     T2 --> M[Your boxes across pools, stats]
-    T3 --> S[Profile, Account, Notifications, Join pool, Erase data, About]
+    T3 --> S[Profile, Account, Notifications, Join pool, Share My Pools, Erase data, About]
 ```
 
 ---
@@ -177,12 +177,14 @@ flowchart TD
         GD1 --> GD2[Show pool structure & payout summary]
         GD2 --> GD3[10x10 grid - column/row numbers, names]
         GD3 --> GD4[Winning square highlighted from current score]
-        GD4 --> GD5[Toolbar: Edit pool, Share, Delete]
+        GD4 --> GD5[Toolbar: Edit pool, Share Grid, Delete]
         GD5 --> |Edit| GD6[Edit sheet - name, teams, numbers, full grid editor]
-        GD5 --> |Share| GD7[Share sheet - generate code via SharedPoolsService]
+        GD5 --> |Share Grid| GD7[Export grid as image - system share sheet]
         GD5 --> |Delete| GD8[Confirm - appState.removePool]
     end
 ```
+
+*Invite codes are generated from **Settings → Share My Pools** (see section 9a).*
 
 ---
 
@@ -196,9 +198,31 @@ flowchart TD
         SV2[Account: Sign out if signed in]
         SV3[Notifications toggles]
         SV4[Join pool with code]
-        SV5[Erase all data - confirm then clear pools, myName, sign out]
-        SV6[About, Show onboarding again]
+        SV5[Share My Pools - list of pools, tap to get invite code]
+        SV6[Erase all data - confirm then clear pools, myName, sign out]
+        SV7[About: How it works, About Square Up, Version]
         SV4 --> JoinPoolSheet
+        SV5 --> SharePoolSheet
+    end
+```
+
+---
+
+## 9a. Share pool (invite code) flow
+
+```mermaid
+flowchart TD
+    subgraph Share["Generate & share invite code"]
+        SH0[Settings → Share My Pools → tap a pool]
+        SH0 --> SH1[SharePoolSheet opens - Square Up logo, pool name]
+        SH1 --> SH2{Code exists?}
+        SH2 -->|No| SH3[SharedPoolsService.uploadPool - POST to Supabase shared_pools]
+        SH3 --> SH4[8-char code returned, stored in pool.sharedCode]
+        SH2 -->|Yes| SH5[Show existing code]
+        SH4 --> SH5
+        SH5 --> SH6[Copy Code / Message / Email / More]
+        SH6 --> SH7[Message, Email, More open system share sheet with invite text]
+        SH7 --> SH8[Recipient gets: pool name, Invite Code, instructions to join]
     end
 ```
 
@@ -250,7 +274,7 @@ flowchart TB
     Main --> Live[Live: next game, pools, on the hunt, leader]
     Main --> Pools[Pools: add or list pools]
     Main --> Boxes[My Boxes: your squares]
-    Main --> Set[Settings: profile, account, join code, erase]
+    Main --> Set[Settings: profile, account, join code, share pools, erase]
     Pools --> Add{Add pool}
     Add --> Scan[Scan sheet → OCR/AI → Review → Payout rules → Save]
     Add --> Create[Create new / from game → Enter numbers → Save]
@@ -261,9 +285,10 @@ flowchart TB
     Saved --> Live
     Saved --> Pools
     Live --> Score[Score updates → refresh winners → notifications]
-    Pools --> Grid[Tap pool → Grid detail → Edit / Share / Delete]
+    Pools --> Grid[Tap pool → Grid detail → Edit / Share grid image / Delete]
+    Set --> SharePools[Share My Pools → invite code → Message/Email/More]
 ```
 
 ---
 
-*SquareUp — pool sheets, live scores, and payouts.*
+*Square Up — pool sheets, live scores, and payouts.*
