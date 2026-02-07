@@ -7,7 +7,7 @@ enum SharedPoolsService {
     enum SharedPoolsError: LocalizedError {
         case notConfigured
         case invalidURL
-        case uploadFailed(Int)
+        case uploadFailed(Int, String?)
         case fetchFailed(Int)
         case noPoolForCode
         case decodingFailed
@@ -16,7 +16,13 @@ enum SharedPoolsService {
             switch self {
             case .notConfigured: return "Share is not configured. Add SharedPoolsURL or LoginDatabaseURL in Secrets.plist."
             case .invalidURL: return "Invalid server URL."
-            case .uploadFailed(let code): return "Upload failed (HTTP \(code))."
+            case .uploadFailed(let code, let detail):
+                var msg = "Upload failed (HTTP \(code))."
+                if code == 404 {
+                    msg += " Use Supabase URL ending in /rest/v1, set anon key, and ensure shared_pools table exists (run migration)."
+                }
+                if let d = detail, !d.isEmpty { msg += " \(d)" }
+                return msg
             case .fetchFailed(let code): return "Could not load pool (HTTP \(code))."
             case .noPoolForCode: return "Invalid or expired code."
             case .decodingFailed: return "Invalid pool data."
@@ -30,31 +36,44 @@ enum SharedPoolsService {
         return String((0..<8).map { _ in chars.randomElement()! })
     }
 
+    /// Builds the full URL for the shared_pools table (Supabase: base is .../rest/v1, so this becomes .../rest/v1/shared_pools).
+    private static func tableURL() throws -> URL {
+        guard let base = SharedPoolsConfig.baseURL else { throw SharedPoolsError.invalidURL }
+        let baseStr = base.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard let url = URL(string: baseStr + "/" + tablePath) else { throw SharedPoolsError.invalidURL }
+        return url
+    }
+
     /// Upload pool to backend; returns the share code. Rules/payout/structure are stored; ownerLabels are stripped so joiners claim with their own name.
     static func uploadPool(_ pool: BoxGrid) async throws -> String {
         guard SharedPoolsConfig.isConfigured else { throw SharedPoolsError.notConfigured }
-        guard let base = SharedPoolsConfig.baseURL,
-              let url = URL(string: tablePath, relativeTo: base) else { throw SharedPoolsError.invalidURL }
+        let url: URL
+        do { url = try tableURL() } catch { throw error }
 
         var template = pool
         template.ownerLabels = nil
         let code = generateCode()
         let body = SharedPoolRowPayload(code: code, pool_json: template)
-        guard let data = try? JSONEncoder().encode(body) else { throw SharedPoolsError.decodingFailed }
+        guard let bodyData = try? JSONEncoder().encode(body) else { throw SharedPoolsError.decodingFailed }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("return=representation", forHTTPHeaderField: "Prefer")
-        request.httpBody = data
+        request.setValue("public", forHTTPHeaderField: "Content-Profile")
+        request.setValue("public", forHTTPHeaderField: "Accept-Profile")
+        request.httpBody = bodyData
         if let key = SharedPoolsConfig.apiKey {
             request.setValue(key, forHTTPHeaderField: "Apikey")
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         }
 
-        let (_, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw SharedPoolsError.uploadFailed(0) }
-        guard (200...299).contains(http.statusCode) else { throw SharedPoolsError.uploadFailed(http.statusCode) }
+        let (responseData, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw SharedPoolsError.uploadFailed(0, nil) }
+        guard (200...299).contains(http.statusCode) else {
+            let detail = Self.messageFromErrorResponse(responseData)
+            throw SharedPoolsError.uploadFailed(http.statusCode, detail)
+        }
         return code
     }
 
@@ -65,7 +84,8 @@ enum SharedPoolsService {
         guard trimmed.count == 8 else { throw SharedPoolsError.noPoolForCode }
 
         guard let base = SharedPoolsConfig.baseURL else { throw SharedPoolsError.invalidURL }
-        var comp = URLComponents(url: base.appendingPathComponent(tablePath), resolvingAgainstBaseURL: true)!
+        let baseStr = base.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        var comp = URLComponents(string: baseStr + "/" + tablePath)!
         comp.queryItems = [
             URLQueryItem(name: "code", value: "eq.\(trimmed)"),
             URLQueryItem(name: "select", value: "pool_json")
@@ -75,6 +95,7 @@ enum SharedPoolsService {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("public", forHTTPHeaderField: "Accept-Profile")
         if let key = SharedPoolsConfig.apiKey {
             request.setValue(key, forHTTPHeaderField: "Apikey")
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
@@ -96,20 +117,32 @@ enum SharedPoolsService {
         guard trimmed.count == 8 else { return }
 
         guard let base = SharedPoolsConfig.baseURL else { throw SharedPoolsError.invalidURL }
-        var comp = URLComponents(url: base.appendingPathComponent(tablePath), resolvingAgainstBaseURL: true)!
+        let baseStr = base.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        var comp = URLComponents(string: baseStr + "/" + tablePath)!
         comp.queryItems = [URLQueryItem(name: "code", value: "eq.\(trimmed)")]
         guard let url = comp.url else { throw SharedPoolsError.invalidURL }
 
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
+        request.setValue("public", forHTTPHeaderField: "Content-Profile")
         if let key = SharedPoolsConfig.apiKey {
             request.setValue(key, forHTTPHeaderField: "Apikey")
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         }
 
-        let (_, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw SharedPoolsError.uploadFailed(0) }
-        guard (200...299).contains(http.statusCode) else { throw SharedPoolsError.uploadFailed(http.statusCode) }
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw SharedPoolsError.uploadFailed(0, nil) }
+        guard (200...299).contains(http.statusCode) else { throw SharedPoolsError.uploadFailed(http.statusCode, Self.messageFromErrorResponse(data)) }
+    }
+
+    /// Parse Supabase/PostgREST error body for a short message to show the user.
+    private static func messageFromErrorResponse(_ data: Data?) -> String? {
+        guard let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        if let msg = json["message"] as? String { return msg }
+        if let msg = json["error_description"] as? String { return msg }
+        if let details = json["details"] as? String { return details }
+        if let code = json["code"] as? String { return code }
+        return nil
     }
 }
 

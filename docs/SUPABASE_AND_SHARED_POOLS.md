@@ -86,6 +86,8 @@ Your REST base URL is: `https://YOUR_PROJECT_REF.supabase.co/rest/v1`.
 
 The app uses these for both shared pools and (if configured) logins. No extra keys needed for invite codes.
 
+**If you get "Upload failed (HTTP 404)" when generating a code:** (1) Use the exact REST URL: `https://YOUR_PROJECT_REF.supabase.co/rest/v1` (with `/rest/v1`). (2) Run the migration so the `shared_pools` table exists (`supabase db push` or run the SQL in `supabase/migrations/` in the Supabase SQL Editor). (3) Confirm **LoginDatabaseApiKey** is your project’s **anon public** key.
+
 ---
 
 ## 5. Use it in the app

@@ -74,7 +74,7 @@ struct CreateFromGameView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     AppNavBrandView()
                 }
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cancel") {
                         onCancel()
                     }

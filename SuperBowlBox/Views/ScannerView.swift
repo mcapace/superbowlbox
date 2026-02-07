@@ -133,7 +133,7 @@ struct ScannerView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     AppNavBrandView()
                 }
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cancel") {
                         dismiss()
                     }

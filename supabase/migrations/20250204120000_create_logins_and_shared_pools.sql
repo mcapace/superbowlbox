@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS public.logins (
 
 ALTER TABLE public.logins ENABLE ROW LEVEL SECURITY;
 
--- Allow app (anon) to insert sign-in events only
+-- Allow app (anon) to insert sign-in events only (idempotent: drop if exists)
+DROP POLICY IF EXISTS "Allow anon to insert logins" ON public.logins;
 CREATE POLICY "Allow anon to insert logins"
   ON public.logins
   FOR INSERT
@@ -37,18 +38,20 @@ CREATE TABLE IF NOT EXISTS public.shared_pools (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX idx_shared_pools_code ON public.shared_pools (code);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_shared_pools_code ON public.shared_pools (code);
 
 ALTER TABLE public.shared_pools ENABLE ROW LEVEL SECURITY;
 
--- Allow app (anon) to insert when sharing a pool
+-- Allow app (anon) to insert when sharing a pool (idempotent: drop if exists)
+DROP POLICY IF EXISTS "Allow anon to insert shared_pools" ON public.shared_pools;
 CREATE POLICY "Allow anon to insert shared_pools"
   ON public.shared_pools
   FOR INSERT
   TO anon
   WITH CHECK (true);
 
--- Allow app (anon) to select by code when joining
+-- Allow app (anon) to select by code when joining (idempotent: drop if exists)
+DROP POLICY IF EXISTS "Allow anon to select shared_pools" ON public.shared_pools;
 CREATE POLICY "Allow anon to select shared_pools"
   ON public.shared_pools
   FOR SELECT

@@ -839,7 +839,7 @@ struct AddPoolFlowView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     AppNavBrandView()
                 }
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cancel") {
                         onDismiss()
                         flowDismiss()
