@@ -8,6 +8,8 @@ class VisionService: ObservableObject {
     @Published var recognizedText: [RecognizedTextBlock] = []
     @Published var detectedGrid: DetectedGrid?
     @Published var error: VisionError?
+    /// True if the last successful scan used the AI backend (Lambda/Claude); false if it used on-device OCR. Used so the UI can show "Analyzed with AI" vs "Analyzed on device".
+    @Published var lastScanUsedAIBackend = false
 
     struct RecognizedTextBlock: Identifiable {
         let id = UUID()
@@ -68,6 +70,7 @@ class VisionService: ObservableObject {
 
         // AI overrides OCR: when AIGrid backend is configured, we use AI only for grid/names/rules. OCR and on-device Vision are not used.
         if let aiURL = AIGridConfig.backendURL {
+            await MainActor.run { self.lastScanUsedAIBackend = true }
             let imageForAI = UIImage(cgImage: uprightImage)
             guard let jpeg = imageForAI.jpegData(compressionQuality: 0.85) else {
                 throw VisionError.imageProcessingFailed
@@ -80,6 +83,7 @@ class VisionService: ObservableObject {
         }
 
         // No AI backend configured: fallback to OCR (Textract backend or on-device Vision). Not used when AIGridBackendURL is set.
+        await MainActor.run { self.lastScanUsedAIBackend = false }
         let croppedImage = cropToLargestPoolLikeRectangle(uprightImage, orientation: .up)
 
         func runPipeline(image: CGImage) async throws -> (BoxGrid, [RecognizedTextBlock]) {

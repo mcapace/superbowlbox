@@ -8,15 +8,22 @@
 
 These are the **only concrete API Gateway / Lambda URLs** that appear in the repo. Use the set that matches your AWS API.
 
-### API ID: `0lgqfeaqxh` (from **AI_GRID_LAMBDA_REPLACE.md** – main reference)
+### API ID: `0lgqfeaqxh` – AI grid (scan)
 
 | Secrets.plist key        | Full URL |
 |--------------------------|----------|
 | **AIGridBackendURL**     | `https://0lgqfeaqxh.execute-api.us-east-1.amazonaws.com/ai-grid` |
 | **TextractBackendURL**   | `https://0lgqfeaqxh.execute-api.us-east-1.amazonaws.com/ocr` |
-| **PayoutParseBackendURL** | `https://0lgqfeaqxh.execute-api.us-east-1.amazonaws.com/parse-payout` |
 
-**Base (for reference):** `https://0lgqfeaqxh.execute-api.us-east-1.amazonaws.com`
+**Base:** `https://0lgqfeaqxh.execute-api.us-east-1.amazonaws.com`
+
+### API ID: `zko1kpmg0l` – Payout parse (Lambda function URL)
+
+| Secrets.plist key        | Full URL |
+|--------------------------|----------|
+| **PayoutParseBackendURL** | `https://zko1kpmg0l.execute-api.us-east-1.amazonaws.com/default/superbowlbox-payout-parse` |
+
+**Base:** `https://zko1kpmg0l.execute-api.us-east-1.amazonaws.com`
 
 ### API ID: `kcmpxvlwa8` (from **PAYOUT_ANTHROPIC_LAMBDA.md** – alternate example)
 
@@ -27,16 +34,16 @@ These are the **only concrete API Gateway / Lambda URLs** that appear in the rep
 
 **Base:** `https://kcmpxvlwa8.execute-api.us-east-1.amazonaws.com`
 
-**Secrets.example.plist** in the app is set to the **0lgqfeaqxh** URLs above. If your deployed API uses **kcmpxvlwa8**, replace the host in Secrets.plist with that base.
+**Secrets.example.plist** uses **0lgqfeaqxh** for scan/OCR and **zko1kpmg0l** for payout parse. If your APIs differ, update those keys in your **Secrets.plist**.
 
 ---
 
-## Quick copy (0lgqfeaqxh – one API for all three)
+## Quick copy (current Secrets.example.plist)
 
 ```
 AIGridBackendURL     = https://0lgqfeaqxh.execute-api.us-east-1.amazonaws.com/ai-grid
 TextractBackendURL   = https://0lgqfeaqxh.execute-api.us-east-1.amazonaws.com/ocr
-PayoutParseBackendURL = https://0lgqfeaqxh.execute-api.us-east-1.amazonaws.com/parse-payout
+PayoutParseBackendURL = https://zko1kpmg0l.execute-api.us-east-1.amazonaws.com/default/superbowlbox-payout-parse
 ```
 
 ---
@@ -45,11 +52,11 @@ PayoutParseBackendURL = https://0lgqfeaqxh.execute-api.us-east-1.amazonaws.com/p
 
 These base URLs are referenced in the setup docs. If this is your API Gateway, use them in **Secrets.plist**. If you use a different API ID, replace the host with your Invoke URL.
 
-| Secrets.plist key        | Full URL (example from docs) |
-|--------------------------|------------------------------|
+| Secrets.plist key        | Full URL (from Secrets.example.plist) |
+|--------------------------|----------------------------------------|
 | **AIGridBackendURL**     | `https://0lgqfeaqxh.execute-api.us-east-1.amazonaws.com/ai-grid` |
-| **TextractBackendURL**   | `https://0lgqfeaqxh.execute-api.us-east-1.amazonaws.com/ocr` (same API, `/ocr` route) |
-| **PayoutParseBackendURL** | `https://0lgqfeaqxh.execute-api.us-east-1.amazonaws.com/parse-payout` (same API, `/parse-payout` route) |
+| **TextractBackendURL**   | `https://0lgqfeaqxh.execute-api.us-east-1.amazonaws.com/ocr` |
+| **PayoutParseBackendURL** | `https://zko1kpmg0l.execute-api.us-east-1.amazonaws.com/default/superbowlbox-payout-parse` |
 
 - **AI grid (scan):** When **AIGridBackendURL** is set to a valid URL, the app sends the pool sheet image to that endpoint and uses the AI response. When it’s missing or a placeholder, the app uses **on-device Vision** (no server).
 - **OCR (scan fallback):** When **TextractBackendURL** is set, the app can use that for OCR instead of on-device Vision. Same API can expose both `/ai-grid` and `/ocr`.

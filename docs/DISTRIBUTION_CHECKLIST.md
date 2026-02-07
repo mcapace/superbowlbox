@@ -2,6 +2,8 @@
 
 Use this **before you Archive** (TestFlight, App Store, or ad‑hoc) so the live app has working APIs, scan/payout Lambdas, AI integration, and Supabase.
 
+**One Secrets.plist for local, TestFlight, and live.** See **docs/SECRETS_FULL_SETUP.md** for every key and “no placeholders” setup.
+
 ---
 
 ## 1. Secrets.plist is what ships
@@ -9,11 +11,12 @@ Use this **before you Archive** (TestFlight, App Store, or ad‑hoc) so the live
 - The app reads **all** API keys and backend URLs from **`SuperBowlBox/Resources/Secrets.plist`**.
 - That file is in **Copy Bundle Resources**, so **whatever Secrets.plist exists in your project when you build/Archive is embedded in the app** and used in production.
 - **Secrets.plist is gitignored** – it never goes in the repo. The **machine that runs Product → Archive** must have the real `Secrets.plist` with production values.
+- **No placeholders in production:** Use real URLs and keys. Same plist works for local, TestFlight, and App Store.
 
 **Before every distribution build:**
 
 1. Open **SuperBowlBox/Resources/Secrets.plist** in Xcode.
-2. Confirm every key you care about has a **production** value (no `YOUR_*`, no `your-api.example.com`, no `localhost`).
+2. Confirm every key you use has a **real** value (see **docs/SECRETS_FULL_SETUP.md** for the full list).
 
 ---
 

@@ -533,6 +533,25 @@ struct EnterNameForScanView: View {
                     .font(.subheadline)
                     .foregroundColor(DesignSystem.Colors.textSecondary)
 
+                if !AIGridConfig.useAIGrid {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("AI scan not configured")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.orange)
+                            Text("Using device OCR. Set AIGridBackendURL in Secrets.plist to your Lambda URL for accurate names and grid.")
+                                .font(.caption2)
+                                .foregroundColor(DesignSystem.Colors.textSecondary)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding()
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.orange.opacity(0.12)))
+                }
+
                 // Thumbnail
                 Image(uiImage: image)
                     .resizable()
@@ -712,18 +731,29 @@ struct ReviewScanView: View {
         ScrollView {
             VStack(spacing: 20) {
                 // Success indicator
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                        .font(.title2)
-                    Text("Scan Complete!")
-                        .font(DesignSystem.Typography.headline)
-                    Spacer()
-                    if image != nil {
-                        Button("View Image") {
-                            showingImagePreview = true
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.title2)
+                        Text("Scan Complete!")
+                            .font(DesignSystem.Typography.headline)
+                        Spacer()
+                        if image != nil {
+                            Button("View Image") {
+                                showingImagePreview = true
+                            }
+                            .font(.caption)
                         }
+                    }
+                    let usedAI = visionService?.lastScanUsedAIBackend ?? false
+                    Text(usedAI ? "Analyzed with AI" : "Analyzed on device (OCR)")
                         .font(.caption)
+                        .foregroundColor(usedAI ? DesignSystem.Colors.textSecondary : .orange)
+                    if !usedAI {
+                        Text("For accurate names and grid, set AIGridBackendURL in Secrets.plist to your AI grid Lambda URL.")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
                     }
                 }
                 .padding()
