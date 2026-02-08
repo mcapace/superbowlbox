@@ -248,7 +248,8 @@ struct GridDetailView: View {
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
-                    if !pool.isLocked {
+                    // Only owner/creator can edit payout rules (re-parse via Lambda), matchup, randomize, or clear names.
+                    if pool.isOwner {
                         Button {
                             showingEditRulesSheet = true
                         } label: {
