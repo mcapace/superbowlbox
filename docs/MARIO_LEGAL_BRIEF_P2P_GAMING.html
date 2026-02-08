@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Square Up — P2P Gaming Model: Legal Overview for Counsel</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 2rem; color: #1a1a1a; }
+    h1 { font-size: 1.75rem; border-bottom: 1px solid #ddd; padding-bottom: 0.5rem; }
+    h2 { font-size: 1.35rem; margin-top: 2rem; }
+    h3 { font-size: 1.15rem; margin-top: 1.5rem; }
+    p { margin: 0.75rem 0; }
+    ul { margin: 0.75rem 0; padding-left: 1.5rem; }
+    strong { font-weight: 600; }
+    hr { border: none; border-top: 1px solid #ddd; margin: 2rem 0; }
+    .mermaid { margin: 1.5rem 0; text-align: center; }
+    .mermaid svg { max-width: 100%; height: auto; }
+    .takeaway { background: #f5f5f5; padding: 0.75rem 1rem; border-radius: 6px; margin: 1rem 0; font-size: 0.95rem; }
+    @media print { body { max-width: 100%; } .mermaid { page-break-inside: avoid; } }
+  </style>
+</head>
+<body>
+
+<h1>Square Up — P2P Gaming Model: Legal Overview for Counsel</h1>
+
+<p><strong>Prepared for:</strong> Mario (Counsel)<br>
+<strong>Subject:</strong> Peer-to-peer pool gaming app; positioning vs. prediction markets (Kalshi, Polymarket) and licensed gambling<br>
+<strong>Date:</strong> February 2025<br>
+<strong>Status:</strong> Discussion draft — not legal advice</p>
+
+<hr>
+
+<h2>One-page summary</h2>
+
+<p><strong>What we built:</strong> A mobile app (<strong>Square Up</strong>) where users <strong>create</strong> or <strong>join</strong> existing pool games (e.g. Super Bowl squares, box pools, brackets). All code is custom; we do not use third-party betting or gambling SDKs.</p>
+
+<p><strong>How it works:</strong> One user creates a pool and sets the rules (e.g. “$25 per quarter, halftime double”). Others join via invite code. Money flows <strong>between participants</strong> according to those rules when the game resolves (e.g. score at end of Q2). The <strong>app does not take a cut</strong>, set odds, or act as a counterparty.</p>
+
+<p><strong>Why it may matter legally:</strong> We are exploring whether this <strong>peer-to-peer, no-house, no-bookmaker</strong> model differs meaningfully from (a) regulated prediction markets (Kalshi, Polymarket) and (b) traditional sportsbooks, for purposes of gambling licensing and regulation.</p>
+
+<p><strong>Ask for counsel:</strong> Whether this structure raises different (or lower) regulatory risk in the U.S. (federal and state), and what guardrails or disclosures you would recommend before scaling.</p>
+
+<hr>
+
+<h2>1. The idea</h2>
+
+<p>Square Up is a <strong>peer-to-peer (P2P) gaming</strong> platform:</p>
+
+<ul>
+  <li><strong>Users create games</strong> — e.g. a 10×10 “squares” pool for the Super Bowl, with custom payout rules (by quarter, halftime, final, first score, etc.).</li>
+  <li><strong>Users join games</strong> — via invite codes; no discovery of “odds” or “markets” run by the platform.</li>
+  <li><strong>Resolution and payouts</strong> — based on real-world outcomes (e.g. NFL score at end of each quarter). The <strong>creator</strong> of the pool defines the rules; the app facilitates tracking and (optionally) sharing the pool, but <strong>does not set odds, take vig, or act as the house</strong>.</li>
+</ul>
+
+<p>Contrast with:</p>
+
+<ul>
+  <li><strong>Kalshi / Polymarket</strong> — prediction <strong>markets</strong>. The platform typically operates or hosts markets, often with a central counterparty or liquidity pool; regulatory treatment (CFTC, state) is a live issue.</li>
+  <li><strong>Traditional sportsbooks</strong> — the <strong>bookmaker</strong> sets odds and takes a margin; clearly regulated as gambling in most jurisdictions.</li>
+</ul>
+
+<p>Our hypothesis: <strong>“Gaming your way”</strong> — creating and joining <strong>user-defined pools with no house and no oddsmaker</strong> — may sit in a different category for licensing and compliance. We want your view on that.</p>
+
+<hr>
+
+<h2>2. How the model works (flowcharts)</h2>
+
+<h3>2.1 Traditional sportsbook vs. Square Up (P2P)</h3>
+
+<div class="mermaid">
+flowchart LR
+    subgraph Traditional["Traditional sportsbook"]
+        A[User] -->|bets| B[Bookmaker / House]
+        B -->|sets odds, takes vig| A
+        B -->|pays out| A
+    end
+
+    subgraph P2P["Square Up — P2P"]
+        C[User A: creates pool] --> D[Pool rules + invite code]
+        E[User B, C, D…] -->|join via code| D
+        D --> F[Outcome: e.g. game score]
+        F --> G[Payouts per pool rules]
+        G --> E
+        G --> C
+    end
+</div>
+
+<div class="takeaway"><strong>Takeaway:</strong> In our model, the <strong>platform does not take a position or a cut</strong>. It is a tool for creating, joining, and resolving <strong>user-created pools</strong> where money moves <strong>between participants</strong> according to <strong>user-defined rules</strong>.</div>
+
+<h3>2.2 User flow: Create vs. join</h3>
+
+<div class="mermaid">
+flowchart TD
+    subgraph Create["Create a game"]
+        A1[User opens app] --> A2[Create pool]
+        A2 --> A3[Set teams, grid, payout rules]
+        A3 --> A4[Get invite code]
+        A4 --> A5[Share with friends / group]
+    end
+
+    subgraph Join["Join a game"]
+        B1[User opens app] --> B2[Enter invite code]
+        B2 --> B3[View pool rules]
+        B3 --> B4[Claim squares / entries]
+        B4 --> B5[Participate in same pool]
+    end
+
+    A5 --> B1
+</div>
+
+<div class="takeaway"><strong>Takeaway:</strong> Every pool is <strong>created by a user</strong> and <strong>joined by others</strong>. The app does not list “markets” or “odds”; it only enables creation, joining (via code), and tracking of these private pools.</div>
+
+<h3>2.3 Where money and control sit</h3>
+
+<div class="mermaid">
+flowchart TB
+    subgraph Platform["Platform (Square Up)"]
+        P[App: create pool, invite code, track scores, show winners]
+    end
+
+    subgraph Users["Users only"]
+        U1[Pool creator]
+        U2[Participant 2]
+        U3[Participant 3]
+        U4[Participant N]
+    end
+
+    U1 -->|defines rules, shares code| P
+    U2 -->|joins with code| P
+    U3 -->|joins with code| P
+    U4 -->|joins with code| P
+    P -->|displays results| U1
+    P -->|displays results| U2
+    P -->|displays results| U3
+    P -->|displays results| U4
+
+    subgraph Money["Money flow (conceptual)"]
+        U2 -.->|payout per rules| U1
+        U3 -.->|payout per rules| U1
+        U1 -.->|payout per rules| U2
+    end
+</div>
+
+<div class="takeaway"><strong>Takeaway:</strong> The <strong>platform does not hold or move funds</strong>. It provides the structure (grid, rules, invite, resolution). Any money flow is <strong>between users</strong>, off-platform (e.g. Venmo, cash) or via whatever mechanism the group agrees on.</div>
+
+<hr>
+
+<h2>3. Context: Prediction markets and regulation</h2>
+
+<ul>
+  <li><strong>Kalshi</strong> — CFTC-regulated prediction market (event contracts); often in the news for scope of allowed markets.</li>
+  <li><strong>Polymarket</strong> — prediction markets; regulatory status has been debated (e.g. CFTC, state gambling).</li>
+  <li><strong>Trend</strong> — “Prediction betting” and micro-markets are popular; regulation is evolving.</li>
+</ul>
+
+<p>Our product is <strong>not</strong> a prediction market in that sense:</p>
+
+<ul>
+  <li>We do not list or operate <strong>markets</strong> or <strong>event contracts</strong>.</li>
+  <li>We do not act as counterparty or liquidity provider.</li>
+  <li>We enable <strong>user-created, invite-only pools</strong> with user-defined rules and no house edge.</li>
+</ul>
+
+<p>We want to understand from counsel whether this <strong>P2P, no-house, no-oddsmaker</strong> framing is relevant for:</p>
+
+<ul>
+  <li>Federal (e.g. Wire Act, UIGEA, CFTC) and state gambling laws.</li>
+  <li>Distinctions between “gambling” (house, bookmaker) and “social / skill-based / P2P” gaming in your view.</li>
+  <li>Any specific risks or mitigations (disclaimers, terms of use, geography, no real-money in-app, etc.).</li>
+</ul>
+
+<hr>
+
+<h2>4. Technical and product guardrails (current)</h2>
+
+<ul>
+  <li><strong>Custom code only</strong> — no integration with third-party betting or gambling APIs/SDKs.</li>
+  <li><strong>No house odds</strong> — the app does not set or display odds; it only reflects user-defined pool rules.</li>
+  <li><strong>Invite-based access</strong> — pools are joined by code, not by browsing a marketplace of “bets.”</li>
+  <li><strong>Resolution</strong> — based on publicly available outcomes (e.g. official game scores) and user-set rules.</li>
+  <li><strong>Money</strong> — the app does not process payments or hold user funds; payouts are between participants.</li>
+</ul>
+
+<hr>
+
+<h2>5. Questions for Mario (counsel)</h2>
+
+<ol>
+  <li>Does the <strong>P2P, no-house, no-bookmaker</strong> structure meaningfully affect how this might be viewed under federal and state gambling laws compared to (a) prediction markets and (b) traditional sportsbooks?</li>
+  <li>Are there states or jurisdictions where this type of “user-created pool” tool is explicitly addressed (permitted, restricted, or prohibited)?</li>
+  <li>What <strong>risk-mitigation</strong> steps would you recommend (e.g. terms of use, disclaimers, age/geography restrictions, no in-app real-money transfer)?</li>
+  <li>Given the current popularity of prediction-style products (Kalshi, Polymarket), is there a window to position a <strong>strictly P2P, no-house</strong> product differently in regulatory discussions or with partners?</li>
+  <li>Any other legal or compliance considerations we should build into the plan before scaling (e.g. advertising, referrals, or future features)?</li>
+</ol>
+
+<hr>
+
+<h2>6. Next steps</h2>
+
+<ul>
+  <li>Share this brief and flowcharts with Mario.</li>
+  <li>Schedule a call to walk through the model and his initial impressions.</li>
+  <li>Based on his feedback, update product and terms (and this doc) and decide on any formal opinion or deeper state-by-state review.</li>
+</ul>
+
+<hr>
+
+<p><em>This document is for discussion with counsel only and does not constitute legal advice. All product and legal decisions should be made in consultation with qualified counsel.</em></p>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+</script>
+
+</body>
+</html>
