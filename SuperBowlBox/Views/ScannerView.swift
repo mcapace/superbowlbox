@@ -1038,7 +1038,7 @@ struct ReviewScanView: View {
                                 do {
                                     let parsed = try await PayoutParseService.parse(payoutDescription: text)
                                     await MainActor.run {
-                                        var merged = parsed
+                                        var merged = parsed.structure
                                         merged.customPayoutDescription = text
                                         pool.poolStructure = merged
                                         payoutParseInProgress = false
@@ -1155,7 +1155,7 @@ struct ReviewScanView: View {
             do {
                 let parsed = try await PayoutParseService.parse(payoutDescription: text)
                 await MainActor.run {
-                    var merged = parsed
+                    var merged = parsed.structure
                     merged.customPayoutDescription = text
                     pool.poolStructure = merged
                     payoutParsedSummary = "Parsed: \(merged.periodLabels.joined(separator: ", "))" + (merged.payoutDescriptions.isEmpty ? "" : " · \(merged.payoutDescriptions.joined(separator: ", "))")
