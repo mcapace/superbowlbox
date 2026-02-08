@@ -56,7 +56,7 @@ struct SettingsView: View {
                     Text("Your name is used to highlight your boxes. When you scan or create a pool, you can set how your name appears on that sheet (and add multiple names if you have more than one box).")
                 }
 
-                // Account — sign in is in onboarding; here: status, Sign out, or single Sign in link
+                // Account — only show sign-in option when logged out (onboarding or after Sign out)
                 Section {
                     if let user = appState.authService.currentUser {
                         HStack(spacing: 12) {
@@ -85,6 +85,7 @@ struct SettingsView: View {
                             }
                         }
                     } else {
+                        // Only when logged out: show sign-in so user can sign in (e.g. after logging out)
                         Button {
                             showingSignIn = true
                         } label: {
@@ -110,7 +111,7 @@ struct SettingsView: View {
                     Text("Account")
                 } footer: {
                     if appState.authService.currentUser == nil {
-                        Text("Sign in during onboarding or here to sync across devices (optional)")
+                        Text("Sign in to sync across devices. You can also sign in during onboarding.")
                     }
                 }
 
@@ -245,6 +246,7 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showingSignIn) {
                 OnboardingSignInView(authService: appState.authService, onSkip: { showingSignIn = false })
+                    .environmentObject(appState)
                     .onChange(of: appState.authService.currentUser) { _, new in
                         if new != nil { showingSignIn = false }
                     }
