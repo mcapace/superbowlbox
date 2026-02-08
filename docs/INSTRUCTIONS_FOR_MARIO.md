@@ -35,7 +35,7 @@ You only need GitHub to read the brief. TestFlight is optional if you want to se
 | 2 | Click **Accept invitation** (or the link in the email). Log in to GitHub if asked. |
 | 3 | Open the repo: [https://github.com/mcapace/superbowlbox](https://github.com/mcapace/superbowlbox) |
 | 4 | Click the **docs** folder. |
-| 5 | **Main doc (everything in one place):** Click **MARIO_FULL_PACK.md** to read the full legal brief, schemas, and app flow on GitHub (or click **Raw** → Save As to download). |
+| 5 | **Main doc (everything in one place):** Click **MARIO_FULL_PACK.md** to read the legal brief, codebase overview, schemas, and app flow on GitHub (or click **Raw** → Save As to download). |
 | 6 | (Optional) For a PDF of the brief: **MARIO_LEGAL_BRIEF_P2P_GAMING.pdf**. For a one-page summary: **MARIO_ONE_PAGER.pdf**. |
 
 **If you prefer the brief with flowcharts in a browser:** In **docs**, click **MARIO_LEGAL_BRIEF_P2P_GAMING.html** → **Download** → open the downloaded file in Chrome, Safari, or Firefox.
@@ -71,7 +71,7 @@ You only need GitHub to read the brief. TestFlight is optional if you want to se
 
 # Part C: What I’m asking from you
 
-- **Read the brief** (the PDF from the **docs** folder) when you have time.
+- **Read the brief** (in **MARIO_FULL_PACK.md** or the PDF from **docs**) when you have time. The full pack includes a **codebase overview** (repo layout, where pool/auth/backend code lives) so you can tie the P2P model to the implementation.
 - **Your honest opinion:** Does this have legs in your view, or is it a dead end? I’d rather hear it straight.
 - **Questions for you** are in Section 5 of the brief (P2P vs. gambling regulation, state/jurisdiction, risk mitigation, etc.).
 - **Next step:** A short call to walk through the model and your take, then we can decide on any follow-up (e.g. formal opinion, state-by-state review).
@@ -83,7 +83,7 @@ You only need GitHub to read the brief. TestFlight is optional if you want to se
 | What | Where / how |
 |------|-------------|
 | **Repo (Git)** | [https://github.com/mcapace/superbowlbox](https://github.com/mcapace/superbowlbox) — accept the GitHub invite first. |
-| **Full pack (main doc)** | In repo: **docs** → **MARIO_FULL_PACK.md** — brief, schemas, app flow. |
+| **Full pack (main doc)** | In repo: **docs** → **MARIO_FULL_PACK.md** — brief, codebase overview, schemas, app flow. |
 | **Brief (PDF)** | In repo: **docs** → **MARIO_LEGAL_BRIEF_P2P_GAMING.pdf** → Download. |
 | **One-pager (PDF)** | In repo: **docs** → **MARIO_ONE_PAGER.pdf** → Download. |
 | **TestFlight** | Use the **Apple ID email** I add; install from the invite email on your iPhone. |

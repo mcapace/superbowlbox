@@ -1,7 +1,7 @@
 # Square Up — Full pack for Mario (Counsel)
 
 **Prepared for:** Mario (Counsel)  
-**Contents:** Legal brief (P2P model, flowcharts), database schemas, app flow (Mermaid).  
+**Contents:** Legal brief (P2P model, flowcharts), codebase overview, database schemas, app flow (Mermaid).  
 **Date:** February 2025  
 **Status:** Discussion draft — not legal advice
 
@@ -218,11 +218,66 @@ The same **P2P pattern** applies across game types: a **creator** defines the ga
 
 ---
 
-# Part 2 — Database schema
+# Part 2 — Codebase overview
+
+This section describes the **Square Up** repository and where key code lives, so the legal brief can be tied to the actual implementation.
+
+## 2.1 Repo and layout
+
+- **Repository:** [github.com/mcapace/superbowlbox](https://github.com/mcapace/superbowlbox) — one repo for the app and backend-related pieces.
+- **Top-level:**
+  - **README.md**, **SETUP.md** — project overview and setup (API keys, Supabase, etc.).
+  - **docs/** — all written documentation: legal brief (this pack), **APP_FLOW.md**, **SCHEMA.md**, **SUPABASE_AND_SHARED_POOLS.md**, setup guides (Lambdas, payouts, OAuth, etc.).
+  - **SuperBowlBox/** — the **iOS app** (Swift/SwiftUI); this is the only user-facing application.
+  - **SuperBowlBox.xcodeproj/** — Xcode project.
+  - **supabase/** — backend: **migrations/** (e.g. `20250204120000_create_logins_and_shared_pools.sql` for `logins` and `shared_pools` tables).
+  - **scripts/** — build and setup scripts (e.g. `build.sh`, `supabase-setup.sh`).
+
+There is **no separate "odds" or "trading" service**. Pool rules and payouts are defined by users and implemented in the app and in the shared-pool schema; the platform does not set odds or take a cut.
+
+## 2.2 iOS app (SuperBowlBox/)
+
+| Area | Purpose | Notable files |
+|------|---------|----------------|
+| **Models** | Pool structure, squares, scores, payout rules | `BoxGrid.swift`, `BoxSquare.swift`, `PoolStructure.swift`, `GameScore.swift`, `Team.swift`, `ListableGame.swift` |
+| **Views** | UI: dashboard, pool list, grid, scan, settings | `ContentView.swift`, `GridView.swift`, `PoolsListView.swift`, `MySquaresView.swift`, `ScannerView.swift`, `SettingsView.swift`, `CreateFromGameView.swift`, `ManualEntryView.swift`, `EnterMyNumbersView.swift` |
+| **Services** | Auth, scores, shared pools, OCR, notifications | `SupabaseAuthService.swift`, `AuthService.swift`, `LoginDatabaseService.swift`, `SharedPoolsService.swift`, `NFLScoreService.swift`, `VisionService.swift`, `NotificationService.swift`, `PayoutParseService.swift`, `GamesService.swift` |
+| **ViewModels** | Grid/pool state | `GridViewModel.swift` |
+| **Resources** | Assets, Secrets (gitignored) | `Assets.xcassets/`, `Secrets.example.plist` |
+
+- **Auth:** Sign in with Apple, Google (optional package), or Email (Supabase Auth). Used for optional sync and identity; not required to create or join pools.
+- **Scores:** **NFLScoreService** — live scores from Sports Data IO (with API key) or ESPN (no key). Used only to **resolve** pool outcomes (e.g. last digit of score at quarter end). No odds or lines.
+- **Shared pools:** **SharedPoolsService** — upload pool JSON to get an **invite code**, or fetch pool by code to join. Backed by Supabase `shared_pools` (see Part 3). No platform fee or house logic.
+- **OCR:** **VisionService** — scan physical pool sheets to import grid and names. Purely input; no betting or market logic.
+
+**No third-party betting, gambling, or prediction-market SDKs** are used. All pool and payout logic is custom and driven by user-defined rules and real-world outcomes.
+
+## 2.3 Backend (Supabase)
+
+- **Migrations:** `supabase/migrations/` — defines `logins` (sign-in events) and `shared_pools` (invite code → pool JSON). See **Part 3** for schema.
+- **Usage:** App talks to Supabase REST (or PostgREST) for: (1) optional login logging, (2) create/fetch shared pool by code. No wallet, no escrow, no platform-led settlement in this repo; payouts are between participants off-app or by their own arrangement.
+- **Docs:** **docs/SUPABASE_AND_SHARED_POOLS.md**, **docs/LOGIN_DATABASE.md**, **docs/SCHEMA.md**.
+
+Optional external services (documented in **docs/** but not required for the P2P model): AWS Lambdas for AI-generated grid or payout parsing; Sports Data IO for scores. These support **resolution and UX**, not odds or house positions.
+
+## 2.4 Why this matters for the brief
+
+The codebase **implements the P2P model** described in Part 1:
+
+- **Creator-defined rules** — payout structure lives in `PoolStructure` and pool JSON; no central "book" or odds engine.
+- **Invite-only participation** — join by code via `SharedPoolsService` and `shared_pools`; no public discovery of "markets" or odds.
+- **Resolution from real-world data** — scores from NFLScoreService (or manual entry) drive who wins which period; no platform-set lines or vig.
+- **No platform take** — no fee or margin logic in app or schema; money flow is between participants per pool rules.
+
+If counsel or regulators ask "where is the odds-making or house logic?", the answer is: **it is not there** — the repo is a tool for creating, sharing, and resolving user-defined pools only.
+
+---
+
+# Part 3 — Database schema
 
 Canonical schema: **`supabase/migrations/20250204120000_create_logins_and_shared_pools.sql`**.
 
-## 2.1 Table: `public.logins`
+## 3.1 Table: `public.logins`
 
 Stores sign-in events (Apple, Google, or Email) when **LoginDatabaseURL** and **LoginDatabaseApiKey** are set.
 
@@ -238,7 +293,7 @@ Stores sign-in events (Apple, Google, or Email) when **LoginDatabaseURL** and **
 
 **RLS:** anon can `INSERT` only. App sends `Apikey` and `Authorization: Bearer <key>` when **LoginDatabaseApiKey** is set. App POSTs to `{LoginDatabaseURL}/logins` on sign-in and optionally to `/logins/signout` on sign-out.
 
-## 2.2 Table: `public.shared_pools`
+## 3.2 Table: `public.shared_pools`
 
 Stores invite codes for sharing pools. Used when **SharedPoolsURL** or **LoginDatabaseURL** (fallback) is set.
 
@@ -259,9 +314,9 @@ Stores invite codes for sharing pools. Used when **SharedPoolsURL** or **LoginDa
 
 ---
 
-# Part 3 — App flow (Mermaid)
+# Part 4 — App flow (Mermaid)
 
-## 3.1 App entry and onboarding
+## 4.1 App entry and onboarding
 
 ```mermaid
 flowchart TD
@@ -286,7 +341,7 @@ flowchart TD
     F --> K[NotificationService.requestPermissionAndRegister]
 ```
 
-## 3.2 Main app structure (tabs)
+## 4.2 Main app structure (tabs)
 
 ```mermaid
 flowchart LR
@@ -302,7 +357,7 @@ flowchart LR
     T3 --> S[Profile, Account, Notifications, Join pool, Share My Pools, Erase data, About]
 ```
 
-## 3.3 Adding a pool (high-level)
+## 4.3 Adding a pool (high-level)
 
 ```mermaid
 flowchart TD
@@ -327,7 +382,7 @@ flowchart TD
     SAVE --> POOLS[Pool appears in Pools list & Live]
 ```
 
-## 3.4 Join pool with code flow
+## 4.4 Join pool with code flow
 
 ```mermaid
 flowchart TD
@@ -348,7 +403,7 @@ flowchart TD
     end
 ```
 
-## 3.5 Share pool (invite code) flow
+## 4.5 Share pool (invite code) flow
 
 ```mermaid
 flowchart TD
@@ -366,7 +421,7 @@ flowchart TD
     end
 ```
 
-## 3.6 Settings and account
+## 4.6 Settings and account
 
 ```mermaid
 flowchart TD
@@ -421,7 +476,7 @@ flowchart LR
     AS --> ESPN
 ```
 
-## 3.8 End-to-end flow summary
+## 4.8 End-to-end flow summary
 
 ```mermaid
 flowchart TB

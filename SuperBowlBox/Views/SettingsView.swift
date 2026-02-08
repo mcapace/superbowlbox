@@ -638,11 +638,8 @@ struct JoinPoolSheet: View {
                                 .fill(DesignSystem.Colors.surfaceElevated)
                         )
                         .onChange(of: code) { _, newValue in
-                            // Limit to 8 characters
-                            if newValue.count > 8 {
-                                code = String(newValue.prefix(8))
-                            }
-                            code = code.uppercased()
+                            let trimmed = String(newValue.prefix(8)).trimmingCharacters(in: .whitespaces).uppercased()
+                            if trimmed != code { code = trimmed }
                         }
 
                     if let error = error {

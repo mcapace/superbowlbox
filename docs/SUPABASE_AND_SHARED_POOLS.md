@@ -52,10 +52,10 @@ supabase db push
 
 When prompted for the database password, use the one you set for the project.
 
-This applies `supabase/migrations/20250204120000_create_logins_and_shared_pools.sql`, which creates:
+This applies all migrations in `supabase/migrations/`:
 
-- **shared_pools** — `code`, `pool_json`, RLS so anon can INSERT and SELECT.
-- **logins** — optional table for Apple, Google, and Email sign-in events; anon can INSERT (set **LoginDatabaseApiKey** so the app sends the key and recordLogin succeeds).
+- **20250204120000** — **shared_pools** (`code`, `pool_json`), RLS: anon INSERT + SELECT; **logins** (anon INSERT).
+- **20250204130000** — **shared_pools**: anon DELETE (so the app can remove a shared pool when the owner deletes it).
 
 ---
 
@@ -90,10 +90,23 @@ The app uses these for both shared pools and (if configured) logins. No extra ke
 
 ---
 
-## 5. Use it in the app
+## 5. Pre-flight: before sharing codes with testers
 
-- **Generate a code**: Settings → Share My Pools → tap a pool. The app uploads to Supabase and shows an 8-character code. Copy or share it.
-- **Join with a code**: Settings → Join Pool with Code (or Pools → Join with code) → enter the code → Join Pool. The joiner claims their name/boxes (no scan).
+| Check | What to do |
+|-------|------------|
+| **Secrets.plist** | Has **LoginDatabaseURL** = `https://YOUR_PROJECT_REF.supabase.co/rest/v1` and **LoginDatabaseApiKey** = your anon key. (Shared pools use these if **SharedPoolsURL** is not set.) |
+| **Migrations applied** | Run `supabase db push` from repo root so `shared_pools` (and optional `logins`) exist and RLS policies are in place. |
+| **Generate a code** | In the app: Settings → Share My Pools → tap a pool. You should see "Generating code…" then an 8-character code. If you see "Configure SharedPoolsURL or LoginDatabaseURL" or "Upload failed", fix Secrets and/or run migrations. |
+| **Join with code** | On another device (or simulator): Settings → Join Pool with Code → enter the 8-char code → Join Pool. You should get "Claim your boxes" and then the pool in your list. |
+
+**Where to share:** Settings → Share My Pools → tap pool → Copy Code or Message/Email/More. Testers: Settings → Join Pool with Code (or Pools tab → Join with code).
+
+---
+
+## 6. Use it in the app
+
+- **Generate a code:** Settings → Share My Pools → tap a pool. The app uploads to Supabase and shows an 8-character code. Copy or share via Message/Email/More.
+- **Join with a code:** Settings → Join Pool with Code (or Pools → Join with code) → enter the 8-character code → Join Pool. The joiner then claims their name/boxes (no scan).
 
 ---
 
