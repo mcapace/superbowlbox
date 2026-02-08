@@ -1,5 +1,6 @@
 import SwiftUI
 import UserNotifications
+import Combine
 
 @main
 struct SquareUpApp: App {
@@ -82,6 +83,7 @@ class AppState: ObservableObject {
     @Published var authService = AuthService()
     /// Last score we used when reviewing game context (for notifications). Used to detect period/lead changes.
     private var lastReviewedScore: GameScore?
+    private var cancellables = Set<AnyCancellable>()
 
     var currentPool: BoxGrid? {
         guard selectedPoolIndex >= 0 && selectedPoolIndex < pools.count else { return nil }
@@ -91,7 +93,24 @@ class AppState: ObservableObject {
     init() {
         hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
         loadPools()
-        // No sample/fake pool: when empty, user can upload, create, or join with code
+        syncMyNameFromAuth()
+        // Forward authService changes so views (e.g. Settings sign-in sheet) update when currentUser changes
+        authService.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.syncMyNameFromAuth()
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
+    }
+
+    /// When signed in, carry over display name or email into Profile (myName) if it's empty so login info appears in Settings.
+    private func syncMyNameFromAuth() {
+        guard myName.isEmpty, let user = authService.currentUser else { return }
+        let name = user.displayName ?? user.email ?? ""
+        guard !name.isEmpty else { return }
+        myName = name
+        savePools()
     }
 
     /// Add a pool (e.g. after create or join). Lock it when saving. Pass isOwner: false when joining via invite code.

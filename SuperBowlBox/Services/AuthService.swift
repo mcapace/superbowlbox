@@ -141,11 +141,13 @@ class AuthService: ObservableObject {
         errorMessage = nil
         do {
             let session = try await SupabaseAuthService.signIn(email: email.trimmingCharacters(in: .whitespaces), password: password)
+            let rawEmail = session.user.email ?? email
+            let displayName = rawEmail.split(separator: "@").first.map(String.init)
             let user = AuthUser(
                 provider: .email,
                 id: session.user.id,
-                email: session.user.email ?? email,
-                displayName: nil
+                email: rawEmail,
+                displayName: displayName
             )
             if let refresh = session.refreshToken {
                 UserDefaults.standard.set(refresh, forKey: emailRefreshTokenKey)
@@ -169,11 +171,13 @@ class AuthService: ObservableObject {
         errorMessage = nil
         do {
             let session = try await SupabaseAuthService.signUp(email: email.trimmingCharacters(in: .whitespaces), password: password)
+            let rawEmail = session.user.email ?? email
+            let displayName = rawEmail.split(separator: "@").first.map(String.init)
             let user = AuthUser(
                 provider: .email,
                 id: session.user.id,
-                email: session.user.email ?? email,
-                displayName: nil
+                email: rawEmail,
+                displayName: displayName
             )
             if let refresh = session.refreshToken {
                 UserDefaults.standard.set(refresh, forKey: emailRefreshTokenKey)

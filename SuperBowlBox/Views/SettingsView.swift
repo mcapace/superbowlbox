@@ -244,12 +244,12 @@ struct SettingsView: View {
                 InstructionsView(isOnboarding: false) { }
                     .environmentObject(appState)
             }
-            .sheet(isPresented: $showingSignIn) {
+            .sheet(isPresented: Binding(
+                get: { showingSignIn && appState.authService.currentUser == nil },
+                set: { showingSignIn = $0 }
+            )) {
                 OnboardingSignInView(authService: appState.authService, onSkip: { showingSignIn = false })
                     .environmentObject(appState)
-                    .onChange(of: appState.authService.currentUser) { _, new in
-                        if new != nil { showingSignIn = false }
-                    }
             }
             .alert("Erase all data?", isPresented: $showingEraseConfirmation) {
                 Button("Cancel", role: .cancel) { }

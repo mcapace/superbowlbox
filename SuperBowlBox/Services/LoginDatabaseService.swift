@@ -25,6 +25,10 @@ enum LoginDatabaseService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let key = LoginDatabaseConfig.apiKey {
+            request.setValue(key, forHTTPHeaderField: "Apikey")
+            request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        }
         request.httpBody = data
 
         URLSession.shared.dataTask(with: request) { _, response, _ in
