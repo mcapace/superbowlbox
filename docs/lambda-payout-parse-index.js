@@ -16,24 +16,31 @@ CRITICAL RULES:
 3. Distinguish between "per box/square" (investment) and "total pot/pool" (total amount).
 4. If the user specifies how 0-0 is handled, include it in readableRules.
 5. Only include a maxScoreChanges cap if the user explicitly mentions one (e.g., "stop at 25").
+6. If the rules are unclear or missing critical info (like payout amounts), set "needsClarification": true and include a "clarificationQuestion" asking what you need to know.
 
-POOL TYPES:
-- "perScoreChange": Pays on every score change. Use amountPerChange (the $ per change), maxScoreChanges (only if specified), totalPoolAmount.
+POOL TYPES (use "custom" if none fit):
+- "perScoreChange": Pays on every score change. Use amountPerChange, maxScoreChanges (only if specified), totalPoolAmount.
 - "byQuarter": Pays at end of Q1, Q2, Q3, Q4 (or Final). Use quarterNumbers and amountsPerPeriod.
 - "halftimeAndFinal": Two payouts only.
+- "halftimeOnly": Single halftime payout.
+- "finalOnly": Single final payout.
 - "firstScoreChange": One payout when score first changes from 0-0.
-- "custom": Non-standard periods.
+- "custom": Any non-standard rules. Use customPeriodLabels for period names.
 
-OUTPUT: Return ONLY valid JSON with these fields:
+OUTPUT: Return ONLY valid JSON. Fields:
 - poolType (required)
-- amountPerChange (for perScoreChange - the EXACT amount user specified)
+- needsClarification (boolean - true if rules are unclear, missing amounts, or ambiguous)
+- clarificationQuestion (string - question to ask user if needsClarification is true)
+- amountPerChange (for perScoreChange - the EXACT amount user specified, or null if not given)
 - maxScoreChanges (for perScoreChange - ONLY if user specifies a cap, otherwise null)
 - quarterNumbers (for byQuarter, e.g. [1,2,3,4])
-- amountsPerPeriod (array of dollar amounts in order)
+- customPeriodLabels (for custom, e.g. ["1st Half", "2nd Half", "OT"])
+- amountsPerPeriod (array of dollar amounts in order, or null if not specified)
+- payoutStyle ("fixedAmount" if amounts given, "equalSplit" if equal %, "percentage" if % given)
 - totalPoolAmount (total pot, NOT per-box amount)
-- zeroZeroCounts (boolean - true if 0-0 counts as first payout, false or omit if not)
-- currencyCode ("USD")
-- readableRules (1-3 sentences summarizing the rules - REQUIRED)
+- zeroZeroCounts (boolean - true if 0-0 counts as first payout)
+- currencyCode ("USD" default)
+- readableRules (1-3 sentences summarizing the rules - REQUIRED even if needsClarification)
 
 EXAMPLES:
 
@@ -47,7 +54,13 @@ Input: "$500 first quarter, $750 second quarter, $500 third quarter, $1,750 Fina
 Output: {"poolType":"byQuarter","quarterNumbers":[1,2,3,4],"amountsPerPeriod":[500,750,500,1750],"totalPoolAmount":3500,"currencyCode":"USD","readableRules":"Quarterly payouts: Q1 $500, Q2 $750, Q3 $500, Final $1,750. Total $3,500."}
 
 Input: "$100 per box, $10,000 total pot. $400 per score change. Stop at 25 scoring changes, remainder to final. 0-0 is not a score change."
-Output: {"poolType":"perScoreChange","amountPerChange":400,"maxScoreChanges":25,"totalPoolAmount":10000,"zeroZeroCounts":false,"currencyCode":"USD","readableRules":"$400 per score change. Stops at 25 changes; remainder goes to final score winner. 0-0 does not count. Total pot $10,000."}`;
+Output: {"poolType":"perScoreChange","amountPerChange":400,"maxScoreChanges":25,"totalPoolAmount":10000,"zeroZeroCounts":false,"currencyCode":"USD","readableRules":"$400 per score change. Stops at 25 changes; remainder goes to final score winner. 0-0 does not count. Total pot $10,000."}
+
+Input: "We pay out at halftime and final"
+Output: {"poolType":"halftimeAndFinal","needsClarification":true,"clarificationQuestion":"How much does each period pay? (e.g., '$500 halftime, $500 final' or 'split evenly')","payoutStyle":"equalSplit","currencyCode":"USD","readableRules":"Pays at halftime and final. Amounts not specified."}
+
+Input: "Winner of each quarter gets paid, overtime counts as Q5"
+Output: {"poolType":"custom","customPeriodLabels":["Q1","Q2","Q3","Q4","OT"],"needsClarification":true,"clarificationQuestion":"What are the payout amounts for each period?","payoutStyle":"equalSplit","currencyCode":"USD","readableRules":"Pays at end of Q1, Q2, Q3, Q4, and OT (as Q5). Amounts not specified."}`;
 
 exports.handler = async (event) => {
   const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
@@ -126,6 +139,8 @@ function postProcess(json, userText) {
   // Normalize the result structure
   const result = {
     poolType,
+    needsClarification: json.needsClarification || false,
+    clarificationQuestion: json.clarificationQuestion || null,
     quarterNumbers: null,
     customPeriodLabels: json.customPeriodLabels || null,
     payoutStyle: null,
@@ -134,6 +149,7 @@ function postProcess(json, userText) {
     maxScoreChanges: null,
     percentagesPerPeriod: json.percentagesPerPeriod || null,
     totalPoolAmount: null,
+    zeroZeroCounts: json.zeroZeroCounts || null,
     currencyCode: json.currencyCode || 'USD',
     readableRules: json.readableRules || null,
   };
