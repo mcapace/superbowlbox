@@ -3,36 +3,65 @@
  * Lambda: parse payout rules with Anthropic (same pattern as ai-grid).
  * Contract:
  *   App sends: POST application/json { "payoutDescription": "<user's free text>" }
- *   Returns: 200 + JSON matching PayoutParseService.Response (poolType, amountsPerPeriod, readableRules, etc.)
+ *   Returns: 200 + JSON matching PayoutParseService.Response
  * Env: ANTHROPIC_API_KEY (required). Optional: MODEL (default claude-sonnet-4-20250514).
  * Route: e.g. POST /parse-payout on your API Gateway.
  */
 
-const PROMPT = `You parse football/sports pool payout rules into structured JSON. The app uses your response for the grid header, current winner, and payouts — so output the structure that matches THIS user's description only.
+const SYSTEM_PROMPT = `You are a sports pool payout rules parser. Convert the user's free-text rules into structured JSON.
 
-Pools vary. Parse exactly what they wrote — do not assume a type. Common cases:
-- Standard quarterly: "byQuarter", pay at end of Q1/Q2/Q3/Q4. Often "equal split" (25% each) or "$X per quarter" (fixedAmount, amountsPerPeriod). quarterNumbers [1,2,3,4].
-- Halftime / final only: "halftimeOnly", "finalOnly", or "halftimeAndFinal" (two payouts).
-- First score: "firstScoreChange" — ONE payout when the score first changes from 0–0. amountsPerPeriod: [single amount] or equalSplit.
-- Per score change: "perScoreChange" only when they clearly say pay per score change / per point, stop at N, remainder to final, no payments for end of quarters/halftime. Then output amountPerChange, maxScoreChanges, totalPoolAmount. Omit quarterNumbers, amountsPerPeriod, payoutStyle.
-- Custom: "custom" with customPeriodLabels when they name non-standard periods.
+CRITICAL RULES:
+1. Extract the EXACT dollar amounts the user specifies. NEVER use default values like $400 or 25 if the user gave different numbers.
+2. Parse comma-formatted numbers correctly: "$1,750" = 1750, "$10,000" = 10000.
+3. Distinguish between "per box/square" (investment) and "total pot/pool" (total amount).
+4. If the user specifies how 0-0 is handled, include it in readableRules.
+5. Only include a maxScoreChanges cap if the user explicitly mentions one (e.g., "stop at 25").
 
-Output ONLY a single valid JSON object, no markdown. Include "readableRules" (REQUIRED): 1–3 clear sentences so the user understands how this pool pays.
+POOL TYPES:
+- "perScoreChange": Pays on every score change. Use amountPerChange (the $ per change), maxScoreChanges (only if specified), totalPoolAmount.
+- "byQuarter": Pays at end of Q1, Q2, Q3, Q4 (or Final). Use quarterNumbers and amountsPerPeriod.
+- "halftimeAndFinal": Two payouts only.
+- "firstScoreChange": One payout when score first changes from 0-0.
+- "custom": Non-standard periods.
 
-Examples:
-Standard quarterly: { "poolType": "byQuarter", "quarterNumbers": [1,2,3,4], "payoutStyle": "fixedAmount", "amountsPerPeriod": [25,25,50,25], "totalPoolAmount": 125, "currencyCode": "USD", "readableRules": "This pool pays $25 per quarter; halftime pays $50 (double)." }
-Equal split: { "poolType": "byQuarter", "quarterNumbers": [1,2,3,4], "payoutStyle": "equalSplit", "totalPoolAmount": 100, "currencyCode": "USD", "readableRules": "Equal split: 25% per quarter. Total pool $100." }
-Per score change (only if they describe it): { "poolType": "perScoreChange", "amountPerChange": 400, "maxScoreChanges": 25, "totalPoolAmount": 10000, "currencyCode": "USD", "readableRules": "..." }
+OUTPUT: Return ONLY valid JSON with these fields:
+- poolType (required)
+- amountPerChange (for perScoreChange - the EXACT amount user specified)
+- maxScoreChanges (for perScoreChange - ONLY if user specifies a cap, otherwise null)
+- quarterNumbers (for byQuarter, e.g. [1,2,3,4])
+- amountsPerPeriod (array of dollar amounts in order)
+- totalPoolAmount (total pot, NOT per-box amount)
+- zeroZeroCounts (boolean - true if 0-0 counts as first payout, false or omit if not)
+- currencyCode ("USD")
+- readableRules (1-3 sentences summarizing the rules - REQUIRED)
 
-Infer totalPoolAmount when implied. Use currencyCode "USD" if not stated.`;
+EXAMPLES:
+
+Input: "$5 payoff per score change, including starting score of 0-0. Final score winner takes remainder of the pot"
+Output: {"poolType":"perScoreChange","amountPerChange":5,"maxScoreChanges":null,"totalPoolAmount":null,"zeroZeroCounts":true,"currencyCode":"USD","readableRules":"$5 per score change. 0-0 counts as the first payout. Final score winner takes any remainder."}
+
+Input: "$125 first quarter, $250 second quarter, $125 third quarter, $500 Final"
+Output: {"poolType":"byQuarter","quarterNumbers":[1,2,3,4],"amountsPerPeriod":[125,250,125,500],"totalPoolAmount":1000,"currencyCode":"USD","readableRules":"Quarterly payouts: Q1 $125, Q2 $250, Q3 $125, Final $500. Total $1,000."}
+
+Input: "$500 first quarter, $750 second quarter, $500 third quarter, $1,750 Final"
+Output: {"poolType":"byQuarter","quarterNumbers":[1,2,3,4],"amountsPerPeriod":[500,750,500,1750],"totalPoolAmount":3500,"currencyCode":"USD","readableRules":"Quarterly payouts: Q1 $500, Q2 $750, Q3 $500, Final $1,750. Total $3,500."}
+
+Input: "$100 per box, $10,000 total pot. $400 per score change. Stop at 25 scoring changes, remainder to final. 0-0 is not a score change."
+Output: {"poolType":"perScoreChange","amountPerChange":400,"maxScoreChanges":25,"totalPoolAmount":10000,"zeroZeroCounts":false,"currencyCode":"USD","readableRules":"$400 per score change. Stops at 25 changes; remainder goes to final score winner. 0-0 does not count. Total pot $10,000."}`;
 
 exports.handler = async (event) => {
   const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+
   try {
     let body = event.body;
-    if (event.isBase64Encoded && body) body = Buffer.from(body, 'base64').toString('utf8');
-    if (typeof body === 'string') body = JSON.parse(body);
-    if (!body || typeof body.payoutDescription !== 'string') {
+    if (event.isBase64Encoded && body) {
+      body = Buffer.from(body, 'base64').toString('utf8');
+    }
+    if (typeof body === 'string') {
+      body = JSON.parse(body);
+    }
+
+    if (!body || typeof body.payoutDescription !== 'string' || !body.payoutDescription.trim()) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing payoutDescription' }) };
     }
 
@@ -41,9 +70,9 @@ exports.handler = async (event) => {
       return { statusCode: 500, headers, body: JSON.stringify({ error: 'ANTHROPIC_API_KEY not set' }) };
     }
 
-    const userMessage = `Parse these pool payout rules into the JSON format:\n\n"${body.payoutDescription}"`;
-
+    const userText = body.payoutDescription.trim();
     const model = process.env.MODEL || 'claude-sonnet-4-20250514';
+
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -54,7 +83,8 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         model,
         max_tokens: 2048,
-        messages: [{ role: 'user', content: userMessage }],
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userText }],
       }),
     });
 
@@ -67,88 +97,167 @@ exports.handler = async (event) => {
     const data = await res.json();
     let text = data.content?.[0]?.text ?? '';
     text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-    const json = JSON.parse(text);
-    const inputText = (body.payoutDescription || '').toLowerCase();
-    const raw = body.payoutDescription || '';
-    const isFirstScorePool = /first\s*score\s*wins|first\s*(td|fg|field\s*goal|team\s*to\s*score)/i.test(raw) && !/per\s*score\s*change|\$\d+\s*per\s*(score\s*change|point)/i.test(raw);
-    const isPerScoreChangePool = /\$?\s*\d+\s*(dollars?)?\s*per\s*(score\s*change|point)|per\s*score\s*change|stop\s*at\s*\d+|remainder\s*to\s*final|no\s*payments?\s*for\s*(end\s*of\s*quarters?|halftime|end\s*of\s*game)/i.test(raw);
 
-    let poolType = json.poolType ?? 'byQuarter';
-    let payoutStyle = json.payoutStyle ?? 'equalSplit';
-    let amountsPerPeriod = Array.isArray(json.amountsPerPeriod) && json.amountsPerPeriod.length > 0 ? json.amountsPerPeriod : null;
-    let amountPerChange = typeof json.amountPerChange === 'number' ? json.amountPerChange : null;
-    let maxScoreChanges = typeof json.maxScoreChanges === 'number' ? json.maxScoreChanges : (json.maxScoreChanges === null ? null : undefined);
-    let totalPoolAmount = json.totalPoolAmount;
-
-    if (isPerScoreChangePool) {
-      poolType = 'perScoreChange';
-      if (amountPerChange == null) {
-        const m = raw.match(/\$?\s*(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:dollars?)?\s*per\s*(?:score\s*change|point)/i) || raw.match(/(\d+)\s*dollars?\s*per\s*(?:score\s*change|point)/i);
-        if (m) amountPerChange = parseFloat(String(m[1]).replace(/,/g, ''));
-      }
-      if (maxScoreChanges === undefined) {
-        const m = raw.match(/stop\s*at\s*(\d+)|(\d+)\s*scoring\s*changes?/i);
-        if (m) maxScoreChanges = parseInt(m[1] || m[2], 10);
-        else maxScoreChanges = 25;
-      }
-      if (totalPoolAmount == null) {
-        const m = raw.match(/\$?\s*(\d+(?:,\d{3})*)\s*(?:total|pot|pool)|(\d+)\s*per\s*box|total\s*pot\s*\$?\s*(\d+)/i);
-        if (m) totalPoolAmount = parseFloat(String(m[1] || m[2] || m[3]).replace(/,/g, ''));
-      }
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (e) {
+      console.error('JSON parse error:', e.message, 'Raw:', text);
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Failed to parse AI response', raw: text }) };
     }
 
-    if (isFirstScorePool && poolType !== 'firstScoreChange') {
-      poolType = 'firstScoreChange';
-      if (!amountsPerPeriod || amountsPerPeriod.length === 0) {
-        const match = raw.match(/\$?\s*(\d+(?:\.\d+)?)/);
-        if (match) {
-          amountsPerPeriod = [parseFloat(match[1])];
-          payoutStyle = 'fixedAmount';
-        }
-      }
-    }
+    // Post-process and validate
+    const result = postProcess(json, userText);
 
-    const hasDollars = /\$|dollar|dollars/.test(inputText);
-    if (!isPerScoreChangePool && !isFirstScorePool && hasDollars && (!amountsPerPeriod || payoutStyle === 'equalSplit')) {
-      // Extract numbers that look like dollar amounts (after $ or "X dollars")
-      const numbers = (body.payoutDescription || '').match(/\$?\s*(\d+(?:\.\d+)?)\s*(?:dollars?)?/gi);
-      if (numbers && numbers.length >= 1) {
-        const amounts = numbers.slice(0, 8).map((s) => {
-          const n = parseFloat(String(s).replace(/[^\d.]/g, ''));
-          return isNaN(n) ? 0 : n;
-        }).filter((n) => n > 0);
-        if (amounts.length >= 1) {
-          // If we got one number and it's "per quarter" style, repeat for 4 quarters (or 2 for halftime+final)
-          const byQuarter = /quarter|q1|q2|q3|q4|per (?:period|box)/i.test(body.payoutDescription || '');
-          const halftimeDouble = /halftime.*double|double.*halftime/i.test(body.payoutDescription || '');
-          if (byQuarter && amounts.length === 1 && amounts[0] > 0) {
-            const base = amounts[0];
-            amountsPerPeriod = halftimeDouble ? [base, base, base * 2, base] : [base, base, base, base];
-          } else if (amounts.length >= 2) {
-            amountsPerPeriod = amounts;
-          }
-          if (amountsPerPeriod) payoutStyle = 'fixedAmount';
-        }
-      }
-    }
-
-    const out = {
-      poolType,
-      quarterNumbers: poolType === 'perScoreChange' ? null : (json.quarterNumbers ?? [1, 2, 3, 4]),
-      customPeriodLabels: json.customPeriodLabels ?? null,
-      payoutStyle: poolType === 'perScoreChange' ? null : payoutStyle,
-      amountsPerPeriod: poolType === 'perScoreChange' ? null : amountsPerPeriod,
-      amountPerChange: poolType === 'perScoreChange' ? (amountPerChange ?? 400) : null,
-      maxScoreChanges: poolType === 'perScoreChange' ? (maxScoreChanges ?? 25) : null,
-      percentagesPerPeriod: json.percentagesPerPeriod ?? null,
-      totalPoolAmount: totalPoolAmount ?? json.totalPoolAmount ?? null,
-      currencyCode: json.currencyCode ?? 'USD',
-      readableRules: typeof json.readableRules === 'string' && json.readableRules.trim() ? json.readableRules.trim() : null,
-    };
-
-    return { statusCode: 200, headers, body: JSON.stringify(out) };
+    return { statusCode: 200, headers, body: JSON.stringify(result) };
   } catch (e) {
     console.error('Lambda error:', e.message, e.stack);
     return { statusCode: 500, headers, body: JSON.stringify({ error: String(e.message) }) };
   }
 };
+
+/**
+ * Post-process Claude's response to ensure correctness.
+ * Fixes comma-formatted numbers and validates amounts against user input.
+ */
+function postProcess(json, userText) {
+  const poolType = json.poolType || 'byQuarter';
+
+  // Normalize the result structure
+  const result = {
+    poolType,
+    quarterNumbers: null,
+    customPeriodLabels: json.customPeriodLabels || null,
+    payoutStyle: null,
+    amountsPerPeriod: null,
+    amountPerChange: null,
+    maxScoreChanges: null,
+    percentagesPerPeriod: json.percentagesPerPeriod || null,
+    totalPoolAmount: null,
+    currencyCode: json.currencyCode || 'USD',
+    readableRules: json.readableRules || null,
+  };
+
+  // Parse totalPoolAmount - look for "total pot/pool" pattern, not "per box"
+  if (json.totalPoolAmount != null) {
+    result.totalPoolAmount = parseNumber(json.totalPoolAmount);
+  } else {
+    // Try to extract from user text - look for total pot/pool, not per box
+    const totalMatch = userText.match(/\$\s*([\d,]+(?:\.\d+)?)\s*(?:total\s*(?:pot|pool)|pot|pool\s*total)/i);
+    if (totalMatch) {
+      result.totalPoolAmount = parseNumber(totalMatch[1]);
+    }
+  }
+
+  // Handle per-score-change pools
+  if (poolType === 'perScoreChange') {
+    // Extract amount per change from Claude or from user text
+    if (json.amountPerChange != null) {
+      result.amountPerChange = parseNumber(json.amountPerChange);
+    } else {
+      // Fallback: extract from user text
+      const amtMatch = userText.match(/\$\s*([\d,]+(?:\.\d+)?)\s*(?:dollars?)?\s*(?:per|each)\s*(?:score\s*change|point|payoff)/i)
+        || userText.match(/\$\s*([\d,]+(?:\.\d+)?)\s*(?:payoff|payout)\s*per\s*(?:score\s*change|point)/i);
+      if (amtMatch) {
+        result.amountPerChange = parseNumber(amtMatch[1]);
+      }
+    }
+
+    // Only set maxScoreChanges if Claude returned it or user explicitly mentioned a cap
+    if (json.maxScoreChanges != null) {
+      result.maxScoreChanges = json.maxScoreChanges;
+    } else {
+      // Check if user mentioned a cap
+      const capMatch = userText.match(/stop\s*(?:at|after)\s*(\d+)|(\d+)\s*(?:score\s*)?changes?\s*(?:max|cap|limit)/i);
+      if (capMatch) {
+        result.maxScoreChanges = parseInt(capMatch[1] || capMatch[2], 10);
+      }
+      // If no cap mentioned, leave as null (not 25 default)
+    }
+
+    return result;
+  }
+
+  // Handle quarterly pools
+  if (poolType === 'byQuarter' || poolType === 'halftimeAndFinal' || poolType === 'halftimeOnly' || poolType === 'finalOnly') {
+    result.quarterNumbers = json.quarterNumbers || [1, 2, 3, 4];
+
+    // Parse amountsPerPeriod - handle comma-formatted numbers
+    if (Array.isArray(json.amountsPerPeriod) && json.amountsPerPeriod.length > 0) {
+      result.amountsPerPeriod = json.amountsPerPeriod.map(parseNumber);
+      result.payoutStyle = 'fixedAmount';
+    } else {
+      // Fallback: try to extract amounts from user text
+      const amounts = extractAmountsFromText(userText);
+      if (amounts.length > 0) {
+        result.amountsPerPeriod = amounts;
+        result.payoutStyle = 'fixedAmount';
+      } else {
+        result.payoutStyle = json.payoutStyle || 'equalSplit';
+      }
+    }
+
+    // Calculate total if we have amounts but no total
+    if (result.amountsPerPeriod && result.totalPoolAmount == null) {
+      result.totalPoolAmount = result.amountsPerPeriod.reduce((a, b) => a + b, 0);
+    }
+
+    return result;
+  }
+
+  // Handle first score change
+  if (poolType === 'firstScoreChange') {
+    if (Array.isArray(json.amountsPerPeriod) && json.amountsPerPeriod.length > 0) {
+      result.amountsPerPeriod = json.amountsPerPeriod.map(parseNumber);
+      result.payoutStyle = 'fixedAmount';
+    } else {
+      result.payoutStyle = 'equalSplit';
+    }
+    return result;
+  }
+
+  // Handle custom pools
+  if (poolType === 'custom') {
+    result.customPeriodLabels = json.customPeriodLabels || [];
+    if (Array.isArray(json.amountsPerPeriod)) {
+      result.amountsPerPeriod = json.amountsPerPeriod.map(parseNumber);
+      result.payoutStyle = 'fixedAmount';
+    } else {
+      result.payoutStyle = 'equalSplit';
+    }
+    return result;
+  }
+
+  return result;
+}
+
+/**
+ * Parse a number that may have commas (e.g., "1,750" -> 1750).
+ */
+function parseNumber(val) {
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') {
+    const cleaned = val.replace(/[$,]/g, '').trim();
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+  }
+  return 0;
+}
+
+/**
+ * Extract dollar amounts from text, handling comma-formatted numbers.
+ * Returns array of numbers in the order they appear.
+ */
+function extractAmountsFromText(text) {
+  const amounts = [];
+  // Match $X,XXX or $XXX patterns, including comma-formatted
+  const regex = /\$\s*([\d,]+(?:\.\d+)?)/g;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    const num = parseNumber(match[1]);
+    if (num > 0) {
+      amounts.push(num);
+    }
+  }
+  return amounts;
+}
