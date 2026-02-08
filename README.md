@@ -94,7 +94,7 @@ SuperBowlBox/
 - **UI (labels, buttons, cards):** System rounded for clarity and consistency.
 - **Tracking:** Slight letter-spacing on “SquareUp” and live labels via `AppTracking.display` for a logo-like feel.
 
-## Sign in with Apple & Google
+## Sign in with Apple, Google & Email
 
 - **Sign in with Apple** works as soon as the capability is enabled: in Xcode, select the target → **Signing & Capabilities** → **+ Capability** → **Sign in with Apple**. The app uses the default entitlement and shows the native Apple button in **Settings → Account**.
 - **Sign in with Google** is wired in the UI and in `AuthService`; the implementation is compiled in only when the [GoogleSignIn-iOS](https://github.com/google/GoogleSignIn-iOS) package is added:
@@ -103,6 +103,7 @@ SuperBowlBox/
      - **Info.plist**: add `GIDClientID` (string) = your iOS client ID.
      - **URL scheme**: add a URL type with the *reversed* client ID (e.g. `com.googleusercontent.apps.123456789-xxxx`).
   3. Rebuild; **Sign in with Google** in Settings will then use the SDK.
+- **Sign in with Email** uses Supabase Auth when **LoginDatabaseURL** and **LoginDatabaseApiKey** (and Supabase Auth enabled for email) are set. The app shows "Sign in with Email" in onboarding and in **Settings → Account** when signed out. When you sign in (any provider), your name or email is shown in Account and, if **Profile → Your name** was empty, it is filled from the login so it carries over for highlighting your boxes.
 
 ## Push notifications & polish
 

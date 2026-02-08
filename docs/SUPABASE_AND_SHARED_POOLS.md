@@ -1,6 +1,6 @@
 # Use Supabase for Share Codes (CLI)
 
-SquareUp uses **Supabase** so you can generate invite codes and let others join a pool without scanning. This repo is set up to use the **Supabase CLI** only (no dashboard SQL). One project gives you **shared_pools** (invite codes) and **logins** (optional Apple/Google sign-in events).
+SquareUp uses **Supabase** so you can generate invite codes and let others join a pool without scanning. This repo is set up to use the **Supabase CLI** only (no dashboard SQL). One project gives you **shared_pools** (invite codes) and **logins** (optional Apple, Google, and Email sign-in events).
 
 ---
 
@@ -55,7 +55,7 @@ When prompted for the database password, use the one you set for the project.
 This applies `supabase/migrations/20250204120000_create_logins_and_shared_pools.sql`, which creates:
 
 - **shared_pools** — `code`, `pool_json`, RLS so anon can INSERT and SELECT.
-- **logins** — optional table for sign-in events; anon can INSERT.
+- **logins** — optional table for Apple, Google, and Email sign-in events; anon can INSERT (set **LoginDatabaseApiKey** so the app sends the key and recordLogin succeeds).
 
 ---
 

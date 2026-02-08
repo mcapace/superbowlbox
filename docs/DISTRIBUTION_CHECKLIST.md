@@ -72,12 +72,13 @@ All URLs must be **HTTPS** and **reachable from the internet** (no `localhost`).
 
 ---
 
-## 4. Sign‑in (Apple + Google)
+## 4. Sign‑in (Apple, Google & Email)
 
 - [ ] **Sign in with Apple:** Team set in Xcode; “Sign in with Apple” capability added; App ID has it enabled for production.
 - [ ] **Sign in with Google:** **GIDClientID** and URL scheme in Info.plist (and GoogleSignIn package). These are in the repo; ensure they’re your **production** client ID if you use a different one for prod.
+- [ ] **Sign in with Email:** **LoginDatabaseURL** and **LoginDatabaseApiKey** (Supabase) set in Secrets.plist; Supabase Auth enabled for email in project. Create a test user for App Review if needed (see **docs/APPLE_REVIEW.md**).
 
-No secrets for sign‑in are in Secrets.plist; they’re in Info.plist / capabilities and are included in the app when you Archive.
+No secrets for Apple/Google sign‑in are in Secrets.plist; they’re in Info.plist / capabilities. Email sign‑in uses Supabase (Secrets.plist) and is included when you Archive.
 
 ---
 

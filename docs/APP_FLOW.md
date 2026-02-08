@@ -16,7 +16,7 @@ flowchart TD
     D -->|No| E[fullScreenCover: InstructionsView]
     D -->|Yes| F[TabView: main app]
     E --> G[Onboarding steps]
-    G --> G1[Step 0: Sign in to sync - Apple/Google or Skip]
+    G --> G1[Step 0: Sign in to sync - Apple / Google / Email or Skip]
     G1 --> G2[Step 1: Create or scan a pool]
     G2 --> G3[Step 2: Set your name]
     G3 --> G4[Step 3: Watch live scores]
@@ -194,15 +194,17 @@ flowchart TD
 flowchart TD
     subgraph Settings["SettingsView"]
         SV0[Profile: Your name - used to highlight your boxes]
-        SV1[Account: Sign in to sync - sheet with Apple/Google]
-        SV2[Account: Sign out if signed in]
-        SV3[Notifications toggles]
-        SV4[Join pool with code]
-        SV5[Share My Pools - list of pools, tap to get invite code]
-        SV6[Erase all data - confirm then clear pools, myName, sign out]
-        SV7[About: How it works, About Square Up, Version]
-        SV4 --> JoinPoolSheet
-        SV5 --> SharePoolSheet
+        SV0a[Profile/name carried over from sign-in when empty - Apple/Google displayName or email local part]
+        SV1[Account: if signed out → Sign in to sync - sheet with Apple / Google / Email]
+        SV1a[Account: if signed in → provider icon + name/email + Sign Out]
+        SV1b[Sign-in sheet dismisses when currentUser is set; AppState forwards auth changes]
+        SV2[Notifications toggles]
+        SV3[Join pool with code]
+        SV4[Share My Pools - list of pools, tap to get invite code]
+        SV5[Erase all data - confirm then clear pools, myName, sign out]
+        SV6[About: How it works, About Square Up, Version]
+        SV3 --> JoinPoolSheet
+        SV4 --> SharePoolSheet
     end
 ```
 
@@ -235,12 +237,15 @@ flowchart LR
     subgraph App["SquareUp app"]
         UI[Views]
         AS[AppState]
+        AUTH[AuthService: Apple/Google/Email, currentUser, recordLogin]
         UI --> AS
+        AS --> AUTH
     end
     subgraph Local["Local"]
-        UD[UserDefaults: savedPools, myName, hasCompletedOnboarding]
+        UD[UserDefaults: savedPools, myName, hasCompletedOnboarding, authUser]
         AS --> UD
     end
+    AUTH --> LD
     subgraph Backends["Optional backends"]
         AI[AIGridConfig - Lambda/Claude for grid scan]
         TX[TextractConfig - fallback OCR]
@@ -275,6 +280,7 @@ flowchart TB
     Main --> Pools[Pools: add or list pools]
     Main --> Boxes[My Boxes: your squares]
     Main --> Set[Settings: profile, account, join code, share pools, erase]
+    Set --> NameCarry[When signed in: name from login carries to Profile if empty]
     Pools --> Add{Add pool}
     Add --> Scan[Scan sheet → OCR/AI → Review → Payout rules → Save]
     Add --> Create[Create new / from game → Enter numbers → Save]

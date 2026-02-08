@@ -6,19 +6,19 @@ Canonical schema is defined in **`supabase/migrations/20250204120000_create_logi
 
 ## 1. `public.logins`
 
-Stores Apple/Google sign-in events when **LoginDatabaseURL** and **LoginDatabaseApiKey** are set in Secrets.plist.
+Stores sign-in events (Apple, Google, or Email) when **LoginDatabaseURL** and **LoginDatabaseApiKey** are set in Secrets.plist.
 
 | Column             | Type         | Notes                    |
 |--------------------|--------------|--------------------------|
 | `id`               | `uuid`       | PK, default `gen_random_uuid()` |
-| `provider`         | `text`       | NOT NULL — `"apple"` or `"google"` |
+| `provider`         | `text`       | NOT NULL — `"apple"`, `"google"`, or `"email"` |
 | `provider_uid`     | `text`       | NOT NULL — opaque ID from provider |
 | `email`            | `text`       | nullable                 |
 | `display_name`     | `text`       | nullable                 |
 | `client_timestamp` | `timestamptz`| nullable                 |
 | `created_at`       | `timestamptz`| NOT NULL, default `now()` |
 
-**RLS:** anon can `INSERT` only. App POSTs to `{LoginDatabaseURL}/logins` on sign-in (and optionally to `/logins/signout` on sign-out).
+**RLS:** anon can `INSERT` only. App sends `Apikey` and `Authorization: Bearer <key>` when **LoginDatabaseApiKey** is set so Supabase accepts the request. App POSTs to `{LoginDatabaseURL}/logins` on sign-in (Apple, Google, or Email) and optionally to `/logins/signout` on sign-out.
 
 See **docs/LOGIN_DATABASE.md** for payload and setup.
 

@@ -1,13 +1,13 @@
-# Login Database (Apple & Google logins)
+# Login Database (Apple, Google & Email logins)
 
-The app can send login (and optional sign-out) events to **your backend** so you can store them in a database. If you don’t set a URL, nothing is sent and behavior is unchanged.
+The app can send login (and optional sign-out) events to **your backend** so you can store them in a database. Sign-in is supported via **Sign in with Apple**, **Sign in with Google**, and **Email** (Supabase Auth). If you don’t set a URL, nothing is sent and behavior is unchanged.
 
 ## 1. Configure the app
 
 In **Secrets.plist** (copy from `Secrets.example.plist` if needed), set:
 
 - **`LoginDatabaseURL`** — base URL of your API (no trailing path).
-- **`LoginDatabaseApiKey`** — (optional) e.g. Supabase anon key. If set, sent as `Apikey` and `Authorization: Bearer` so you can POST directly to Supabase REST.
+- **`LoginDatabaseApiKey`** — (optional) e.g. Supabase anon key. If set, the app sends it as `Apikey` and `Authorization: Bearer <key>` on every POST to `.../logins` and `.../logins/signout`, so Supabase accepts the request (required for recordLogin to succeed when using Supabase).
 
 Examples:
 
@@ -16,7 +16,7 @@ Examples:
 
 The app will POST to:
 
-- **`{LoginDatabaseURL}/logins`** — when a user signs in with Apple or Google.
+- **`{LoginDatabaseURL}/logins`** — when a user signs in with Apple, Google, or Email.
 - **`{LoginDatabaseURL}/logins/signout`** — when a user signs out (optional; your backend may ignore this).
 
 ## 2. Payload (POST /logins)
@@ -25,10 +25,10 @@ JSON body:
 
 | Field             | Type   | Description                          |
 |-------------------|--------|--------------------------------------|
-| `provider`        | string | `"apple"` or `"google"`             |
+| `provider`        | string | `"apple"`, `"google"`, or `"email"` |
 | `provider_uid`    | string | Opaque user ID from the provider    |
 | `email`           | string \| null | Email (if provided by provider) |
-| `display_name`    | string \| null | Name (if provided)              |
+| `display_name`    | string \| null | Name (if provided); for Email sign-in the app sends the local part of the email, e.g. `john` from `john@example.com`) |
 | `client_timestamp`| string | ISO 8601 time when the app sent it  |
 
 Example:

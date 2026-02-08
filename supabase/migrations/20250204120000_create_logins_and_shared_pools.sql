@@ -1,4 +1,4 @@
--- SquareUp: logins (Apple/Google sign-in events) and shared_pools (invite codes)
+-- SquareUp: logins (Apple/Google/Email sign-in events) and shared_pools (invite codes)
 
 -- =============================================================================
 -- Table: logins

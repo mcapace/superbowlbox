@@ -21,7 +21,7 @@ Use **one** `Secrets.plist` for every environment: local (simulator/device), pro
 | **TextractBackendURL** | Optional OCR backend | Lambda URL + `/ocr` | Only used when AIGridBackendURL is not set |
 | **SportsDataIOApiKey** | Live NFL scores (primary) | API key from [sportsdata.io](https://sportsdata.io) | App uses ESPN for scores |
 | **LoginDatabaseURL** | Sign-in + optional shared pools | `https://YOUR_PROJECT_REF.supabase.co/rest/v1` (your Supabase project) | No login recording; no share/join via Supabase |
-| **LoginDatabaseApiKey** | Supabase auth | Supabase **anon** key from project dashboard | Required if LoginDatabaseURL is set |
+| **LoginDatabaseApiKey** | Supabase auth | Supabase **anon** key from project dashboard; app sends as `Apikey` + `Authorization: Bearer` so recordLogin (Apple/Google/Email) succeeds | Required if LoginDatabaseURL is set |
 | **SharedPoolsURL** | Optional separate share/join backend | Full base URL of your share API | Falls back to LoginDatabaseURL (one Supabase for logins + pools) |
 | **SharedPoolsApiKey** | Optional API key for SharedPoolsURL | Your share backend key | Falls back to LoginDatabaseApiKey |
 | **AWSRegion** | For Textract (if used) | e.g. `us-east-1` | Only needed if using Textract backend |
