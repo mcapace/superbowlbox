@@ -4,8 +4,12 @@ import Foundation
 /// When PayoutParseBackendURL is set, the app uses only the API response for grid, modal, and payouts (no local inference). The AI powers the logic.
 enum PayoutParseService {
     struct Response: Decodable {
-        /// byQuarter | halftimeOnly | finalOnly | halftimeAndFinal | firstScoreChange | custom
+        /// byQuarter | halftimeOnly | finalOnly | halftimeAndFinal | firstScoreChange | perScoreChange | custom
         let poolType: String?
+        /// True if the AI needs more info to parse the rules correctly
+        let needsClarification: Bool?
+        /// Question to ask the user if needsClarification is true
+        let clarificationQuestion: String?
         /// For byQuarter: e.g. [1,2,3,4]
         let quarterNumbers: [Int]?
         /// For custom: e.g. ["Q1","Q2","Halftime","Final"]
@@ -24,6 +28,17 @@ enum PayoutParseService {
         let amountPerChange: Double?
         /// For perScoreChange: cap on number of payouts (e.g. 25); remainder goes to final.
         let maxScoreChanges: Int?
+        /// True if 0-0 counts as the first score change payout
+        let zeroZeroCounts: Bool?
+    }
+
+    /// Result of parsing payout rules - includes clarification info if needed
+    struct ParseResult {
+        let structure: PoolStructure
+        let needsClarification: Bool
+        let clarificationQuestion: String?
+
+        var isComplete: Bool { !needsClarification }
     }
 
     /// Infer payout structure from rules text when backend is unavailable or returns equalSplit.
@@ -32,65 +47,75 @@ enum PayoutParseService {
         let lower = text.lowercased()
 
         // Per score change: $X per score change, stop at N, remainder to final
-        let isPerScoreChange = (lower.contains("per score change") || (lower.contains("score change") && lower.contains("$"))) && (lower.contains("stop at") || lower.contains("remainder") || lower.contains("25"))
+        let isPerScoreChange = (lower.contains("per score change") || lower.contains("per point") || (lower.contains("score change") && lower.contains("$")))
         if isPerScoreChange {
-            var amount: Double = 400
-            if let regex = try? NSRegularExpression(pattern: #"\$?\s*(\d{2,4})\s*(?:dollars?)?\s*per\s*(?:score\s*change|point)"#, options: .caseInsensitive),
+            var amount: Double?
+            // Extract amount - handle comma-formatted numbers
+            if let regex = try? NSRegularExpression(pattern: #"\$\s*([\d,]+(?:\.\d+)?)\s*(?:dollars?)?\s*(?:per|each)\s*(?:score\s*change|point|payoff)"#, options: .caseInsensitive),
                let m = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
-               let r = Range(m.range(at: 1), in: text), let n = Double(text[r]), n > 0 { amount = n }
-            var maxChanges: Int? = 25
-            if let regex = try? NSRegularExpression(pattern: #"stop\s*at\s*(\d+)"#, options: .caseInsensitive),
+               let r = Range(m.range(at: 1), in: text) {
+                let numStr = String(text[r]).replacingOccurrences(of: ",", with: "")
+                amount = Double(numStr)
+            }
+
+            var maxChanges: Int?
+            if let regex = try? NSRegularExpression(pattern: #"stop\s*(?:at|after)\s*(\d+)"#, options: .caseInsensitive),
                let m = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
-               m.range(at: 1).location != NSNotFound, let r = Range(m.range(at: 1), in: text), let n = Int(text[r]), n > 0 { maxChanges = n }
-            else if lower.contains("25") { maxChanges = 25 }
-            var total: Double? = 10000
-            if lower.contains("10,000") || lower.contains("10000") || lower.contains("$10,000") { total = 10000 }
-            if lower.contains("100 per box") || lower.contains("$100 per box") { total = 10000 }
-            return PoolStructure(poolType: .perScoreChange(amountPerChange: amount, maxScoreChanges: maxChanges), payoutStyle: .equalSplit, totalPoolAmount: total, currencyCode: "USD", customPayoutDescription: nil)
+               m.range(at: 1).location != NSNotFound, let r = Range(m.range(at: 1), in: text), let n = Int(text[r]), n > 0 {
+                maxChanges = n
+            }
+
+            var total: Double?
+            // Look for total pot/pool (not per box)
+            if let regex = try? NSRegularExpression(pattern: #"\$\s*([\d,]+)\s*(?:total\s*(?:pot|pool)|pot|pool)"#, options: .caseInsensitive),
+               let m = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+               let r = Range(m.range(at: 1), in: text) {
+                let numStr = String(text[r]).replacingOccurrences(of: ",", with: "")
+                total = Double(numStr)
+            }
+
+            if let amt = amount {
+                return PoolStructure(poolType: .perScoreChange(amountPerChange: amt, maxScoreChanges: maxChanges), payoutStyle: .equalSplit, totalPoolAmount: total, currencyCode: "USD", customPayoutDescription: text)
+            }
         }
 
         // First score / score change: one payout when score first changes from 0–0
         let isFirstScore = (lower.contains("first score") || lower.contains("first td") || lower.contains("first field goal") || lower.contains("first team to score")) && !isPerScoreChange
         if isFirstScore {
-            let pattern = #"\$\s*(\d+(?:\.\d+)?)|\b(\d+(?:\.\d+)?)\s*dollars?"#
+            let pattern = #"\$\s*([\d,]+(?:\.\d+)?)"#
             guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
-                return PoolStructure(poolType: .firstScoreChange, payoutStyle: .equalSplit, currencyCode: "USD", customPayoutDescription: nil)
+                return PoolStructure(poolType: .firstScoreChange, payoutStyle: .equalSplit, currencyCode: "USD", customPayoutDescription: text)
             }
             let range = NSRange(text.startIndex..., in: text)
             var amount: Double?
             regex.enumerateMatches(in: text, options: [], range: range) { match, _, _ in
-                guard let m = match else { return }
-                for i in 1..<m.numberOfRanges {
-                    guard m.range(at: i).location != NSNotFound, let r = Range(m.range(at: i), in: text), let n = Double(text[r]), n > 0 else { continue }
-                    amount = n
-                    return
-                }
+                guard let m = match, let r = Range(m.range(at: 1), in: text) else { return }
+                let numStr = String(text[r]).replacingOccurrences(of: ",", with: "")
+                if let n = Double(numStr), n > 0 { amount = n; return }
             }
             if let amt = amount {
-                return PoolStructure(poolType: .firstScoreChange, payoutStyle: .fixedAmount([amt]), totalPoolAmount: amt, currencyCode: "USD", customPayoutDescription: nil)
+                return PoolStructure(poolType: .firstScoreChange, payoutStyle: .fixedAmount([amt]), totalPoolAmount: amt, currencyCode: "USD", customPayoutDescription: text)
             }
-            return PoolStructure(poolType: .firstScoreChange, payoutStyle: .equalSplit, currencyCode: "USD", customPayoutDescription: nil)
+            return PoolStructure(poolType: .firstScoreChange, payoutStyle: .equalSplit, currencyCode: "USD", customPayoutDescription: text)
         }
 
         let hasDollars = lower.contains("$") || lower.contains("dollar")
         guard hasDollars else { return nil }
 
-        // Extract numbers that look like dollar amounts: $25 or 25 dollars
-        let pattern = #"\$\s*(\d+(?:\.\d+)?)|\b(\d+(?:\.\d+)?)\s*dollars?"#
+        // Extract dollar amounts - handle comma-formatted numbers
+        let pattern = #"\$\s*([\d,]+(?:\.\d+)?)"#
         guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return nil }
         let range = NSRange(text.startIndex..., in: text)
         var amounts: [Double] = []
         regex.enumerateMatches(in: text, options: [], range: range) { match, _, _ in
-            guard let m = match else { return }
-            for i in 1..<m.numberOfRanges {
-                guard m.range(at: i).location != NSNotFound, let r = Range(m.range(at: i), in: text) else { continue }
-                if let num = Double(text[r]), num > 0 { amounts.append(num) }
-            }
+            guard let m = match, let r = Range(m.range(at: 1), in: text) else { return }
+            let numStr = String(text[r]).replacingOccurrences(of: ",", with: "")
+            if let num = Double(numStr), num > 0 { amounts.append(num) }
         }
         if amounts.isEmpty { return nil }
 
         let halftimeDouble = lower.contains("halftime") && (lower.contains("double") || lower.contains("2x") || lower.contains("twice"))
-        let byQuarter = lower.contains("quarter") || lower.contains("q1") || lower.contains("q2") || lower.contains("q3") || lower.contains("q4")
+        let byQuarter = lower.contains("quarter") || lower.contains("q1") || lower.contains("q2") || lower.contains("q3") || lower.contains("q4") || lower.contains("final")
 
         if byQuarter && amounts.count == 1 {
             let base = amounts[0]
@@ -100,7 +125,7 @@ enum PayoutParseService {
                 payoutStyle: .fixedAmount(four),
                 totalPoolAmount: four.reduce(0, +),
                 currencyCode: "USD",
-                customPayoutDescription: nil
+                customPayoutDescription: text
             )
         }
         if amounts.count >= 2 {
@@ -110,14 +135,14 @@ enum PayoutParseService {
                 payoutStyle: .fixedAmount(capped),
                 totalPoolAmount: capped.reduce(0, +),
                 currencyCode: "USD",
-                customPayoutDescription: nil
+                customPayoutDescription: text
             )
         }
         return nil
     }
 
-    /// POST payoutDescription to backend; returns a PoolStructure from the parsed response, or nil on failure.
-    static func parse(payoutDescription: String) async throws -> PoolStructure {
+    /// POST payoutDescription to backend; returns a ParseResult with structure and clarification info.
+    static func parse(payoutDescription: String) async throws -> ParseResult {
         guard let url = PayoutParseConfig.backendURL else {
             throw PayoutParseError.notConfigured
         }
@@ -147,16 +172,31 @@ enum PayoutParseService {
             dataToDecode = bodyData
         }
         let decoded = try JSONDecoder().decode(Response.self, from: dataToDecode)
-        return mapToPoolStructure(decoded)
+        return mapToParseResult(decoded, originalDescription: payoutDescription)
     }
 
-    private static func mapToPoolStructure(_ r: Response) -> PoolStructure {
+    /// Re-parse rules after user provides clarification or updates rules
+    static func reparse(originalDescription: String, clarification: String) async throws -> ParseResult {
+        let combined = "\(originalDescription)\n\nAdditional info: \(clarification)"
+        return try await parse(payoutDescription: combined)
+    }
+
+    private static func mapToParseResult(_ r: Response, originalDescription: String) -> ParseResult {
+        let structure = mapToPoolStructure(r, originalDescription: originalDescription)
+        return ParseResult(
+            structure: structure,
+            needsClarification: r.needsClarification ?? false,
+            clarificationQuestion: r.clarificationQuestion
+        )
+    }
+
+    private static func mapToPoolStructure(_ r: Response, originalDescription: String) -> PoolStructure {
         let poolType: PoolType = {
             let t = (r.poolType ?? "").lowercased()
             if t == "perscorechange" {
-                let amount = r.amountPerChange ?? 400
+                let amount = r.amountPerChange
                 let max = r.maxScoreChanges
-                return .perScoreChange(amountPerChange: amount, maxScoreChanges: max)
+                return .perScoreChange(amountPerChange: amount ?? 0, maxScoreChanges: max)
             }
             if t == "byquarter", let q = r.quarterNumbers, !q.isEmpty {
                 return .byQuarter(Array(Set(q)).filter { (1...4).contains($0) }.sorted())
@@ -187,7 +227,7 @@ enum PayoutParseService {
             payoutStyle: payoutStyle,
             totalPoolAmount: r.totalPoolAmount,
             currencyCode: r.currencyCode ?? "USD",
-            customPayoutDescription: nil,
+            customPayoutDescription: originalDescription,
             readableRulesSummary: (r.readableRules?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap { $0.isEmpty ? nil : $0 }
         )
     }

@@ -317,3 +317,17 @@ enum PayoutStyle: Codable, Equatable, Hashable {
     /// Custom text per period
     case custom(descriptions: [String])
 }
+
+// MARK: - Sport
+
+enum Sport: String, Codable, CaseIterable {
+    case nfl = "NFL"
+    case nba = "NBA"
+    case nhl = "NHL"
+    case mlb = "MLB"
+    case ncaaf = "NCAAF"
+    case ncaab = "NCAAB"
+    case wnba = "WNBA"
+    case cfl = "CFL"
+    case mls = "MLS"
+}
