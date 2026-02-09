@@ -9,6 +9,8 @@ class NFLScoreService: ObservableObject {
 
     private var timer: Timer?
     private var cancellables = Set<AnyCancellable>()
+    /// Guard against overlapping fetches (e.g. timer + manual refresh at the same time)
+    private var isFetching = false
 
     enum ScoreError: Error, LocalizedError {
         case networkError(Error)
@@ -43,15 +45,17 @@ class NFLScoreService: ObservableObject {
             await fetchCurrentScore()
         }
 
-        // Poll every interval (e.g. 30s); use .common run loop mode so timer fires even while user scrolls
-        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+        // Create timer directly in .common run loop mode so it fires even while user scrolls.
+        // IMPORTANT: Do NOT use Timer.scheduledTimer (which registers in .default) followed by
+        // RunLoop.add(_, forMode: .common) — that double-registers the timer and can cause
+        // the callback to fire twice per interval, leading to duplicate score fetches.
+        let t = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
             Task {
                 await self?.fetchCurrentScore()
             }
         }
-        if let t = timer {
-            RunLoop.main.add(t, forMode: .common)
-        }
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
     }
 
     func stopLiveUpdates() {
@@ -61,33 +65,49 @@ class NFLScoreService: ObservableObject {
 
     @MainActor
     func fetchCurrentScore() async {
+        // Prevent overlapping fetches — each fetch just sets the score, but redundant
+        // network calls waste resources and can confuse the update pipeline.
+        guard !isFetching else {
+            print("[ScoreDebug] fetchCurrentScore: skipping, already fetching")
+            return
+        }
+        isFetching = true
         isLoading = true
         error = nil
 
         do {
             let score = try await fetchScoreFromAPI()
+            print("[ScoreDebug] fetchCurrentScore: API returned home=\(score.homeScore) away=\(score.awayScore) (\(score.homeTeam.abbreviation) vs \(score.awayTeam.abbreviation))")
             currentScore = score
             lastUpdated = Date()
         } catch let err as ScoreError {
             error = err
+            print("[ScoreDebug] fetchCurrentScore error: \(err.localizedDescription)")
         } catch {
             self.error = .networkError(error)
+            print("[ScoreDebug] fetchCurrentScore network error: \(error.localizedDescription)")
         }
 
         isLoading = false
+        isFetching = false
     }
 
     private func fetchScoreFromAPI() async throws -> GameScore {
         // Primary: Sports Data IO (when API key is set in Secrets.plist or Info.plist)
         if SportsDataIOConfig.isConfigured {
+            print("[ScoreDebug] fetchScoreFromAPI: trying SportsDataIO (primary)")
             do {
-                return try await SportsDataIOService.fetchNFLScore()
+                let score = try await SportsDataIOService.fetchNFLScore()
+                print("[ScoreDebug] SportsDataIO returned: home=\(score.homeScore) away=\(score.awayScore)")
+                return score
             } catch {
+                print("[ScoreDebug] SportsDataIO failed: \(error.localizedDescription), falling back to ESPN")
                 // Backup: if Sports Data IO is down, rate-limited, or returns no game, use ESPN
             }
         }
 
         // Backup / default: ESPN scoreboard (no key required; always available)
+        print("[ScoreDebug] fetchScoreFromAPI: using ESPN scoreboard")
         let urlString = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
         guard let url = URL(string: urlString) else {
             throw ScoreError.apiError("Invalid URL")
@@ -164,7 +184,26 @@ class NFLScoreService: ObservableObject {
 
         for competitor in competitors {
             let isHome = competitor["homeAway"] as? String == "home"
-            let score = Int(competitor["score"] as? String ?? "0") ?? 0
+
+            // Parse score: ESPN returns "score" as a String (e.g. "30"), but handle
+            // numeric types as a safety net in case the API format changes.
+            let score: Int = {
+                if let s = competitor["score"] as? String {
+                    return Int(s) ?? 0
+                }
+                if let n = competitor["score"] as? NSNumber {
+                    return n.intValue
+                }
+                return 0
+            }()
+
+            let abbrev: String = {
+                if let team = competitor["team"] as? [String: Any] {
+                    return team["abbreviation"] as? String ?? "?"
+                }
+                return "?"
+            }()
+            print("[ScoreDebug] ESPN competitor: \(abbrev) homeAway=\(competitor["homeAway"] as? String ?? "?") rawScore=\(competitor["score"] ?? "nil") parsedScore=\(score)")
 
             if let team = competitor["team"] as? [String: Any] {
                 let name = team["displayName"] as? String ?? "Team"
@@ -191,6 +230,8 @@ class NFLScoreService: ObservableObject {
             }
         }
 
+        print("[ScoreDebug] ESPN parsed totals: home(\(homeTeam.abbreviation))=\(homeScore) away(\(awayTeam.abbreviation))=\(awayScore)")
+
         // Parse game status
         let status = competition["status"] as? [String: Any]
         let statusType = status?["type"] as? [String: Any]
@@ -201,17 +242,39 @@ class NFLScoreService: ObservableObject {
         let isActive = statusName == "STATUS_IN_PROGRESS"
         let isOver = statusName == "STATUS_FINAL"
 
-        // Parse quarter scores if available
+        // Parse quarter scores from BOTH competitors.
+        // ESPN linescore values are Doubles (e.g. 3.0), not Ints, so we must
+        // handle both types. Also correctly assign to Home vs Away based on
+        // each competitor's "homeAway" field (not blindly using competitors.first).
         var quarterScores = QuarterScores()
-        if let linescores = competitors.first?["linescores"] as? [[String: Any]] {
-            for (index, linescore) in linescores.enumerated() {
-                let value = linescore["value"] as? Int ?? 0
-                switch index {
-                case 0: quarterScores.q1Home = value
-                case 1: quarterScores.q2Home = value
-                case 2: quarterScores.q3Home = value
-                case 3: quarterScores.q4Home = value
-                default: break
+        for competitor in competitors {
+            let isHome = competitor["homeAway"] as? String == "home"
+            if let linescores = competitor["linescores"] as? [[String: Any]] {
+                for (index, linescore) in linescores.enumerated() {
+                    // ESPN returns linescore values as Double (e.g. 3.0); handle both Double and Int
+                    let value: Int = {
+                        if let d = linescore["value"] as? Double { return Int(d) }
+                        if let i = linescore["value"] as? Int { return i }
+                        if let n = linescore["value"] as? NSNumber { return n.intValue }
+                        return 0
+                    }()
+                    if isHome {
+                        switch index {
+                        case 0: quarterScores.q1Home = value
+                        case 1: quarterScores.q2Home = value
+                        case 2: quarterScores.q3Home = value
+                        case 3: quarterScores.q4Home = value
+                        default: break
+                        }
+                    } else {
+                        switch index {
+                        case 0: quarterScores.q1Away = value
+                        case 1: quarterScores.q2Away = value
+                        case 2: quarterScores.q3Away = value
+                        case 3: quarterScores.q4Away = value
+                        default: break
+                        }
+                    }
                 }
             }
         }
@@ -232,6 +295,7 @@ class NFLScoreService: ObservableObject {
 
     // Manual score entry for testing or when API isn't available
     func setManualScore(homeScore: Int, awayScore: Int, quarter: Int = 1) {
+        print("[ScoreDebug] setManualScore: home=\(homeScore) away=\(awayScore) quarter=\(quarter)")
         var score = currentScore ?? GameScore.mock
         score.homeScore = homeScore
         score.awayScore = awayScore

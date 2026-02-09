@@ -75,6 +75,7 @@ enum SportsDataIOService {
         let awayTeam = parseTeam(from: game, home: false)
         let homeScore = int(from: game, keys: ["HomeScore", "homeScore"]) ?? 0
         let awayScore = int(from: game, keys: ["AwayScore", "awayScore"]) ?? 0
+        print("[ScoreDebug] SportsDataIO parsed: home=\(homeScore) away=\(awayScore)")
         let quarter = int(from: game, keys: ["Quarter", "quarter"]) ?? 0
         let timeRemaining = string(from: game, keys: ["TimeRemaining", "timeRemaining"]) ?? "15:00"
         let status = string(from: game, keys: ["Status", "status"]) ?? ""
