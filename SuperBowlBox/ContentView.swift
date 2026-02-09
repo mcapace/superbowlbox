@@ -683,15 +683,11 @@ struct TeamScoreColumn: View {
                 .font(.system(size: logoSize * 0.22, weight: .medium))
                 .foregroundColor(DesignSystem.Colors.textTertiary)
 
-            HStack(spacing: 0) {
-                ForEach(Array(scoreDigits(score).enumerated()), id: \.offset) { _, digit in
-                    FlipDigit(
-                        digit: digit,
-                        color: isLeading ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.textPrimary,
-                        size: min(logoSize * 0.45, 26)
-                    )
-                }
-            }
+            // Single clear score number (no flip-board)
+            Text("\(score)")
+                .font(.system(size: min(logoSize * 0.9, 44), weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundColor(isLeading ? DesignSystem.Colors.liveGreen : DesignSystem.Colors.textPrimary)
 
             Text("\(lastDigit)")
                 .font(.system(size: 12, weight: .medium))
@@ -705,11 +701,6 @@ struct TeamScoreColumn: View {
                 )
         }
         .frame(maxWidth: .infinity)
-    }
-
-    private func scoreDigits(_ s: Int) -> [Int] {
-        if s < 10 { return [0, s] }
-        return String(s).compactMap { Int(String($0)) }
     }
 }
 
