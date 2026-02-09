@@ -200,6 +200,7 @@ class AppState: ObservableObject {
     /// Updates winner state on all pools from current score and saves. Also reviews what’s happening and may push local notifications.
     func refreshWinnersFromCurrentScore() {
         guard let score = scoreService.currentScore else { return }
+        print("[ScoreDebug] refreshWinnersFromCurrentScore: home(\(score.homeTeam.abbreviation))=\(score.homeScore) away(\(score.awayTeam.abbreviation))=\(score.awayScore)")
         var didChange = false
         for i in pools.indices {
             var pool = pools[i]

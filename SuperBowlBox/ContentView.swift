@@ -527,6 +527,9 @@ struct LiveScoreCard: View {
 
     private var liveScoreContent: some View {
         VStack(spacing: 0) {
+            // Debug: trace score values reaching the display layer
+            let _ = print("[ScoreDebug] LiveScoreCard display: home(\(score.homeTeam.abbreviation))=\(score.homeScore) away(\(score.awayTeam.abbreviation))=\(score.awayScore)")
+
             // Top: League + status or kickoff timeline
             HStack {
                 Text("NFL")
