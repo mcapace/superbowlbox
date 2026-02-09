@@ -147,6 +147,15 @@ class NFLScoreService: ObservableObject {
         throw ScoreError.noGameFound
     }
 
+    /// ESPN may return numbers as Int or Double in JSON; normalize to Int for score/period/linescore.
+    private func intFromJSON(_ value: Any?) -> Int {
+        guard let v = value else { return 0 }
+        if let n = v as? Int { return n }
+        if let n = v as? NSNumber { return n.intValue }
+        if let n = v as? Double { return Int(n) }
+        return 0
+    }
+
     private func parseEventDate(_ event: [String: Any]) -> Date? {
         guard let dateString = event["date"] as? String else { return nil }
         let formatter = ISO8601DateFormatter()
@@ -191,26 +200,29 @@ class NFLScoreService: ObservableObject {
             }
         }
 
-        // Parse game status
-        let status = competition["status"] as? [String: Any]
+        // Parse game status (ESPN puts it under situation.status when game is in progress, else competition.status)
+        let situation = competition["situation"] as? [String: Any]
+        let status = (situation?["status"] as? [String: Any]) ?? (competition["status"] as? [String: Any])
         let statusType = status?["type"] as? [String: Any]
         let statusName = statusType?["name"] as? String ?? "STATUS_SCHEDULED"
-        let period = status?["period"] as? Int ?? 0
+        let period = (status?["period"] as? Int) ?? (status?["period"] as? NSNumber)?.intValue ?? 0
         let clock = status?["displayClock"] as? String ?? "15:00"
 
         let isActive = statusName == "STATUS_IN_PROGRESS"
         let isOver = statusName == "STATUS_FINAL"
 
-        // Parse quarter scores if available
+        // Parse quarter scores: each competitor has linescores (value can be Int or Double in JSON)
         var quarterScores = QuarterScores()
-        if let linescores = competitors.first?["linescores"] as? [[String: Any]] {
+        for competitor in competitors {
+            let isHome = competitor["homeAway"] as? String == "home"
+            guard let linescores = competitor["linescores"] as? [[String: Any]] else { continue }
             for (index, linescore) in linescores.enumerated() {
-                let value = linescore["value"] as? Int ?? 0
+                let value = intFromJSON(linescore["value"])
                 switch index {
-                case 0: quarterScores.q1Home = value
-                case 1: quarterScores.q2Home = value
-                case 2: quarterScores.q3Home = value
-                case 3: quarterScores.q4Home = value
+                case 0: if isHome { quarterScores.q1Home = value } else { quarterScores.q1Away = value }
+                case 1: if isHome { quarterScores.q2Home = value } else { quarterScores.q2Away = value }
+                case 2: if isHome { quarterScores.q3Home = value } else { quarterScores.q3Away = value }
+                case 3: if isHome { quarterScores.q4Home = value } else { quarterScores.q4Away = value }
                 default: break
                 }
             }
