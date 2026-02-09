@@ -78,26 +78,25 @@ class NFLScoreService: ObservableObject {
     }
 
     private func fetchScoreFromAPI() async throws -> GameScore {
-        // Primary: Sports Data IO (when API key is set in Secrets.plist or Info.plist)
-        if SportsDataIOConfig.isConfigured {
+        // Primary: ESPN scoreboard (no key, same structure we parse; correct game/quarter/scores for playoff/Super Bowl)
+        let urlString = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
+        if let url = URL(string: urlString) {
             do {
-                return try await SportsDataIOService.fetchNFLScore()
+                let (data, response) = try await URLSession.shared.data(from: url)
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                    return try parseESPNResponse(data)
+                }
             } catch {
-                // Backup: if Sports Data IO is down, rate-limited, or returns no game, use ESPN
+                // Fall through to Sports Data IO if ESPN fails
             }
         }
 
-        // Backup / default: ESPN scoreboard (no key required; always available)
-        let urlString = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
-        guard let url = URL(string: urlString) else {
-            throw ScoreError.apiError("Invalid URL")
+        // Fallback: Sports Data IO when API key is set (if ESPN failed or returned no game)
+        if SportsDataIOConfig.isConfigured {
+            return try await SportsDataIOService.fetchNFLScore()
         }
-        let (data, response) = try await URLSession.shared.data(from: url)
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
-            throw ScoreError.apiError("Invalid response")
-        }
-        return try parseESPNResponse(data)
+
+        throw ScoreError.noGameFound
     }
 
     /// Featured game is always from API (Sports Data IO if configured, else ESPN scoreboard). Prefer Super Bowl when present.
@@ -107,15 +106,17 @@ class NFLScoreService: ObservableObject {
             throw ScoreError.decodingError
         }
 
-        // 1) Prefer Super Bowl by name (neutral site in CA etc.) so we show the right "next game"
+        // 1) Prefer Super Bowl by event name or competition notes (e.g. "Super Bowl LX")
         for event in events {
-            guard let name = event["name"] as? String, name.lowercased().contains("super bowl"),
-                  let competitions = event["competitions"] as? [[String: Any]],
-                  let competition = competitions.first,
-                  let competitors = competition["competitors"] as? [[String: Any]] else {
-                continue
+            let name = event["name"] as? String ?? ""
+            let competitions = event["competitions"] as? [[String: Any]] ?? []
+            guard let competition = competitions.first,
+                  let competitors = competition["competitors"] as? [[String: Any]] else { continue }
+            let notes = competition["notes"] as? [[String: Any]] ?? []
+            let notesHeadline = notes.first?["headline"] as? String ?? ""
+            if name.lowercased().contains("super bowl") || notesHeadline.lowercased().contains("super bowl") {
+                return try parseCompetition(competition, competitors: competitors, scheduledStart: parseEventDate(event))
             }
-            return try parseCompetition(competition, competitors: competitors, scheduledStart: parseEventDate(event))
         }
 
         // 2) Else prefer any playoff game
